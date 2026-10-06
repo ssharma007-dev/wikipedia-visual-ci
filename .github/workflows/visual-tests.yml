@@ -1,0 +1,136 @@
+name: Visual tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: visual-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Visual tests + agent review
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
+      # One Eyes batch per run, so the agent reviews exactly this run's results
+      APPLITOOLS_BATCH_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      APPLITOOLS_BATCH_NAME: ${{ github.event_name == 'pull_request' && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || format('{0} @ {1}', github.ref_name, github.sha) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # PR checkout is a merge commit; HEAD^1 is the base branch
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start the Wikipedia site
+        run: |
+          node server.mjs > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/wikipedia > /dev/null && exit 0
+            sleep 1
+          done
+          echo "Site did not start"; cat server.log; exit 1
+
+      # Eyes differences do not fail Playwright here — the agent below decides.
+      - name: Run visual tests
+        run: |
+          mkdir -p ci-context
+          npx playwright test 2>&1 | tee ci-context/eyes-run.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            ci-context/eyes-run.log
+          retention-days: 14
+
+      # ---------- PRs only: Claude reviews the Eyes results through the Applitools MCP ----------
+
+      - name: Collect PR context
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr view "$PR" --json number,title,author,body \
+            --template '# PR #{{.number}}: {{.title}}{{"\n\n"}}Author: {{.author.login}}{{"\n\n"}}## Description{{"\n\n"}}{{.body}}{{"\n"}}' \
+            > ci-context/pr.md
+          # Compact diff: only the changed part of each line (pages are minified)
+          git diff -U0 HEAD^1 HEAD | node scripts/compact-diff.mjs > ci-context/pr.diff
+          cat ci-context/pr.diff
+          cat ci-context/pr.md
+
+      - name: Agent review (Claude + Applitools MCP)
+        if: github.event_name == 'pull_request'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The Applitools MCP reads results with the read key and accepts/rejects with the write key
+          APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+          APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+        run: |
+          for k in ANTHROPIC_API_KEY APPLITOOLS_READ_KEY APPLITOOLS_WRITE_KEY; do
+            [ -n "${!k}" ] || { echo "::error::$k secret is not set"; exit 1; }
+          done
+          mkdir -p review
+          npm install -g @anthropic-ai/claude-code
+          # The agent may inspect, accept, reject and add regions in Eyes.
+          # It can never save or reset baselines, edit code, or run shell commands.
+          claude -p "$(cat .github/prompts/visual-review.md)" \
+            --mcp-config .mcp.json --strict-mcp-config \
+            --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" \
+            --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" "Bash" "Edit" \
+            --max-turns 150 \
+            --output-format stream-json --verbose > review/agent-transcript.jsonl
+          tail -n 1 review/agent-transcript.jsonl | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).result)}catch{console.log(s)}})'
+
+      - name: Upload agent transcript
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-review
+          path: review/
+          retention-days: 14
+
+      - name: Comment on the PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -f review/summary.md ]; then
+            gh pr comment "$PR" --body-file review/summary.md
+          else
+            gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
+          The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+          fi
+
+      - name: Enforce verdict
+        if: github.event_name == 'pull_request'
+        run: |
+          verdict=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
+          echo "Agent verdict: $verdict"
+          cat review/verdict.json 2>/dev/null || true
+          [ "$verdict" = "pass" ] || { echo "::error::Visual review verdict: $verdict"; exit 1; }
