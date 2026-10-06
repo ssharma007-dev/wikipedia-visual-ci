@@ -1,0 +1,3 @@
+# Pin to the eyes-selenium version the team runs (Schoox: Python + Selenium + UFG)
+eyes-selenium==6.5.9
+pytest==8.4.2

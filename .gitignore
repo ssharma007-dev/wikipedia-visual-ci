@@ -5,3 +5,5 @@ playwright-report/
 blob-report/
 ci-context/
 review/
+.venv/
+__pycache__/

@@ -16,15 +16,25 @@ concurrency:
 
 jobs:
   visual:
-    name: Visual tests + agent review
+    # Same site, same decision prompt, same agent — two test frameworks.
+    # The Applitools MCP reviews Eyes results, so it doesn't care which SDK produced them.
+    name: ${{ matrix.label }} + agent review
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: playwright
+            label: Playwright (JS)
+          - suite: python
+            label: Python + Selenium
     env:
       CI: true
       APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
-      # One Eyes batch per run, so the agent reviews exactly this run's results
-      APPLITOOLS_BATCH_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      APPLITOOLS_BATCH_NAME: ${{ github.event_name == 'pull_request' && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || format('{0} @ {1}', github.ref_name, github.sha) }}
+      # One Eyes batch per run and framework, so each agent reviews exactly its own results
+      APPLITOOLS_BATCH_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.suite }}
+      APPLITOOLS_BATCH_NAME: ${{ github.event_name == 'pull_request' && format('PR #{0} [{1}]: {2}', github.event.pull_request.number, matrix.label, github.event.pull_request.title) || format('{0} [{1}] @ {2}', github.ref_name, matrix.label, github.sha) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -36,10 +46,23 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+      - name: Install dependencies (Node — site server, Playwright, agent tooling)
+        run: npm ci
+
+      - name: Install Playwright browser
+        if: matrix.suite == 'playwright'
+        run: npx playwright install --with-deps chromium
+
+      - uses: actions/setup-python@v5
+        if: matrix.suite == 'python'
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: python/requirements.txt
+
+      - name: Install Python dependencies
+        if: matrix.suite == 'python'
+        run: pip install -r python/requirements.txt
 
       - name: Start the Wikipedia site
         run: |
@@ -50,21 +73,31 @@ jobs:
           done
           echo "Site did not start"; cat server.log; exit 1
 
-      # Eyes differences do not fail Playwright here — the agent below decides.
-      - name: Run visual tests
+      # Eyes differences do not fail the tests here — the agent below decides.
+      - name: Run visual tests (Playwright)
+        if: matrix.suite == 'playwright'
         run: |
           mkdir -p ci-context
           npx playwright test 2>&1 | tee ci-context/eyes-run.log
           exit ${PIPESTATUS[0]}
 
-      - name: Upload Playwright report
+      - name: Run visual tests (Python + Selenium)
+        if: matrix.suite == 'python'
+        working-directory: python
+        run: |
+          mkdir -p ../ci-context
+          python -m pytest 2>&1 | tee ../ci-context/eyes-run.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload test output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: test-output-${{ matrix.suite }}
           path: |
             playwright-report/
             ci-context/eyes-run.log
+          if-no-files-found: ignore
           retention-days: 14
 
       # ---------- PRs only: Claude reviews the Eyes results through the Applitools MCP ----------
@@ -78,10 +111,10 @@ jobs:
           gh pr view "$PR" --json number,title,author,body \
             --template '# PR #{{.number}}: {{.title}}{{"\n\n"}}Author: {{.author.login}}{{"\n\n"}}## Description{{"\n\n"}}{{.body}}{{"\n"}}' \
             > ci-context/pr.md
+          printf '\nTest framework: ${{ matrix.label }}\n' >> ci-context/pr.md
           # Compact diff: only the changed part of each line (pages are minified)
           git diff -U0 HEAD^1 HEAD | node scripts/compact-diff.mjs > ci-context/pr.diff
-          cat ci-context/pr.diff
-          cat ci-context/pr.md
+          cat ci-context/pr.md ci-context/pr.diff
 
       - name: Agent review (Claude + Applitools MCP)
         if: github.event_name == 'pull_request'
@@ -110,7 +143,7 @@ jobs:
         if: always() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: agent-review
+          name: agent-review-${{ matrix.suite }}
           path: review/
           retention-days: 14
 
@@ -123,7 +156,7 @@ jobs:
           if [ -f review/summary.md ]; then
             gh pr comment "$PR" --body-file review/summary.md
           else
-            gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
+            gh pr comment "$PR" --body "## ⚠️ Visual review (${{ matrix.label }}) did not complete
           The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
           fi
 
