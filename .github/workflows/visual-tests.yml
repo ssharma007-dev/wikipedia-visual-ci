@@ -117,8 +117,8 @@ jobs:
             --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" \
             --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" "Bash" "Edit" \
             --max-turns 150 \
-            --output-format stream-json --verbose > review/agent-transcript.jsonl
-          tail -n 1 review/agent-transcript.jsonl | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).result)}catch{console.log(s)}})'
+            --output-format stream-json --verbose \
+            | tee review/agent-transcript.jsonl | node scripts/agent-progress.mjs
 
       - name: Upload agent transcript
         if: always() && env.PR != ''
