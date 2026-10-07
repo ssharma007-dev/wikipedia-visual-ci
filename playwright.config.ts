@@ -12,6 +12,9 @@ export default defineConfig<EyesFixture>({
   use: {
     eyesConfig: {
       appName: 'Wikipedia CI demo',
+      // Differences must not fail the run: the review agent decides. On CI the fixture
+      // defaults to 'afterAll', i.e. getAllTestResults(true), which throws on diffs.
+      failTestsOnDiff: false,
       matchLevel: 'Strict',
       type: 'ufg',
       browsersInfo: [

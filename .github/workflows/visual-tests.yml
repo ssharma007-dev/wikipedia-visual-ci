@@ -64,10 +64,8 @@ jobs:
       - name: Run visual tests
         run: |
           mkdir -p ci-context
-          npx playwright test 2>&1 | tee ci-context/eyes-run.log || true
-          # Visual differences are for the agent to judge, so they don't fail this step.
-          # Fail only if the tests never reached Eyes (no results URL in the output).
-          grep -q "Eyes results" ci-context/eyes-run.log || { echo "::error::No Eyes results — the tests did not run"; exit 1; }
+          npx playwright test 2>&1 | tee ci-context/eyes-run.log
+          exit ${PIPESTATUS[0]}
 
       - name: Upload Playwright report
         if: always()
