@@ -49,7 +49,7 @@ Repository secrets (Settings → Secrets and variables → Actions):
 - `APPLITOOLS_API_KEY` — runs the tests
 - `APPLITOOLS_READ_KEY` — lets the MCP read results
 - `APPLITOOLS_WRITE_KEY` — lets the MCP accept/reject and add regions
-- `ANTHROPIC_API_KEY` — runs the Claude agent
+- `ANTHROPIC_API_KEY` **or** `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) — runs the Claude agent
 
 Baselines come from the first run on `python` (or a manual run via **Actions → Visual tests → Run workflow**).
 
