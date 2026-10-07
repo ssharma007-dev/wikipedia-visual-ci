@@ -14,6 +14,11 @@ function describePair(before, after) {
     end < before.length - start && end < after.length - start &&
     before[before.length - 1 - end] === after[after.length - 1 - end]
   ) end++;
+  // Widen to whole tokens (e.g. a full CSS declaration) so a change like
+  // "-5.6rem" -> "-9.6rem" isn't shown as a lone digit next to a stray "-".
+  const boundary = /[;{}<>,\s"']/;
+  while (start > 0 && !boundary.test(before[start - 1])) start--;
+  while (end > 0 && !boundary.test(before[before.length - end])) end--;
   const from = Math.max(0, start - CONTEXT);
   const pre = before.slice(from, start);
   const post = before.slice(before.length - end, before.length - end + CONTEXT);
