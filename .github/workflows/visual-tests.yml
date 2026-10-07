@@ -4,7 +4,14 @@ on:
   pull_request:
   push:
     branches: [python]
+  # Manual run: Actions → Visual tests → Run workflow. Enter a PR number to run the
+  # full PR flow (tests + agent review + PR comment) without pushing a commit.
   workflow_dispatch:
+    inputs:
+      pr:
+        description: 'Pull request number to test and review (leave empty to just run the tests)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -21,15 +28,18 @@ jobs:
     timeout-minutes: 30
     env:
       CI: true
+      PR: ${{ github.event.pull_request.number || inputs.pr }}
       APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
       # One Eyes batch per run, so the agent reviews exactly this run's results
       APPLITOOLS_BATCH_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      APPLITOOLS_BATCH_NAME: "${{ github.event_name == 'pull_request' && format('PR #{0} [Python]: {1}', github.event.pull_request.number, github.event.pull_request.title) || format('{0} [Python] @ {1}', github.ref_name, github.sha) }}"
+      APPLITOOLS_BATCH_NAME: "${{ github.event.pull_request.number && format('PR #{0} [Python] {1}', github.event.pull_request.number, github.event.pull_request.title) || inputs.pr && format('PR #{0} [Python] (manual run)', inputs.pr) || format('{0} [Python] @ {1}', github.ref_name, github.sha) }}"
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2   # PR checkout is a merge commit; HEAD^1 is the base branch
+          # Manual run with a PR number: test that PR's merge commit, same as a PR event does
+          ref: ${{ inputs.pr && format('refs/pull/{0}/merge', inputs.pr) || '' }}
 
       # Node runs the site server, the diff helper and the Claude CLI
       - uses: actions/setup-node@v4
@@ -73,10 +83,9 @@ jobs:
       # ---------- PRs only: Claude reviews the Eyes results through the Applitools MCP ----------
 
       - name: Collect PR context
-        if: github.event_name == 'pull_request'
+        if: env.PR != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
         run: |
           gh pr view "$PR" --json number,title,author,body \
             --template '# PR #{{.number}}: {{.title}}{{"\n\n"}}Author: {{.author.login}}{{"\n\n"}}## Description{{"\n\n"}}{{.body}}{{"\n"}}' \
@@ -87,7 +96,7 @@ jobs:
           cat ci-context/pr.md ci-context/pr.diff
 
       - name: Agent review (Claude + Applitools MCP)
-        if: github.event_name == 'pull_request'
+        if: env.PR != ''
         env:
           # Claude auth: an Anthropic API key, or a Claude login token from `claude setup-token`
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -114,7 +123,7 @@ jobs:
           tail -n 1 review/agent-transcript.jsonl | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).result)}catch{console.log(s)}})'
 
       - name: Upload agent transcript
-        if: always() && github.event_name == 'pull_request'
+        if: always() && env.PR != ''
         uses: actions/upload-artifact@v4
         with:
           name: agent-review
@@ -122,10 +131,9 @@ jobs:
           retention-days: 14
 
       - name: Comment on the PR
-        if: always() && github.event_name == 'pull_request'
+        if: always() && env.PR != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
         run: |
           if [ -f review/summary.md ]; then
             gh pr comment "$PR" --body-file review/summary.md
@@ -135,7 +143,7 @@ jobs:
           fi
 
       - name: Enforce verdict
-        if: github.event_name == 'pull_request'
+        if: env.PR != ''
         run: |
           verdict=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
           echo "Agent verdict: $verdict"
