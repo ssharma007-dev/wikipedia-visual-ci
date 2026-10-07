@@ -87,12 +87,16 @@ jobs:
       - name: Agent review (Claude + Applitools MCP)
         if: github.event_name == 'pull_request'
         env:
+          # Claude auth: an Anthropic API key, or a Claude login token from `claude setup-token`
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The Applitools MCP reads results with the read key and accepts/rejects with the write key
           APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
           APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
         run: |
-          for k in ANTHROPIC_API_KEY APPLITOOLS_READ_KEY APPLITOOLS_WRITE_KEY; do
+          [ -n "$ANTHROPIC_API_KEY$CLAUDE_CODE_OAUTH_TOKEN" ] || { echo "::error::Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN"; exit 1; }
+          [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY   # an empty key would override the token
+          for k in APPLITOOLS_READ_KEY APPLITOOLS_WRITE_KEY; do
             [ -n "${!k}" ] || { echo "::error::$k secret is not set"; exit 1; }
           done
           mkdir -p review
