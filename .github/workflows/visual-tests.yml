@@ -134,7 +134,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -f review/summary.md ]; then
-            gh pr comment "$PR" --body-file review/summary.md
+            {
+              echo '> 🤖 **Posted by Claude, the AI visual reviewer** — runs in CI with the Applitools MCP. It reviews every Eyes difference, accepts or rejects steps, and passes or fails this check. It **never saves baselines**: the 👤 items below are for people.'
+              echo
+              cat review/summary.md
+            } > review/comment.md
+            gh pr comment "$PR" --body-file review/comment.md
           else
             gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
           The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."

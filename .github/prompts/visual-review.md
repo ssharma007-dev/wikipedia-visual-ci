@@ -88,6 +88,12 @@ This is posted as the PR comment. Use this shape:
 
 **Fix suggestion:** <for each regression: the likely culprit in the diff and how to fix it; omit if none>
 
+### 🤖 Done by AI · 👤 Needs a human
+
+| 🤖 Done by Claude (automatic) | 👤 Needs a human |
+|---|---|
+| <each thing you did: diffs reviewed, steps accepted / rejected / masked in Eyes, check passed or failed> | <each decision left to people: code fixes, anything you were unsure about, approving the PR, **saving baselines in Eyes**> |
+
 [Open the batch in Eyes](<batch URL verbatim>) · Baselines are **not saved** — a reviewer saves them in Eyes after approving this PR.
 ```
 
