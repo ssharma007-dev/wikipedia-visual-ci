@@ -7,3 +7,11 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-102: brand teal for the search buttons */
+.search-container button[type="submit"],
+.cdx-search-input .cdx-button.cdx-search-input__end-button {
+  background-color: #0E7C7B;
+  border-color: #0E7C7B;
+  color: #FFFFFF;
+}
