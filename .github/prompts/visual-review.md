@@ -20,10 +20,10 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 
 1. Read `ci-context/pr.md` and `ci-context/pr.diff` first and write down, for yourself,
    the **expected change**: what should look different, where, and on which screens.
-2. Start the review with `eyes_review_progress` (`scope: "batch"`, `mode: "resolve"`)
-   using the batch URL, and always follow its `next` field until it reports the whole
-   batch reviewed. Do not skip steps or areas, and do not conclude anything before
-   `eyes_review_end` reports completion.
+2. Start the review with `eyes_review_progress` (`scope: "batch"`) using the batch URL, in the
+   **mode the "Eyes MCP behaviour" switches below call for**, and always follow its `next` field
+   until it reports the whole batch reviewed. Do not skip steps or areas, and do not conclude
+   anything before `eyes_review_end` reports completion.
 3. For every changed area, look at the evidence (image diff and DOM diff) and classify it:
 
 | Class | Meaning | Action in Eyes |
@@ -49,6 +49,37 @@ Edit this table to tune the gate — it is the policy this agent enforces.
 
 A difference that appears on only some browsers or devices is still a regression if
 the PR does not explain it — note which environments are affected.
+
+## Eyes MCP behaviour
+
+What the agent is allowed to do **in the Eyes dashboard** through the Applitools Eyes MCP.
+Edit the switches to give the AI more or less autonomy — for example, start a trial with
+`Auto-accept: off` and `Auto-reject: off` so the AI only recommends.
+
+| Switch | Setting | Meaning |
+|---|---|---|
+| Auto-accept | **on** | Expected, Noise and Dynamic steps are **accepted** in Eyes |
+| Auto-reject | **on** | Regression and Missing steps are **rejected** in Eyes |
+| Mask dynamic content | **on** | Confirmed-dynamic content gets a match region before the step is accepted |
+| Apply a decision to the same test on other browsers/devices | **on** | Uses the MCP's default propagation (same scenario, identical diff only) |
+| Save baselines | **never** | `eyes_resolve_save` and `eyes_resolve_reset` are blocked in CI; a person saves |
+
+**Which MCP mode to use:**
+
+- All of Auto-accept, Auto-reject and Mask dynamic content **on** → `eyes_review_progress` with
+  `mode: "resolve"`: the MCP accepts, rejects or leaves each step unresolved from your findings.
+- Any of them **off** → `mode: "inspect"` (read-only), then apply **only the allowed** actions
+  yourself, step by step, after the review:
+
+| Outcome | Eyes MCP action | Only if |
+|---|---|---|
+| Expected / Noise | `eyes_resolve_checkpoint` with `action: "accept"` | Auto-accept is on |
+| Dynamic | `eyes_resolve_regions` with the strictest fitting level (`layout` before `ignore`), then accept | Mask dynamic content and Auto-accept are on |
+| Regression / Missing | `eyes_resolve_checkpoint` with `action: "reject"` | Auto-reject is on |
+| Not sure | No action: leave the step **unresolved** for a person | always |
+| Anything blocked by a switch | No action; write "AI recommends accept/reject" in the comment and list it under 👤 Needs a human | always |
+
+Set `propagate: "none"` on those calls when "Apply a decision to … other browsers/devices" is **off**.
 
 ## Hard rules
 
