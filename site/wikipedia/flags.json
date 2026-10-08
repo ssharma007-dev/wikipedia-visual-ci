@@ -11,6 +11,6 @@
   "remove-app-store-badge": false,
   "shuffle-languages": false,
   "remove-sanity-section": false,
-  "header-typo": true,
+  "header-typo": false,
   "random-article-count": false
 }
