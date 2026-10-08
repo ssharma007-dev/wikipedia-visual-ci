@@ -139,6 +139,9 @@ jobs:
               echo '> 🤖 **Posted by Claude, the AI visual reviewer** — runs in CI with the Applitools MCP. It reviews every Eyes difference, accepts or rejects steps, and passes or fails this check. It **never saves baselines**: the 👤 items below are for people.'
               echo
               cat review/summary.md
+              echo
+              echo '---'
+              echo '📏 **Decided using [these rules](https://github.com/ssharma007-dev/wikipedia-visual-ci/blob/python/.github/prompts/visual-review.md#decision-thresholds)**: unexpected moved/hidden button, text change or layout shift over **2px** → reject · shift of **2px or less** with no HTML change → noise · change described in the PR → accept · uncertain → left for a person.'
             } > review/comment.md
             gh pr comment "$PR" --body-file review/comment.md
           else
