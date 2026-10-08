@@ -1,7 +1,7 @@
 {
   "subpixel-shift": false,
   "replace-icon": false,
-  "remove-banner": false,
+  "remove-banner": true,
   "expand-qa-paragraph": false,
   "move-footer": false,
   "rename-login": false,
