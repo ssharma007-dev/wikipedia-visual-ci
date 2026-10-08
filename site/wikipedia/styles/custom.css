@@ -8,9 +8,8 @@
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
 
-/* WIKI-102: brand teal for the search buttons */
-.search-container button[type="submit"],
-.cdx-search-input .cdx-button.cdx-search-input__end-button {
+/* WIKI-102: brand teal for the portal search button (portal only — article pages unchanged) */
+.search-container button[type="submit"] {
   background-color: #0E7C7B;
   border-color: #0E7C7B;
   color: #FFFFFF;
