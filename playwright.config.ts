@@ -20,6 +20,8 @@ export default defineConfig<EyesFixture>({
       // main's baseline until its own changes are saved.
       ...(process.env.EYES_BRANCH_NAME ? { branchName: process.env.EYES_BRANCH_NAME } : {}),
       ...(process.env.EYES_PARENT_BRANCH_NAME ? { parentBranchName: process.env.EYES_PARENT_BRANCH_NAME } : {}),
+      // PRs always compare against main's baseline, even if the PR branch saved one earlier.
+      ...(process.env.EYES_PARENT_BRANCH_NAME ? { compareWithParentBranch: true } : {}),
       matchLevel: 'Strict',
       type: 'ufg',
       browsersInfo: [
