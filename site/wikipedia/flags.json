@@ -3,7 +3,7 @@
   "replace-icon": false,
   "remove-banner": false,
   "expand-qa-paragraph": false,
-  "move-footer": false,
+  "move-footer": true,
   "rename-login": false,
   "shift-globe": false,
   "cut-search": false,
