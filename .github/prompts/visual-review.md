@@ -56,6 +56,10 @@ the PR does not explain it — note which environments are affected.
   a human decision made in Eyes after the PR is approved.
 - Do not modify source files or tests. You only review.
 - Keep every Eyes URL exactly as the tools return it (do not strip trailing `~~`).
+- **Report what Eyes actually recorded, not what you intended.** The `Action` column must come
+  from the `resolution` counts that `eyes_review_end` returns for each step (accepted / rejected /
+  unresolved). If the review left a step **unresolved**, write "Left unresolved in Eyes → 👤 human
+  decides" and list it under 👤 Needs a human.
 
 ## Output — write both files before you finish
 
