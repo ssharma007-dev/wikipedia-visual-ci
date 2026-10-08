@@ -4,6 +4,8 @@
 // Feature flags: every flag set to true in site/wikipedia/flags.json is applied to the
 // pages, using the transforms in flag-definitions.json (same flags as demo-runner).
 // Turning a flag on is therefore a code change that can go in a pull request.
+// Team CSS: site/wikipedia/styles/custom.css is added to every page (after Wikipedia's own
+// styles) whenever it holds any rules — this is the file developers edit for tickets.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,12 +40,21 @@ function flagMarkup() {
   return (css ? `<style data-flags>${css}</style>` : '') + (js ? `<script data-flags>${js}</script>` : '');
 }
 
+function customCss() {
+  const file = path.join(root, 'styles', 'custom.css');
+  const css = fs.existsSync(file) ? fs.readFileSync(file, 'utf-8') : '';
+  return css.replace(/\/\*[\s\S]*?\*\//g, '').trim() ? `<style data-custom-css>${css}</style>` : '';
+}
+
 function sendPage(res, file) {
   if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404).end('Not found');
     return;
   }
-  const html = fs.readFileSync(file, 'utf-8');
+  let html = fs.readFileSync(file, 'utf-8');
+  const css = customCss();
+  const head = html.indexOf('</head>');
+  if (css && head >= 0) html = html.slice(0, head) + css + html.slice(head);
   const extra = flagMarkup();
   const last = html.lastIndexOf('</body>');
   const out = !extra ? html : last < 0 ? html + extra : html.slice(0, last) + extra + html.slice(last);

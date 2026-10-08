@@ -90,8 +90,22 @@ jobs:
           printf '\nTest framework: Playwright (JS)\n' >> ci-context/pr.md
           # Compact diff: only the changed part of each line (pages are minified)
           git diff -U0 HEAD^1 HEAD | node scripts/compact-diff.mjs > ci-context/pr.diff
-          cat ci-context/pr.diff
-          cat ci-context/pr.md
+          # The ticket: from this PR's branch, matched by the ticket ID in the branch name
+          BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          TASK=$(ls guidelines/tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
+          if [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
+          else printf 'No ticket found for branch `%s` (expected feature/WIKI-123-... with guidelines/tasks/WIKI-123-*.md).\n' "$BRANCH" > ci-context/task.md; fi
+          # Design system + review rules: always from main, so a PR can't change the rules it is judged by
+          git fetch -q --depth=1 origin "${{ github.base_ref || 'main' }}"
+          git show FETCH_HEAD:guidelines/design-system.md > ci-context/design-system.md
+          git show FETCH_HEAD:guidelines/review-rules.md > ci-context/review-rules.md
+          CHANGED=$(git diff --name-only HEAD^1 HEAD -- guidelines ':(exclude)guidelines/tasks' || true)
+          if [ -n "$CHANGED" ]; then
+            printf '\n## ⚠️ This PR changes the review guidelines\n\n%s\n\nThese edits were NOT applied: the versions on main were used.\n' "$CHANGED" >> ci-context/pr.md
+          fi
+          echo "Ticket: ${TICKET:-none} (${TASK:-not found})"
+          cat ci-context/pr.md ci-context/pr.diff
 
       - name: Agent review (Claude + Applitools MCP)
         if: env.PR != ''
@@ -112,7 +126,7 @@ jobs:
           npm install -g @anthropic-ai/claude-code
           # The agent may inspect, accept, reject and add regions in Eyes.
           # It can never save or reset baselines, edit code, or run shell commands.
-          claude -p "$(cat .github/prompts/visual-review.md)" \
+          claude -p "$(cat ci-context/review-rules.md)" \
             --mcp-config .mcp.json --strict-mcp-config \
             --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" \
             --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" "Bash" "Edit" \
@@ -140,7 +154,7 @@ jobs:
               cat review/summary.md
               echo
               echo '---'
-              echo '📏 **Decided using [these rules](https://github.com/ssharma007-dev/wikipedia-visual-ci/blob/main/.github/prompts/visual-review.md#decision-thresholds)**: unexpected moved/hidden button, text change or layout shift over **2px** → reject · shift of **2px or less** with no HTML change → noise · change described in the PR → accept · uncertain → left for a person.'
+              echo '📏 **Decided using [the guidelines](https://github.com/ssharma007-dev/wikipedia-visual-ci/tree/main/guidelines)** (from main): not asked for by the ticket → reject · asked for but breaks the [design system](https://github.com/ssharma007-dev/wikipedia-visual-ci/blob/main/guidelines/design-system.md) → reject, a person decides · asked for and on-design → accept · shift of **2px or less** with no HTML change → noise · unsure → left for a person.'
             } > review/comment.md
             gh pr comment "$PR" --body-file review/comment.md
           else

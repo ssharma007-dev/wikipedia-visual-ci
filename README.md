@@ -14,7 +14,7 @@ PR opened ─► GitHub Actions ─► site up ─► Playwright + Eyes (UFG)
                                               │
                          PR title/description + compact diff + Eyes batch URL
                                               ▼
-                       Claude + Applitools MCP  ──  .github/prompts/visual-review.md
+                       Claude + Applitools MCP  ──  guidelines/review-rules.md
                          · inspects every changed area (image diff + DOM diff)
                          · accepts expected changes, masks dynamic content, rejects regressions
                          · never saves baselines
@@ -22,9 +22,20 @@ PR opened ─► GitHub Actions ─► site up ─► Playwright + Eyes (UFG)
                          PR comment (summary + Eyes links)  +  ✅ / ❌ check
 ```
 
+## Developer flow
+
+1. Pick a ticket from [`guidelines/tasks/`](guidelines/tasks/) — e.g. `WIKI-102-brand-search-button.md`.
+2. `git switch main && git pull && git switch -c feature/WIKI-102-brand-search-button`
+3. Implement it — usually in `site/wikipedia/styles/custom.css` — following [`guidelines/design-system.md`](guidelines/design-system.md).
+4. Push and open a PR (the template asks for the ticket). CI starts automatically.
+5. The AI reviews every visual difference against **the ticket** and **the design system**, accepts or rejects it in Eyes, and comments ✅/❌ on the PR.
+6. ❌ → fix and push again. ✅ → a reviewer approves, saves the baselines in Eyes, and merges.
+
+The [`guidelines/`](guidelines/) folder is everything the AI judges against — see its README.
+
 ## How the AI decides (the rules)
 
-After the visual tests finish, the AI agent reads **[`.github/prompts/visual-review.md`](https://github.com/ssharma007-dev/wikipedia-visual-ci/blob/main/.github/prompts/visual-review.md#decision-thresholds)** and applies these rules to every difference Eyes found. Edit that file to change the behavior — no code changes.
+After the visual tests finish, the AI agent reads **[`guidelines/review-rules.md`](guidelines/review-rules.md)** and applies these rules to every difference Eyes found. Edit that file to change the behavior — no code changes.
 
 | The difference… | 🤖 AI action in Eyes | PR check |
 |---|---|---|
@@ -58,7 +69,7 @@ The AI **never saves baselines**. A person saves them in Eyes.
 | `tests/wikipedia.spec.ts` | The two visual tests |
 | `playwright.config.ts` | Eyes + Ultrafast Grid config |
 | `.mcp.json` | Applitools MCP server for the agent |
-| `.github/prompts/visual-review.md` | **The agent's policy** — classes, thresholds, output format. Edit the thresholds table to tune the gate. |
+| `guidelines/review-rules.md` | **The agent's policy** — classes, thresholds, output format. Edit the thresholds table to tune the gate. |
 | `.github/workflows/visual-tests.yml` | The pipeline |
 | `scripts/compact-diff.mjs` | Shrinks diffs of minified lines to just the changed part, so the agent can read them |
 
