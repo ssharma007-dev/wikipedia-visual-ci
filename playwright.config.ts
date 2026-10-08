@@ -15,9 +15,11 @@ export default defineConfig<EyesFixture>({
       // Differences must not fail the run: the review agent decides. On CI the fixture
       // defaults to 'afterAll', i.e. getAllTestResults(true), which throws on diffs.
       failTestsOnDiff: false,
-      // Eyes branch for pushes to main (set by CI): '<owner>/<repo>/main' — the same name the
-      // Applitools GitHub integration uses as every PR's parent, so PRs compare against main.
+      // Eyes branching (set by CI): main runs use '<owner>/<repo>/main'; a PR runs on
+      // '<owner>/<repo>/<pr-branch>' with '<owner>/<repo>/main' as its parent, so it inherits
+      // main's baseline until its own changes are saved.
       ...(process.env.EYES_BRANCH_NAME ? { branchName: process.env.EYES_BRANCH_NAME } : {}),
+      ...(process.env.EYES_PARENT_BRANCH_NAME ? { parentBranchName: process.env.EYES_PARENT_BRANCH_NAME } : {}),
       matchLevel: 'Strict',
       type: 'ufg',
       browsersInfo: [
