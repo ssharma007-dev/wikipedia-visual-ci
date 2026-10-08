@@ -7,3 +7,9 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-104: highlight Donate for the fundraising campaign */
+#pt-sitesupport-2 a,
+#pt-sitesupport-2 a span {
+  color: #D73333;
+}
