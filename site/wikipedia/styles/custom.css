@@ -7,3 +7,8 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-103: hide the App Store badge on phones */
+.app-badge-ios {
+  display: none;
+}
