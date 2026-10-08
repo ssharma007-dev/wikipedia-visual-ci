@@ -22,6 +22,27 @@ PR opened ─► GitHub Actions ─► site up ─► Playwright + Eyes (UFG)
                          PR comment (summary + Eyes links)  +  ✅ / ❌ check
 ```
 
+## How the AI decides (the rules)
+
+After the visual tests finish, the AI agent reads **[`.github/prompts/visual-review.md`](https://github.com/ssharma007-dev/wikipedia-visual-ci/blob/main/.github/prompts/visual-review.md#decision-thresholds)** and applies these rules to every difference Eyes found. Edit that file to change the behavior — no code changes.
+
+| The difference… | 🤖 AI action in Eyes | PR check |
+|---|---|---|
+| Matches what the PR description says should change (any size) | Accept | ✅ PASS |
+| Shift of **2px or less**, no HTML change | Treat as noise, accept | ✅ PASS |
+| **Not** explained by the PR and moves, hides or cuts a button, input or link | Reject | ❌ FAIL |
+| **Not** explained by the PR and changes text or removes content | Reject | ❌ FAIL |
+| **Not** explained by the PR and shifts layout **more than 2px** | Reject | ❌ FAIL |
+| Expected change is **missing** on any browser or device | Reject | ❌ FAIL |
+| AI isn't certain | Leave unresolved | 👤 a person decides |
+
+Two thresholds apply at different times:
+
+- **During the test run:** Eyes decides what counts as a difference, using its match level (`Strict`).
+- **After the test run:** the AI applies the rules above, including the **2px** noise rule.
+
+The AI **never saves baselines**. A person saves them in Eyes.
+
 ## What's where
 
 | Path | What it is |
