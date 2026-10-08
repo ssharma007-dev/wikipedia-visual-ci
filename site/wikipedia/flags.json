@@ -8,7 +8,7 @@
   "shift-globe": false,
   "cut-search": false,
   "white-search-button": false,
-  "remove-app-store-badge": false,
+  "remove-app-store-badge": true,
   "shuffle-languages": false,
   "remove-sanity-section": false,
   "header-typo": false,

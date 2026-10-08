@@ -11,7 +11,7 @@ export default defineConfig<EyesFixture>({
   reporter: [['list'], ['html', { open: 'never' }], ['@applitools/eyes-playwright/reporter']],
   use: {
     eyesConfig: {
-      appName: 'Wikipedia - feature workflow',
+      appName: 'Wikipedia - feature workflow - 1',
       // Differences must not fail the run: the review agent decides. On CI the fixture
       // defaults to 'afterAll', i.e. getAllTestResults(true), which throws on diffs.
       failTestsOnDiff: false,
