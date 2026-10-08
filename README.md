@@ -45,6 +45,8 @@ Two thresholds apply at different times:
 
 The AI **never saves baselines**. A person saves them in Eyes.
 
+**What the AI may do in Eyes** is set by switches in the same file (section *Eyes MCP behaviour*): Auto-accept, Auto-reject, Mask dynamic content, and whether a decision applies to the same test on other browsers/devices. All **on** → the Eyes MCP resolves steps directly (`mode: "resolve"`). Any **off** → the MCP reads only (`mode: "inspect"`) and the AI just recommends for that part — useful for the first week of a trial.
+
 ## What's where
 
 | Path | What it is |
