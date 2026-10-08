@@ -1,0 +1,117 @@
+{
+  "subpixel-shift": {
+    "label": "Sub-pixel shift nav bar",
+    "action": "css",
+    "selector": ".vector-column-start",
+    "property": "transform",
+    "value": "translateY(0.5px)",
+    "description": "Shifts the left navigation bar down by half a pixel"
+  },
+  "replace-icon": {
+    "label": "Replace external link icon",
+    "action": "css",
+    "selector": ".mw-parser-output a.external",
+    "property": "background-image",
+    "value": "url('/assets/wikipedia/58c80db746c6.png')",
+    "description": "Replaces the external link icon with an alternative icon"
+  },
+  "remove-banner": {
+    "label": "Remove citations banner",
+    "action": "remove",
+    "selector": "table.ambox-Refimprove",
+    "description": "Removes the \"additional citations\" banner causing a massive vertical displacement"
+  },
+  "expand-qa-paragraph": {
+    "label": "Expand QA paragraph text",
+    "action": "replace",
+    "selector": "p:has(#cite_ref-Prasad_4-0)",
+    "value": "Frequently, functional testing is a <a href=\"/wiki/Quality_assurance\" title=\"Quality assurance\">quality assurance</a> (QA) process.<sup id=\"cite_ref-Prasad_4-0\" class=\"reference\"><a href=\"#cite_note-Prasad-4\"><span class=\"cite-bracket\">[</span>4<span class=\"cite-bracket\">]</span></a></sup> In practice, it forms an integral part of the software development lifecycle, helping teams verify that newly introduced functionality aligns with defined requirements and the intended user experience. It is often carried out alongside other testing disciplines such as performance testing and security testing to provide comprehensive coverage.",
+    "description": "Expands the QA paragraph with additional text causing a massive vertical displacement"
+  },
+  "move-footer": {
+    "label": "Shift article footer right",
+    "action": "css",
+    "selector": "#footer",
+    "property": "margin-left",
+    "value": "10px",
+    "description": "Moves the article footer 10 pixels to the right"
+  },
+  "rename-login": {
+    "label": "Rename login link",
+    "action": "replace",
+    "selector": "#pt-login-2 a span",
+    "value": "Login",
+    "description": "Changes the \"Log in\" link text to \"Login\" causing horizontal displacement"
+  },
+  "shift-globe": {
+    "label": "Shift globe onto wordmark (narrow screens)",
+    "action": "css",
+    "selector": ".central-featured-logo",
+    "rules": [
+      {
+        "property": "left",
+        "value": "30px",
+        "media": "(max-width: 480px)"
+      },
+      {
+        "property": "left",
+        "value": "65px",
+        "media": "(min-width: 481px) and (max-width: 899px)"
+      }
+    ],
+    "description": "On phone and tablet-width screens, moves the globe logo 30 pixels to the right so it overlaps the Wikipedia text logo next to it"
+  },
+  "cut-search": {
+    "label": "Cut search button (narrow screens)",
+    "action": "script",
+    "value": "(function(){if(!document.querySelector('button.pure-button-primary-progressive'))return;var style=document.createElement('style');style.textContent='#cut-search-overlay{position:absolute;right:0;width:10vw;height:50px;background:#fff;z-index:1000;top:468.59375px}@media (max-width:480px){#cut-search-overlay{top:98.59375px}}';document.head.appendChild(style);var div=document.createElement('div');div.id='cut-search-overlay';document.body.appendChild(div)})();",
+    "description": "Below 900px width, the search button is increasingly hidden behind a white overlay as the screen narrows"
+  },
+  "white-search-button": {
+    "label": "Make search button white",
+    "action": "css",
+    "selector": "button.pure-button.pure-button-primary-progressive",
+    "rules": [
+      {
+        "property": "background-color",
+        "value": "white"
+      },
+      {
+        "property": "border-color",
+        "value": "white"
+      }
+    ],
+    "description": "Changes the portal page search button background and border to white"
+  },
+  "remove-app-store-badge": {
+    "label": "Remove App Store badge",
+    "action": "remove",
+    "selector": ".app-badge-ios",
+    "description": "Removes the \"Download on the App Store\" app badge"
+  },
+  "shuffle-languages": {
+    "label": "Shuffle language positions",
+    "action": "script",
+    "value": "(function(){var n=Array.prototype.slice.call(document.querySelectorAll('.central-featured-lang'));var p=n.map(function(e){return{lang:e.getAttribute('lang'),dir:e.getAttribute('dir'),html:e.innerHTML}});for(var i=p.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=p[i];p[i]=p[j];p[j]=t}n.forEach(function(e,i){e.setAttribute('lang',p[i].lang);e.setAttribute('dir',p[i].dir);e.innerHTML=p[i].html})})();",
+    "description": "Randomly shuffles which language appears in each fixed position slot around the globe, on every page load"
+  },
+  "remove-sanity-section": {
+    "label": "Remove Sanity testing section",
+    "action": "remove",
+    "selector": "section[aria-labelledby=\"Sanity_testing\"]",
+    "description": "Removes the entire \"Sanity testing\" section, header and body, from the Functional testing article"
+  },
+  "header-typo": {
+    "label": "Typo in Regression testing header",
+    "action": "replace",
+    "selector": "h3#Regression_testing",
+    "value": "Regresion testing",
+    "description": "Misspells the \"Regression testing\" section header as \"Regresion testing\""
+  },
+  "random-article-count": {
+    "label": "Random article count",
+    "action": "script",
+    "value": "(function(){var targets=[{id:'js-link-box-en',sep:','},{id:'js-link-box-de',sep:'.'}];targets.forEach(function(t){var box=document.getElementById(t.id);if(!box)return;var small=box.querySelector('small');if(!small)return;var textNode=small.firstChild;if(!textNode)return;var m=textNode.textContent.match(/^([\\d.,]+)(\\+?)(\\s*)$/);if(!m)return;var num=parseInt(m[1].split(t.sep).join(''),10);var newNum=num+Math.floor(Math.random()*800000)+1;var formatted=newNum.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,t.sep);textNode.textContent=formatted+m[2]+m[3]})})();",
+    "description": "Randomly bumps the English and Deutsch article counts by up to 800,000, keeping each locale's number format"
+  }
+}

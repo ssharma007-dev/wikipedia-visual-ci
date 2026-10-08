@@ -43,6 +43,10 @@ Two thresholds apply at different times:
 
 The AI **never saves baselines**. A person saves them in Eyes.
 
+## Feature flags (for demos)
+
+`site/wikipedia/flags.json` lists the demo-runner feature flags, all `false` on `main`. Set one to `true` in a pull request and the server applies it (`flag-definitions.json` says what each one does), so a flag change is a normal, reviewable code change. Examples: `remove-banner`, `rename-login`, `cut-search`, `move-footer`.
+
 ## What's where
 
 | Path | What it is |
