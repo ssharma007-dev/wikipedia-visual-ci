@@ -227,6 +227,13 @@ jobs:
         env:
           KEY: ${{ steps.task.outputs.key }}
         run: |
+          # Only commit code the agent finished verifying (it wrote its report); never half-done work.
+          if [ ! -f agent-report/report.json ]; then
+            if grep -q "session limit\|usage limit\|rate limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
+              echo "::error::Agent 1 stopped early: Claude usage limit reached — re-run later (Jira button or Actions → Run workflow)."
+            else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
+            exit 1
+          fi
           git add -A site tests
           if git diff --cached --quiet; then echo "No code changes to commit"; exit 0; fi
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
