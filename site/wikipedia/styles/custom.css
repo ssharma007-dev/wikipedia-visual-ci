@@ -7,3 +7,16 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-7: fundraising campaign — article header "Donate" link in campaign red.
+   NOTE: #D73333 is not a design-system color token (see guidelines/design-system.md, Color
+   tokens section); flagged for human review, not auto-approved. */
+#pt-sitesupport > a,
+#pt-sitesupport-2 > a {
+  color: #D73333;
+}
+
+#pt-sitesupport > a:visited,
+#pt-sitesupport-2 > a:visited {
+  color: #D73333;
+}
