@@ -13,13 +13,20 @@ name: Agent 1 — implement task
 on:
   push:
     branches-ignore: [main]
+  # Started from Jira (Automation rule → GitHub API) or the Actions tab: only the ticket key is needed.
+  workflow_dispatch:
+    inputs:
+      key:
+        description: 'Jira ticket key, e.g. WIKI-8'
+        required: true
+        type: string
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: agent-${{ github.ref }}
+  group: agent-${{ inputs.key || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -36,7 +43,7 @@ jobs:
   implement:
     name: Implement, test, analyse, report
     # Skip the agent's own commits (they also never trigger workflows, since they use GITHUB_TOKEN)
-    if: ${{ !contains(github.event.head_commit.message, '[agent]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[agent]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -44,26 +51,53 @@ jobs:
       merged: ${{ steps.merge.outputs.merged }}
     env:
       APPLITOOLS_BATCH_ID: agent-${{ github.run_id }}-${{ github.run_attempt }}
-      # Eyes branching: this branch, compared with main's baseline. New tests are NOT auto-saved.
-      EYES_BRANCH_NAME: ${{ github.repository }}/${{ github.ref_name }}
+      # Eyes branching: the task branch (set below), compared with main's baseline. New tests are NOT auto-saved.
       EYES_PARENT_BRANCH_NAME: ${{ github.repository }}/main
       EYES_SAVE_NEW_TESTS: 'false'
 
     steps:
-      - name: Find the task named in the commit message
+      - name: Find the task (commit message, or the key sent from Jira)
         id: task
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
+          INPUT_KEY: ${{ inputs.key }}
         run: |
-          KEY=$(printf '%s' "$MESSAGE" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
-          if [ -z "$KEY" ]; then echo "No task key in the commit message — nothing to implement."; echo "key=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          KEY=$(printf '%s\n%s' "$INPUT_KEY" "$MESSAGE" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          if [ -z "$KEY" ]; then echo "No task key — nothing to implement."; echo "key=" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "key=$KEY" >> "$GITHUB_OUTPUT"
-          echo "Task: $KEY"
+          echo "Task: $KEY (started by ${{ github.event_name }})"
 
       - uses: actions/checkout@v4
         if: steps.task.outputs.key != ''
         with:
           fetch-depth: 0
+
+      # Started from Jira: use the ticket's branch if one exists, else create feature/<KEY>-<summary> from
+      # main and commit the task file synced from Jira. A push always runs on the pushed branch.
+      - name: Prepare the task branch
+        if: steps.task.outputs.key != ''
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BR=$(git branch -r --format='%(refname:short)' | sed 's#^origin/##' | grep -E "(^|[^0-9A-Za-z])$KEY([^0-9]|$)" | grep -vx main | head -1 || true)
+            if [ -n "$BR" ]; then git switch "$BR"
+            else
+              node scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
+              SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
+              BR="feature/$KEY-$SLUG"; git switch -c "$BR" origin/main
+            fi
+            if ! ls "$TASKS_DIR"/"$KEY"-*.md >/dev/null 2>&1; then
+              mkdir -p "$TASKS_DIR"; node scripts/jira.mjs fetch "$KEY" > "$TASKS_DIR/$KEY-${BR#feature/$KEY-}.md"
+              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: task synced from Jira" && git push -u origin "$BR"
+            fi
+          else
+            BR="${{ github.ref_name }}"
+          fi
+          echo "TASK_BRANCH=$BR" >> "$GITHUB_ENV"
+          echo "EYES_BRANCH_NAME=${{ github.repository }}/$BR" >> "$GITHUB_ENV"
+          echo "Task branch: $BR"
 
       - uses: actions/setup-node@v4
         if: steps.task.outputs.key != ''
@@ -93,7 +127,7 @@ jobs:
           git show origin/main:guidelines/design-system.md > ci-context/design-system.md
           git show origin/main:guidelines/review-rules.md  > ci-context/review-rules.md
           git show origin/main:guidelines/agent-implement.md > ci-context/agent-implement.md
-          echo "APPLITOOLS_BATCH_NAME=$KEY · Agent 1 · ${{ github.ref_name }}" >> "$GITHUB_ENV"
+          echo "APPLITOOLS_BATCH_NAME=$KEY · Agent 1 · $TASK_BRANCH" >> "$GITHUB_ENV"
           echo "Task file: $FILE · review mode: $MODE · Jira: $JIRA ($LABELS)"; cat ci-context/task.md
 
       - name: "Jira: In Progress"
@@ -189,7 +223,7 @@ jobs:
           if git diff --cached --quiet; then echo "No code changes to commit"; exit 0; fi
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."
-          git push origin HEAD:${{ github.ref_name }}
+          git push origin HEAD:"$TASK_BRANCH"
 
       - name: Open or update the pull request
         id: pr
@@ -198,7 +232,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           KEY: ${{ steps.task.outputs.key }}
         run: |
-          BR="${{ github.ref_name }}"
+          BR="$TASK_BRANCH"
           TITLE="$KEY: $(head -1 ci-context/task.md | sed -E 's/^#+ *//; s/^[A-Z]+-[0-9]+ *[—-]* *//')"
           N=$(gh pr list --head "$BR" --state open --json number --jq '.[0].number // empty')
           if [ -z "$N" ]; then
