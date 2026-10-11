@@ -11,10 +11,12 @@ export default defineConfig<EyesFixture>({
   reporter: [['list'], ['html', { open: 'never' }], ['@applitools/eyes-playwright/reporter']],
   use: {
     eyesConfig: {
-      appName: 'New-App-Liran-Shreya-8th_October',
+      appName: 'Wikipedia - agent workflow',
       // Differences must not fail the run: the review agent decides. On CI the fixture
       // defaults to 'afterAll', i.e. getAllTestResults(true), which throws on diffs.
       failTestsOnDiff: false,
+      // Agent runs set EYES_SAVE_NEW_TESTS=false so tests the agent writes wait for a person to save them.
+      saveNewTests: process.env.EYES_SAVE_NEW_TESTS !== 'false',
       // Eyes branching (set by CI): main runs use '<owner>/<repo>/main'; a PR runs on
       // '<owner>/<repo>/<pr-branch>' with '<owner>/<repo>/main' as its parent, so it inherits
       // main's baseline until its own changes are saved.

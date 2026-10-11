@@ -90,6 +90,21 @@ Repository secrets (Settings → Secrets and variables → Actions):
 
 Baselines come from the first run on `main` (or a manual run via **Actions → Visual tests → Run workflow**).
 
+## Agent 1 — implement a task from a commit
+
+Put task files in `tasks/` on your branch, named `<KEY>-<anything>.md` (e.g. `tasks/WIKI-101-remove-app-store-badge.md`).
+Push a commit whose message contains the key (e.g. `WIKI-101: hide the App Store badge on phones`) — **one task per commit**.
+
+[`implement-task.yml`](.github/workflows/implement-task.yml) then runs **Agent 1** ([instructions](guidelines/agent-implement.md)):
+
+1. reads `tasks/WIKI-101-*.md` from the branch, plus the design system and review rules from `main`;
+2. implements the task (only `site/` and `tests/` may change), finds the relevant tests and writes new ones if needed;
+3. runs the visual tests and analyses every difference with the Applitools Eyes MCP — **real change** (task + guidelines) → accepted, **bug** → rejected with evidence and a fix;
+4. publishes an **HTML report** (artifact `agent-report-WIKI-101`): what was implemented, tests, findings with evidence, baseline recommendations and why, bugs vs real changes;
+5. commits its implementation (`[agent] WIKI-101: …`) and opens a PR.
+
+**People stay in charge:** the agent never saves Eyes baselines or merges. A reviewer reads the report, saves in Eyes, and merges the PR.
+
 ## Jira
 
 Secrets `JIRA_BASE_URL` (`https://<site>.atlassian.net`), `JIRA_EMAIL` and `JIRA_API_TOKEN` connect the pipeline to Jira. Without them, tickets come from `guidelines/tasks/<KEY>-*.md` and no Jira comment is posted. Helper: `scripts/jira.mjs`.
