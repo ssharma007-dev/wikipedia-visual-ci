@@ -12,6 +12,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 |---|---|
 | `ci-context/task.md` | **The task** — the `tasks/<KEY>-*.md` file on this branch, picked by the key in the commit message. Implement this and nothing else. |
 | `ci-context/commit.txt` | The commit message that triggered you (use its words to find relevant tests). |
+| `ci-context/mode.txt` | `manual` or `auto`. In **auto** mode, if your report has no bugs and nothing is left unresolved, the pipeline saves the baselines and merges — so be strict: anything you are unsure about must be left unresolved, never accepted. |
 | `ci-context/design-system.md` | The design system (from `main`). Your change must follow it. |
 | `ci-context/review-rules.md` | How to classify differences and what you may do in Eyes (from `main`). Follow its classes, thresholds and "Eyes MCP behaviour" switches. |
 | `site/wikipedia/` | The site. `styles/custom.css` is the team stylesheet; `pages/` holds the HTML; `flags.json` holds demo feature flags. |
@@ -49,6 +50,8 @@ You run unattended. Nobody will answer questions — decide, and explain your re
      system → reject it in Eyes and document it.
    - **Noise** — ≤ 2px with no DOM change → accept.
    - Not sure → leave unresolved for a person.
+   - Also use the review rules' other classes where they fit (environment/infra change, flaky capture,
+     content change, third-party) — each has its own action.
    **Never save or reset baselines** (those tools are blocked). A person saves after review.
    New tests you wrote appear as **New** steps — they are not saved automatically; recommend
    whether a person should save them.

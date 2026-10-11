@@ -2,6 +2,9 @@
 //   node scripts/jira.mjs fetch <KEY>                       → prints the ticket as markdown (for the AI)
 //   node scripts/jira.mjs comment <KEY> <verdict.json> <pr-url> <batch-url>
 //                                                          → posts the AI verdict as a comment on the ticket
+//   node scripts/jira.mjs labels <KEY>                      → prints the ticket's labels (comma-separated)
+//   node scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
+//   node scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
 // Needs JIRA_BASE_URL (https://<site>.atlassian.net), JIRA_EMAIL and JIRA_API_TOKEN.
 import fs from 'node:fs';
 
@@ -83,7 +86,24 @@ ${adfToText(f.description) || '_(no description)_'}`);
   };
   await jira(`/rest/api/3/issue/${key}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
   console.log(`Commented on ${key}`);
+} else if (command === 'labels') {
+  const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
+  console.log((issue.fields.labels ?? []).join(','));
+} else if (command === 'transition') {
+  // Move the ticket to the named status, if the workflow allows it from where it is now.
+  const target = rest.join(' ').toLowerCase();
+  const { transitions } = await jira(`/rest/api/3/issue/${key}/transitions`);
+  const t = transitions.find((x) => x.to?.name?.toLowerCase() === target || x.name.toLowerCase() === target);
+  if (!t) { console.log(`${key}: no transition to "${target}" (now available: ${transitions.map((x) => x.to?.name).join(', ')})`); process.exit(0); }
+  await jira(`/rest/api/3/issue/${key}/transitions`, { method: 'POST', body: JSON.stringify({ transition: { id: t.id } }) });
+  console.log(`${key} → ${t.to?.name ?? t.name}`);
+} else if (command === 'note') {
+  // Post a plain-text comment (one paragraph per line of the given file).
+  const lines = fs.readFileSync(rest[0], 'utf-8').split('\n').filter((l) => l.trim());
+  const body = { type: 'doc', version: 1, content: lines.map((l) => ({ type: 'paragraph', content: [{ type: 'text', text: l }] })) };
+  await jira(`/rest/api/3/issue/${key}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
+  console.log(`Commented on ${key}`);
 } else {
-  console.error('Usage: jira.mjs fetch <KEY> | comment <KEY> <verdict.json> <pr-url> <batch-url>');
+  console.error('Usage: jira.mjs fetch|labels <KEY> | transition <KEY> <status> | note <KEY> <file> | comment <KEY> <verdict.json> <pr-url> <batch-url>');
   process.exit(2);
 }

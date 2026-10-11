@@ -3,6 +3,13 @@ name: Agent 1 — implement task
 # A push to any branch except main whose commit message names a task (e.g. "WIKI-101") makes
 # Agent 1 implement tasks/WIKI-101-*.md from that branch, run the visual tests, analyse the
 # results with the Applitools Eyes MCP and publish an HTML report. One task per commit.
+#
+# Review mode (per ticket):
+#   manual (default)                 → the agent accepts/rejects in Eyes; a person saves and merges.
+#   auto (Jira label visual-auto-approve, or a "visual-auto-approve" line in the task file)
+#                                    → if there are NO bugs and NO unresolved steps, the pipeline saves the
+#                                      baselines, merges the PR, refreshes main's baseline, and moves the ticket
+#                                      to Done. If anything is wrong, it falls back to a person.
 on:
   push:
     branches-ignore: [main]
@@ -15,6 +22,16 @@ concurrency:
   group: agent-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  CI: true
+  TASKS_DIR: tasks
+  APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
+  APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+  APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+  JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+  JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+  JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
 jobs:
   implement:
     name: Implement, test, analyse, report
@@ -22,12 +39,10 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[agent]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      key: ${{ steps.task.outputs.key }}
+      merged: ${{ steps.merge.outputs.merged }}
     env:
-      CI: true
-      TASKS_DIR: tasks
-      APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
-      APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
-      APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
       APPLITOOLS_BATCH_ID: agent-${{ github.run_id }}-${{ github.run_attempt }}
       # Eyes branching: this branch, compared with main's baseline. New tests are NOT auto-saved.
       EYES_BRANCH_NAME: ${{ github.repository }}/${{ github.ref_name }}
@@ -50,7 +65,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Load the task file and the guidelines
+      - uses: actions/setup-node@v4
+        if: steps.task.outputs.key != ''
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Load the task, review mode and guidelines
         if: steps.task.outputs.key != ''
         id: ctx
         env:
@@ -62,18 +83,22 @@ jobs:
           [ -n "$FILE" ] || { echo "::error::No task file $TASKS_DIR/$KEY-*.md on this branch"; exit 1; }
           cp "$FILE" ci-context/task.md; echo "file=$FILE" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$MESSAGE" > ci-context/commit.txt
+          # Review mode: the Jira label wins; the task file can also opt in.
+          JIRA=no; LABELS=""
+          if LABELS=$(node scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
+          if echo ",$LABELS," | grep -q ',visual-auto-approve,' || grep -qi 'visual-auto-approve' "$FILE"; then MODE=auto; else MODE=manual; fi
+          echo "$MODE" > ci-context/mode.txt
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"; echo "jira=$JIRA" >> "$GITHUB_OUTPUT"
           # Rules come from main, so a branch can't change what it is judged by
           git show origin/main:guidelines/design-system.md > ci-context/design-system.md
           git show origin/main:guidelines/review-rules.md  > ci-context/review-rules.md
           git show origin/main:guidelines/agent-implement.md > ci-context/agent-implement.md
           echo "APPLITOOLS_BATCH_NAME=$KEY · Agent 1 · ${{ github.ref_name }}" >> "$GITHUB_ENV"
-          echo "Task file: $FILE"; cat ci-context/task.md
+          echo "Task file: $FILE · review mode: $MODE · Jira: $JIRA ($LABELS)"; cat ci-context/task.md
 
-      - uses: actions/setup-node@v4
-        if: steps.task.outputs.key != ''
-        with:
-          node-version: 20
-          cache: npm
+      - name: "Jira: In Progress"
+        if: steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
+        run: node scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "In Progress" || true
 
       - name: Install dependencies
         if: steps.task.outputs.key != ''
@@ -117,12 +142,31 @@ jobs:
             esac
           done < ci-context/changed.txt
 
+      # ---- auto mode: save only when there are no bugs and nothing unresolved ----
+      - name: "Auto mode: save baselines in Eyes"
+        id: save
+        if: steps.task.outputs.key != '' && steps.ctx.outputs.mode == 'auto'
+        run: |
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo missing)
+          B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || echo "")
+          BUGS=$(node -p '(require("./agent-report/report.json").bugs||[]).length' 2>/dev/null || echo 1)
+          if [ "$V" = "bugs-found" ] || [ "$BUGS" != "0" ] || [ -z "$B" ]; then
+            echo "Auto mode: NOT saving (verdict $V, bugs $BUGS) — a person decides."; echo "saved=no" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if node scripts/eyes-save.mjs "$B"; then
+            echo "saved=yes" >> "$GITHUB_OUTPUT"
+            node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Auto mode (Jira label visual-auto-approve): no bugs and nothing unresolved, so the pipeline saved the baselines.";require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+          else
+            echo "saved=no" >> "$GITHUB_OUTPUT"; echo "Auto mode: Eyes guard refused to save — a person decides."
+          fi
+
       - name: Render the HTML report
         if: always() && steps.task.outputs.key != ''
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if [ -f agent-report/report.json ]; then
             node scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
+            printf '\n**Review mode:** %s\n' "$(cat ci-context/mode.txt)" >> agent-report/summary.md
             cat agent-report/summary.md >> "$GITHUB_STEP_SUMMARY"
           else
             echo "## ⚠️ Agent 1 did not produce a report — see the run log" | tee agent-report/summary.md >> "$GITHUB_STEP_SUMMARY"
@@ -147,20 +191,59 @@ jobs:
           git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."
           git push origin HEAD:${{ github.ref_name }}
 
-      - name: Open or update the pull request (a person merges)
+      - name: Open or update the pull request
+        id: pr
         if: always() && steps.task.outputs.key != ''
         env:
           GH_TOKEN: ${{ github.token }}
           KEY: ${{ steps.task.outputs.key }}
         run: |
           BR="${{ github.ref_name }}"
-          TITLE="$KEY: $(head -1 ci-context/task.md | sed -E 's/^#+ *//')"
+          TITLE="$KEY: $(head -1 ci-context/task.md | sed -E 's/^#+ *//; s/^[A-Z]+-[0-9]+ *[—-]* *//')"
           N=$(gh pr list --head "$BR" --state open --json number --jq '.[0].number // empty')
           if [ -z "$N" ]; then
             gh pr create --base main --head "$BR" --title "$TITLE" --body-file agent-report/summary.md
+            N=$(gh pr list --head "$BR" --state open --json number --jq '.[0].number // empty')
           else
             gh pr comment "$N" --body-file agent-report/summary.md
           fi
+          echo "number=$N" >> "$GITHUB_OUTPUT"
+          echo "url=${{ github.server_url }}/${{ github.repository }}/pull/$N" >> "$GITHUB_OUTPUT"
+
+      - name: "Auto mode: merge the PR"
+        id: merge
+        if: steps.task.outputs.key != '' && steps.save.outputs.saved == 'yes' && steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch; then
+            echo "merged=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "merged=no" >> "$GITHUB_OUTPUT"; echo "::warning::Auto-merge failed (e.g. a conflict with main) — a person merges."
+          fi
+
+      - name: "Jira: report back"
+        if: always() && steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo "no report")
+          S=$(node -p 'require("./agent-report/report.json").implementation.summary' 2>/dev/null || echo "")
+          B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || echo "")
+          RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "🤖 Agent 1 implemented $KEY — verdict: $V (review mode: ${{ steps.ctx.outputs.mode }})"
+            [ -n "$S" ] && echo "What it did: $S"
+            echo "Pull request: ${{ steps.pr.outputs.url }}"
+            [ -n "$B" ] && echo "Eyes batch: $B"
+            echo "HTML report: $RUN (artifact agent-report-$KEY)"
+            if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then echo "Auto mode: no bugs, nothing unresolved → baselines saved and PR merged automatically."
+            elif [ "${{ steps.ctx.outputs.mode }}" = "auto" ]; then echo "Auto mode was ON, but the pipeline did not finish alone (bugs, unresolved steps or a merge conflict) → a person reviews, saves and merges."
+            else echo "Manual mode: a person reviews the report, saves the baselines in Eyes and merges the PR."; fi
+          } > ci-context/jira-note.txt
+          node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+          if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then node scripts/jira.mjs transition "$KEY" "Done" || true
+          else node scripts/jira.mjs transition "$KEY" "In Review" || true; fi
 
       - name: Verdict
         if: steps.task.outputs.key != ''
@@ -169,3 +252,37 @@ jobs:
           echo "Agent 1 verdict: $V"
           [ "$V" = "bugs-found" ] && { echo "::error::Bugs found — see the HTML report"; exit 1; } || true
           [ "$V" = "missing" ] && exit 1 || true
+
+  # After an auto-merge, refresh main's Eyes baseline from the merged code (one at a time).
+  main-baseline:
+    name: "Auto mode: refresh main's baseline"
+    needs: implement
+    if: needs.implement.outputs.merged == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: main-baseline
+      cancel-in-progress: false
+    env:
+      APPLITOOLS_BATCH_ID: main-baseline-${{ github.run_id }}-${{ github.run_attempt }}
+      APPLITOOLS_BATCH_NAME: "main · baseline after ${{ needs.implement.outputs.key }} (auto)"
+      EYES_BRANCH_NAME: ${{ github.repository }}/main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install and start the site
+        run: |
+          npm ci && npx playwright install --with-deps chromium
+          node server.mjs > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3001/wikipedia > /dev/null && break; sleep 1; done
+      - name: Run the visual tests on merged main
+        run: npx playwright test 2>&1 | tee main-run.log
+      - name: Accept and save (the merged change was already approved)
+        run: |
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' main-run.log)
+          node scripts/eyes-save.mjs "$B" --accept-all
