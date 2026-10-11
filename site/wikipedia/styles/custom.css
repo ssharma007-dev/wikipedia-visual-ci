@@ -7,3 +7,8 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-10: bold "Create account" header link on article pages (desktop + phone) to lift sign-ups. */
+.vector-header .vector-user-links li[id^="pt-createaccount"] a {
+	font-weight: 600;
+}
