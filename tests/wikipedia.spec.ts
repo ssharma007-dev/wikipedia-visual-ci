@@ -15,3 +15,9 @@ test('Search for "functional testing"', async ({ page, eyes }) => {
 
   await eyes.check('Functional testing page', { fully: true });
 });
+
+test('Article header shows Donate, Create account and Log in links', async ({ page, eyes }) => {
+  await page.goto(`${BASE}/wiki/Functional_testing`);
+
+  await eyes.check('Article header links', { region: '#p-vector-user-menu-overflow', fully: false });
+});
