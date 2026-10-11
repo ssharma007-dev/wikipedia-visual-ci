@@ -86,10 +86,12 @@ jobs:
             else
               node scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
               SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
-              BR="feature/$KEY-$SLUG"; git switch -c "$BR" origin/main
+              TYPE=$(node scripts/jira.mjs type "$KEY" 2>/dev/null || echo feature)
+              case "$TYPE" in bug) PFX=bugfix ;; hotfix|refactor|chore|content|experiment|revert) PFX=$TYPE ;; *) PFX=feature ;; esac
+              BR="$PFX/$KEY-$SLUG"; git switch -c "$BR" origin/main
             fi
             if ! ls "$TASKS_DIR"/"$KEY"-*.md >/dev/null 2>&1; then
-              mkdir -p "$TASKS_DIR"; node scripts/jira.mjs fetch "$KEY" > "$TASKS_DIR/$KEY-${BR#feature/$KEY-}.md"
+              mkdir -p "$TASKS_DIR"; node scripts/jira.mjs fetch "$KEY" > "$TASKS_DIR/$KEY-${BR#*/$KEY-}.md"
               git add "$TASKS_DIR" && git commit -m "[agent] $KEY: task synced from Jira" && git push -u origin "$BR"
             fi
           else
@@ -122,13 +124,19 @@ jobs:
           if LABELS=$(node scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
           if echo ",$LABELS," | grep -q ',visual-auto-approve,' || grep -qi 'visual-auto-approve' "$FILE"; then MODE=auto; else MODE=manual; fi
           echo "$MODE" > ci-context/mode.txt
+          WT=""; [ "$JIRA" = yes ] && WT=$(node scripts/jira.mjs type "$KEY" 2>/dev/null || true)
+          if [ -z "$WT" ] || [ "$WT" = feature ]; then
+            case "$TASK_BRANCH" in bugfix/*|bug/*) WT=bug ;; hotfix/*) WT=hotfix ;; refactor/*) WT=refactor ;; chore/*) WT=chore ;;
+              content/*) WT=content ;; experiment/*) WT=experiment ;; revert/*) WT=revert ;; *) WT=${WT:-feature} ;; esac
+          fi
+          echo "$WT" > ci-context/worktype.txt; echo "worktype=$WT" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"; echo "jira=$JIRA" >> "$GITHUB_OUTPUT"
           # Rules come from main, so a branch can't change what it is judged by
           git show origin/main:guidelines/design-system.md > ci-context/design-system.md
           git show origin/main:guidelines/review-rules.md  > ci-context/review-rules.md
           git show origin/main:guidelines/agent-implement.md > ci-context/agent-implement.md
           echo "APPLITOOLS_BATCH_NAME=$KEY · Agent 1 · $TASK_BRANCH" >> "$GITHUB_ENV"
-          echo "Task file: $FILE · review mode: $MODE · Jira: $JIRA ($LABELS)"; cat ci-context/task.md
+          echo "Task file: $FILE · work type: $WT · review mode: $MODE · Jira: $JIRA ($LABELS)"; cat ci-context/task.md
 
       - name: "Jira: In Progress"
         if: steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
@@ -243,6 +251,25 @@ jobs:
           fi
           echo "number=$N" >> "$GITHUB_OUTPUT"
           echo "url=${{ github.server_url }}/${{ github.repository }}/pull/$N" >> "$GITHUB_OUTPUT"
+
+      - name: "Jira: create a sub-task for each bug found"
+        if: always() && steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          [ -f agent-report/report.json ] || exit 0
+          N=$(node -p '(require("./agent-report/report.json").bugs||[]).length'); [ "$N" -gt 0 ] || { echo "No bugs found"; exit 0; }
+          for i in $(seq 0 $((N-1))); do
+            node -e '
+              const r=require("./agent-report/report.json"), b=r.bugs[+process.argv[1]], e=b.evidence||{};
+              const L=[`Found by Agent 1 while implementing ${r.task.key} (${r.task.workType||"feature"}).`,
+                `Why it is a bug: ${b.whyBug}`, `Rule: ${b.guidelineRef}`, `How to fix: ${b.fix}`,
+                e.eyesUrl?`Eyes evidence: ${e.eyesUrl}`:"", e.dom?`DOM: ${e.dom}`:"",
+                `Pull request: ${process.argv[2]}`, `Severity: ${b.severity}`];
+              require("fs").writeFileSync("ci-context/bug.txt", L.filter(Boolean).join("\n"));
+              require("fs").writeFileSync("ci-context/bug-title.txt", "Visual bug: "+b.title);' "$i" "${{ steps.pr.outputs.url }}"
+            node scripts/jira.mjs subtask "$KEY" "$(cat ci-context/bug-title.txt)" ci-context/bug.txt || true
+          done
 
       - name: "Auto mode: merge the PR"
         id: merge

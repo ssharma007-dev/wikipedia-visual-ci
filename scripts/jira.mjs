@@ -3,6 +3,8 @@
 //   node scripts/jira.mjs comment <KEY> <verdict.json> <pr-url> <batch-url>
 //                                                          → posts the AI verdict as a comment on the ticket
 //   node scripts/jira.mjs labels <KEY>                      → prints the ticket's labels (comma-separated)
+//   node scripts/jira.mjs type <KEY>                        → feature | bug | hotfix | refactor | chore | content | experiment | a11y | revert
+//   node scripts/jira.mjs subtask <KEY> <summary> <file>    → creates a sub-task under <KEY>, prints its key
 //   node scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
 //   node scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
 // Needs JIRA_BASE_URL (https://<site>.atlassian.net), JIRA_EMAIL and JIRA_API_TOKEN.
@@ -86,6 +88,25 @@ ${adfToText(f.description) || '_(no description)_'}`);
   };
   await jira(`/rest/api/3/issue/${key}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
   console.log(`Commented on ${key}`);
+} else if (command === 'type') {
+  // Work type for the agent: from the issue type, then labels.
+  const f = (await jira(`/rest/api/3/issue/${key}?fields=issuetype,labels,priority`)).fields;
+  const labels = (f.labels ?? []).map((l) => l.toLowerCase());
+  const it = (f.issuetype?.name ?? '').toLowerCase();
+  const order = ['hotfix', 'bug', 'refactor', 'chore', 'content', 'experiment', 'a11y', 'revert'];
+  const fromLabel = order.find((t) => labels.includes(t));
+  console.log(fromLabel === 'hotfix' ? 'hotfix' : it === 'bug' ? 'bug' : fromLabel ?? 'feature');
+} else if (command === 'subtask') {
+  // Create a sub-task under <KEY>: subtask <KEY> <summary> <description-file>
+  const [summary, file] = rest;
+  const lines = fs.readFileSync(file, 'utf-8').split('\n').filter((l) => l.trim());
+  const project = key.split('-')[0];
+  const types = (await jira(`/rest/api/3/project/${project}`)).issueTypes;
+  const sub = types.find((t) => t.subtask);
+  const body = { fields: { project: { key: project }, parent: { key }, issuetype: { id: sub.id }, summary: summary.slice(0, 250), labels: ['visual', 'bug', 'found-by-agent'],
+    description: { type: 'doc', version: 1, content: lines.map((l) => ({ type: 'paragraph', content: [{ type: 'text', text: l }] })) } } };
+  const created = await jira('/rest/api/3/issue', { method: 'POST', body: JSON.stringify(body) });
+  console.log(created.key);
 } else if (command === 'labels') {
   const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
   console.log((issue.fields.labels ?? []).join(','));

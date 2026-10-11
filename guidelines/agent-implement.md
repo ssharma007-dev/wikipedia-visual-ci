@@ -12,11 +12,32 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 |---|---|
 | `ci-context/task.md` | **The task** — the `tasks/<KEY>-*.md` file on this branch, picked by the key in the commit message. Implement this and nothing else. |
 | `ci-context/commit.txt` | The commit message that triggered you (use its words to find relevant tests). |
+| `ci-context/worktype.txt` | The kind of work: `feature`, `bug`, `hotfix`, `refactor`, `chore`, `content`, `experiment`, `a11y` or `revert`. It changes what you should expect to see — see **Work types** below. |
 | `ci-context/mode.txt` | `manual` or `auto`. In **auto** mode, if your report has no bugs and nothing is left unresolved, the pipeline saves the baselines and merges — so be strict: anything you are unsure about must be left unresolved, never accepted. |
 | `ci-context/design-system.md` | The design system (from `main`). Your change must follow it. |
 | `ci-context/review-rules.md` | How to classify differences and what you may do in Eyes (from `main`). Follow its classes, thresholds and "Eyes MCP behaviour" switches. |
 | `site/wikipedia/` | The site. `styles/custom.css` is the team stylesheet; `pages/` holds the HTML; `flags.json` holds demo feature flags. |
 | `tests/` | The Playwright + Eyes visual tests. |
+
+## Work types — what to expect
+
+| Type | Expected visual outcome | Extra you must do |
+|---|---|---|
+| `feature` | Only the changes the task describes | Implement; add a test if none covers it |
+| `bug` | Only the fix: the screen moves from **Actual** to **Expected** | **Reproduce first** (step 0). Find the **root cause**. Fix it. Add a **regression test** that would have caught it. Report before/after evidence |
+| `hotfix` | The **smallest possible** fix and **zero other differences** | Same as `bug`, but change as little as possible; any difference outside the fix is a bug. Keep the report short and decisive |
+| `refactor`, `chore` | **No visual change at all** | Any difference is a regression — unless it is clearly an environment/infra rendering change |
+| `content` | Only text changes (layout may reflow slightly) | Check the new text fits — no truncation or overflow |
+| `experiment` | The variant differs; the control does not | Note which variant the tests saw |
+| `a11y` | Visible accessibility improvements (contrast, sizes, focus) | Check against design-system contrast and tap-target rules |
+| `revert` | The screen returns to how it looked before the reverted change | Treat any other difference as a regression |
+
+**Step 0 — for `bug` and `hotfix` only: reproduce.** Before changing code, run the relevant test and
+look at the Eyes result / screenshot on the environment the ticket names. Record whether the
+"Actual" behaviour is visible (`reproduced: true/false`) and what causes it (DOM / CSS evidence).
+If it does **not** reproduce, do not guess a fix: report `reproduced: false` with evidence and stop.
+Note: if `main`'s baseline already contains the bug, the fix shows up as a difference — accept it and
+explain in the baseline recommendation that the old baseline contained the bug.
 
 ## Steps
 
@@ -67,7 +88,8 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
 
 ```json
 {
-  "task": { "key": "WIKI-101", "title": "…", "file": "tasks/WIKI-101-….md" },
+  "task": { "key": "WIKI-101", "title": "…", "file": "tasks/WIKI-101-….md", "workType": "feature" },
+  "bugTicket": { "reproduced": true, "rootCause": "…", "before": "/abs/path.png", "after": "/abs/path.png", "regressionTest": "tests/….spec.ts › …" },
   "verdict": "pass | changes-detected | bugs-found",
   "implementation": {
     "summary": "What you changed and why, in 1–3 sentences.",
@@ -115,6 +137,8 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
   }
 }
 ```
+
+`bugTicket` only for `bug` / `hotfix` work (omit otherwise). `before` / `after` are image paths from the Eyes MCP (baseline vs checkpoint).
 
 `verdict`: `pass` = no differences at all; `changes-detected` = only real changes / noise / new
 tests; `bugs-found` = at least one bug. Keep every Eyes URL exactly as the tools return it.
