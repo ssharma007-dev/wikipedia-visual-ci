@@ -11,7 +11,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 
 | File | What it is |
 |---|---|
-| `ci-context/task.md` | **The ticket** this branch implements (`guidelines/tasks/WIKI-xxx.md`). **Its acceptance criteria are the source of truth for what is expected to change** — and for what must stay unchanged. |
+| `ci-context/task.md` | **The ticket** this branch implements — read from **Jira** by the key in the branch name (fallback: `guidelines/tasks/WIKI-xxx.md`). **Its acceptance criteria are the source of truth for what is expected to change** — and for what must stay unchanged. |
 | `ci-context/design-system.md` | **The design system** (`guidelines/design-system.md`, taken from `main`). Rules every page must follow in every PR. |
 | `ci-context/pr.md` | PR number, title, author and description — supporting detail. If it claims more than the ticket asks for, the ticket wins. |
 | `ci-context/pr.diff` | The code diff of this PR. Use it to tie a visual difference to the change that caused it. |

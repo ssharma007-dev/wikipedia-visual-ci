@@ -24,11 +24,11 @@ PR opened ─► GitHub Actions ─► site up ─► Playwright + Eyes (UFG)
 
 ## Developer flow
 
-1. Pick a ticket from [`guidelines/tasks/`](guidelines/tasks/) — e.g. `WIKI-102-brand-search-button.md`.
-2. `git switch main && git pull && git switch -c feature/WIKI-102-brand-search-button`
+1. The PM / team lead creates the ticket in **Jira** (project key `WIKI`), with acceptance criteria and a "Must not change" list.
+2. The developer creates a branch **containing the Jira key** — e.g. `WIKI-105_brand-search-button` (from Jira's *Create branch*, or `git switch main && git pull && git switch -c WIKI-105_brand-search-button`).
 3. Implement it — usually in `site/wikipedia/styles/custom.css` — following [`guidelines/design-system.md`](guidelines/design-system.md).
 4. Push and open a PR (the template asks for the ticket). CI starts automatically.
-5. The AI reviews every visual difference against **the ticket** and **the design system**, accepts or rejects it in Eyes, and comments ✅/❌ on the PR.
+5. The AI reads **the Jira ticket** (by the key in the branch name), reviews every visual difference against it and **the design system**, accepts or rejects it in Eyes, and comments ✅/❌ on the PR **and on the Jira ticket**.
 6. ❌ → fix and push again. ✅ → a reviewer approves, saves the baselines in Eyes, and merges.
 
 The [`guidelines/`](guidelines/) folder is everything the AI judges against — see its README.
@@ -89,6 +89,10 @@ Repository secrets (Settings → Secrets and variables → Actions):
 - `ANTHROPIC_API_KEY` **or** `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) — runs the Claude agent
 
 Baselines come from the first run on `main` (or a manual run via **Actions → Visual tests → Run workflow**).
+
+## Jira
+
+Secrets `JIRA_BASE_URL` (`https://<site>.atlassian.net`), `JIRA_EMAIL` and `JIRA_API_TOKEN` connect the pipeline to Jira. Without them, tickets come from `guidelines/tasks/<KEY>-*.md` and no Jira comment is posted. Helper: `scripts/jira.mjs`.
 
 ## Run locally
 

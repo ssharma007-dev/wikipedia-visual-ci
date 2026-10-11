@@ -98,6 +98,9 @@ jobs:
         if: env.PR != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           gh pr view "$PR" --json number,title,author,body \
             --template '# PR #{{.number}}: {{.title}}{{"\n\n"}}Author: {{.author.login}}{{"\n\n"}}## Description{{"\n\n"}}{{.body}}{{"\n"}}' \
@@ -109,8 +112,13 @@ jobs:
           BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           TASK=$(ls guidelines/tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
-          if [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
-          else printf 'No ticket found for branch `%s` (expected feature/WIKI-123-... with guidelines/tasks/WIKI-123-*.md).\n' "$BRANCH" > ci-context/task.md; fi
+          echo "TICKET=$TICKET" >> "$GITHUB_ENV"
+          # 1st choice: the ticket from Jira. Fallback: guidelines/tasks/<KEY>-*.md in the repo.
+          if [ -n "$TICKET" ] && node scripts/jira.mjs fetch "$TICKET" > ci-context/task.md 2> ci-context/jira.err; then
+            TASK="Jira $JIRA_BASE_URL/browse/$TICKET"
+          elif [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
+          else printf 'No ticket found for branch `%s` (expected a Jira key such as WIKI-123 in the branch name).\n' "$BRANCH" > ci-context/task.md; TASK=""; fi
+          cat ci-context/jira.err 2>/dev/null || true
           # Design system + review rules: always from main, so a PR can't change the rules it is judged by
           git fetch -q --depth=1 origin "${{ github.base_ref || 'main' }}"
           git show FETCH_HEAD:guidelines/design-system.md > ci-context/design-system.md
@@ -176,6 +184,19 @@ jobs:
             gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
           The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
           fi
+
+      - name: Comment on the Jira ticket
+        if: always() && env.PR != '' && env.TICKET != ''
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          [ -f review/verdict.json ] || { echo "No verdict to post"; exit 0; }
+          BATCH=$(grep -oE 'https://eyes\.applitools\.com/app/(test-results|batches)/[0-9]+[^)]*' review/summary.md 2>/dev/null | grep -vE '/[0-9]+/[0-9]+' | tail -1 || true)
+          node scripts/jira.mjs comment "$TICKET" review/verdict.json \
+            "${{ github.server_url }}/${{ github.repository }}/pull/$PR" "$BATCH" \
+            || echo "::warning::Could not comment on Jira ticket $TICKET (Jira not configured or not reachable)"
 
       - name: Enforce verdict
         if: env.PR != ''
