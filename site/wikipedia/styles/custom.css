@@ -7,3 +7,9 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-9: portal Search button uses the 2026 brand teal (design-system "Portal search bar"). */
+.search-container .pure-button-primary-progressive {
+	background-color: #0e7c7b;
+	border-color: #0e7c7b;
+}
