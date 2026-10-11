@@ -15,3 +15,9 @@ test('Search for "functional testing"', async ({ page, eyes }) => {
 
   await eyes.check('Functional testing page', { fully: true });
 });
+
+test('Article header account link (WIKI-5)', async ({ page, eyes }) => {
+  await page.goto(`${BASE}/wiki/Notfound`);
+
+  await eyes.check('Article header - Notfound page', { fully: true });
+});
