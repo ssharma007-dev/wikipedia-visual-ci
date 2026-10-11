@@ -70,6 +70,9 @@ explain in the baseline recommendation that the old baseline contained the bug.
    - **Bug** — not asked for by the task, on its "Must not change" list, or breaks the design
      system → reject it in Eyes and document it.
    - **Noise** — ≤ 2px with no DOM change → accept.
+   - **Pre-existing** — already on `main` before your change and not caused by your diff (e.g. another
+     open bug) → leave unresolved, list it under findings with class `pre-existing`, and say which
+     ticket or area it belongs to. It is **not** a bug of this task and does not go in `bugs`.
    - Not sure → leave unresolved for a person.
    - Also use the review rules' other classes where they fit (environment/infra change, flaky capture,
      content change, third-party) — each has its own action.
@@ -105,7 +108,7 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
   "findings": [
     {
       "title": "App Store badge hidden on phone",
-      "class": "real-change | bug | noise | dynamic | new-test",
+      "class": "real-change | bug | noise | dynamic | new-test | pre-existing",
       "environments": ["Galaxy S25 Ultra"],
       "decision": "accepted | rejected | masked | unresolved",
       "why": "Which task line / design-system rule this matches or breaks.",
