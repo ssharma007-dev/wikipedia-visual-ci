@@ -85,9 +85,9 @@ jobs:
       - name: Start the Wikipedia site
         if: steps.task.outputs.key != ''
         run: |
-          node server.mjs > server.log 2>&1 &
+          node server.mjs > ci-context/server.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3001/wikipedia > /dev/null && exit 0; sleep 1; done
-          echo "Site did not start"; cat server.log; exit 1
+          echo "Site did not start"; cat ci-context/server.log; exit 1
 
       - name: Agent 1 (Claude + Applitools Eyes MCP)
         if: steps.task.outputs.key != ''
@@ -110,12 +110,12 @@ jobs:
       - name: Keep only allowed changes (site/ and tests/)
         if: steps.task.outputs.key != ''
         run: |
-          git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > changed.txt || true
+          git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > ci-context/changed.txt || true
           while read -r f; do
             case "$f" in site/*|tests/*) echo "kept:      $f" ;;
               *) echo "::warning::Agent changed $f — discarded (only site/ and tests/ are allowed)"; git checkout -- "$f" 2>/dev/null || rm -f "$f" ;;
             esac
-          done < changed.txt
+          done < ci-context/changed.txt
 
       - name: Render the HTML report
         if: always() && steps.task.outputs.key != ''
