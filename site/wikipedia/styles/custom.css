@@ -7,3 +7,14 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-8: 48px tap target for the portal search input and button on phone only (<=480px) */
+@media (max-width: 480px) {
+  #searchInput {
+    height: 48px;
+  }
+
+  .search-container button[type="submit"] {
+    min-height: 48px;
+  }
+}
