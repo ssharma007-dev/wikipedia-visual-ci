@@ -7,3 +7,12 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-101: on phone, the store links to the right app automatically — the App Store badge
+ * in the portal's "Download Wikipedia" box is redundant there. Google Play stays and is
+ * centered by the existing .footer-sidebar-content text-align rule. */
+@media (max-width: 480px) {
+  .app-badges .app-badge-ios {
+    display: none;
+  }
+}
