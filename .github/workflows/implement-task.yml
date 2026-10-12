@@ -192,6 +192,14 @@ jobs:
             esac
           done < ci-context/changed.txt
 
+      # Before / after / differences images for the report — must run before any save.
+      - name: Collect visual evidence from Eyes
+        if: steps.task.outputs.key != ''
+        run: |
+          B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || true)
+          [ -n "$B" ] && [ "$B" != "undefined" ] || { echo "No Eyes batch in the report — skipping evidence"; exit 0; }
+          node scripts/eyes-evidence.mjs "$B" agent-report/evidence || true
+
       # ---- auto mode: save only when there are no bugs and nothing unresolved ----
       - name: "Auto mode: save baselines in Eyes"
         id: save
@@ -210,10 +218,32 @@ jobs:
             echo "saved=no" >> "$GITHUB_OUTPUT"; echo "Auto mode: Eyes guard refused to save — a person decides."
           fi
 
+      - name: Commit the implementation to this branch
+        id: commit
+        if: steps.task.outputs.key != ''
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          # Only commit code the agent finished verifying (it wrote its report); never half-done work.
+          if [ ! -f agent-report/report.json ]; then
+            if grep -q "session limit\|usage limit\|rate limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
+              echo "::error::Agent 1 stopped early: Claude usage limit reached — re-run later (Jira button or Actions → Run workflow)."
+            else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
+            exit 1
+          fi
+          git add -A site tests
+          if git diff --cached --quiet; then echo "No code changes to commit"; echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."
+          git push origin HEAD:"$TASK_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Render the HTML report
         if: always() && steps.task.outputs.key != ''
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
+          export REPORT_SHA="${{ steps.commit.outputs.sha }}"
           if [ -f agent-report/report.json ]; then
             node scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
             node scripts/report-pdf.mjs agent-report/report.html "agent-report/${{ steps.task.outputs.key }}-visual-report.pdf" || echo "::warning::PDF could not be created"
@@ -230,24 +260,6 @@ jobs:
           name: agent-report-${{ steps.task.outputs.key }}
           path: agent-report/
           retention-days: 30
-
-      - name: Commit the implementation to this branch
-        if: steps.task.outputs.key != ''
-        env:
-          KEY: ${{ steps.task.outputs.key }}
-        run: |
-          # Only commit code the agent finished verifying (it wrote its report); never half-done work.
-          if [ ! -f agent-report/report.json ]; then
-            if grep -q "session limit\|usage limit\|rate limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
-              echo "::error::Agent 1 stopped early: Claude usage limit reached — re-run later (Jira button or Actions → Run workflow)."
-            else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
-            exit 1
-          fi
-          git add -A site tests
-          if git diff --cached --quiet; then echo "No code changes to commit"; exit 0; fi
-          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."
-          git push origin HEAD:"$TASK_BRANCH"
 
       - name: Open or update the pull request
         id: pr

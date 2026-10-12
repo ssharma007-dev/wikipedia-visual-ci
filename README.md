@@ -105,7 +105,7 @@ Push a commit whose message contains the key (e.g. `WIKI-101: hide the App Store
 
 **Automatic by default, a person when asked:** if the review finds **no bugs and nothing unresolved**, the pipeline (not the agent) saves the Eyes baselines, merges the PR, refreshes `main`'s baseline and moves the Jira ticket to Done. Add the label **`human-review`** to the Jira ticket (or the PR) and a person reviews, saves and merges instead. Bugs, design violations, unsure steps and merge conflicts **always** go to a person.
 
-**Report:** every run produces a **PDF** (`<KEY>-visual-report.pdf`) — summary, then each bug with *why it is a bug* (evidence: screenshot, Eyes link, DOM change, rule broken) and *how to fix it* — attached to the Jira ticket, plus the same report as HTML in the run's artifacts.
+**Report:** every run produces a **PDF** (`<KEY>-visual-report.pdf`), attached to the Jira ticket (and as HTML in the run's artifacts): a summary; each bug with *why it is a bug* (rule broken, evidence) and *how to fix it*; **before / after / differences-highlighted images for every changed area**, so nobody has to open the Eyes dashboard (links are there if you want to); and every test with links to its **code** (exact commit and line) and its **Eyes result**.
 
 ## Jira
 
