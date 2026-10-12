@@ -32,8 +32,15 @@ test('Search for "functional testing"', async ({ page, eyes }) => {
   await eyes.check('Functional testing page', { fully: true });
 });
 
-test('Article header shows Donate, Create account and Log in links', async ({ page, eyes }) => {
+// WIKI-15: the "Create account" header link is renamed to "Join Wikipedia" on article
+// pages, on both desktop and phone. "Donate" and "Log in" must stay unchanged.
+test('Article header shows Donate, Join Wikipedia and Log in links (WIKI-15)', async ({ page, eyes }) => {
   await page.goto(`${BASE}/wiki/Functional_testing`);
+
+  await expect(page.locator('#pt-createaccount-2 a span')).toHaveText('Join Wikipedia');
+  await expect(page.locator('#pt-createaccount a span').last()).toHaveText('Join Wikipedia');
+  await expect(page.locator('#pt-sitesupport-2 a span')).toHaveText('Donate');
+  await expect(page.locator('#pt-login-2 a span')).toHaveText('Log in');
 
   await eyes.check('Article header links', { region: '#p-vector-user-menu-overflow', fully: false });
 });
