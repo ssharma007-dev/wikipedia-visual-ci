@@ -1,132 +1,49 @@
-# Wikipedia visual CI — Applitools MCP agent in the pipeline (Playwright)
+# From Jira ticket to merged pull request, reviewed by AI
 
-> This is **`main`**, the Playwright (JS) version. A **Python + Selenium** version of the same pipeline lives on the **`python`** branch.
+A product manager writes a Jira ticket. A developer, or the AI, builds it. Playwright and
+Applitools Eyes test it, and an AI reviews every visual change with the Applitools Eyes MCP.
+No bugs → it merges by itself. Otherwise, a person decides.
 
-A pull request on this repo triggers a GitHub Actions build that:
+## The flow
 
-1. starts a local copy of the Wikipedia portal (`server.mjs`, port 3001),
-2. runs two Playwright tests with Applitools Eyes on the Ultrafast Grid (Chrome 1200×800 and Galaxy S25 Ultra),
-3. hands the results to a **Claude agent with the Applitools MCP server**, which reviews every visual difference against what the PR says it changes,
-4. posts the agent's verdict as a PR comment and **passes or fails the check**.
-
-```
-PR opened ─► GitHub Actions ─► site up ─► Playwright + Eyes (UFG)
-                                              │
-                         PR title/description + compact diff + Eyes batch URL
-                                              ▼
-                       Claude + Applitools MCP  ──  guidelines/review-rules.md
-                         · inspects every changed area (image diff + DOM diff)
-                         · accepts expected changes, masks dynamic content, rejects regressions
-                         · never saves baselines
-                                              ▼
-                         PR comment (summary + Eyes links)  +  ✅ / ❌ check
-```
-
-## Developer flow
-
-1. The PM / team lead creates the ticket in **Jira** (project key `WIKI`), with acceptance criteria and a "Must not change" list.
-2. The developer creates a branch **containing the Jira key** — e.g. `WIKI-105_brand-search-button` (from Jira's *Create branch*, or `git switch main && git pull && git switch -c WIKI-105_brand-search-button`).
-3. Implement it — usually in `site/wikipedia/styles/custom.css` — following [`guidelines/design-system.md`](guidelines/design-system.md).
-4. Push and open a PR (the template asks for the ticket). CI starts automatically.
-5. The AI reads **the Jira ticket** (by the key in the branch name), reviews every visual difference against it and **the design system**, accepts or rejects it in Eyes, and comments ✅/❌ on the PR **and on the Jira ticket**.
-6. ❌ → fix and push again. ✅ → a reviewer approves, saves the baselines in Eyes, and merges.
-
-The [`guidelines/`](guidelines/) folder is everything the AI judges against — see its README.
-
-## How the AI decides (the rules)
-
-After the visual tests finish, the AI agent reads **[`guidelines/review-rules.md`](guidelines/review-rules.md)** and applies these rules to every difference Eyes found. Edit that file to change the behavior — no code changes.
-
-| The difference… | 🤖 AI action in Eyes | PR check |
-|---|---|---|
-| Matches what the PR description says should change (any size) | Accept | ✅ PASS |
-| Shift of **2px or less**, no HTML change | Treat as noise, accept | ✅ PASS |
-| **Not** explained by the PR and moves, hides or cuts a button, input or link | Reject | ❌ FAIL |
-| **Not** explained by the PR and changes text or removes content | Reject | ❌ FAIL |
-| **Not** explained by the PR and shifts layout **more than 2px** | Reject | ❌ FAIL |
-| Expected change is **missing** on any browser or device | Reject | ❌ FAIL |
-| AI isn't certain | Leave unresolved | 👤 a person decides |
-
-Two thresholds apply at different times:
-
-- **During the test run:** Eyes decides what counts as a difference, using its match level (`Strict`).
-- **After the test run:** the AI applies the rules above, including the **2px** noise rule.
-
-The AI **never saves baselines**. A person saves them in Eyes.
-
-**What the AI may do in Eyes** is set by switches in the same file (section *Eyes MCP behaviour*): Auto-accept, Auto-reject, Mask dynamic content, and whether a decision applies to the same test on other browsers/devices. All **on** → the Eyes MCP resolves steps directly (`mode: "resolve"`). Any **off** → the MCP reads only (`mode: "inspect"`) and the AI just recommends for that part — useful for the first week of a trial.
-
-## Feature flags (for demos)
-
-`site/wikipedia/flags.json` lists the demo-runner feature flags, all `false` on `main`. Set one to `true` in a pull request and the server applies it (`flag-definitions.json` says what each one does), so a flag change is a normal, reviewable code change. Examples: `remove-banner`, `rename-login`, `cut-search`, `move-footer`.
+1. **Jira ticket** — what should change, and what must not.
+2. **Branch** — its name contains the ticket key (e.g. `feature/WIKI-17-…`), so it links to the ticket.
+3. **Build it** — a developer, or click **Run Agent 1** in Jira and the AI builds it and writes the tests.
+4. **Test** — Playwright + Applitools Eyes on desktop and mobile, compared with the branch the PR merges into.
+5. **AI review** — accepts what the ticket asked for, rejects bugs. If the AI wrote the code, it fixes its own bugs.
+6. **Report** — a PDF with before/after images is attached to the Jira ticket.
+7. **Merge** — automatic when there are no bugs. Add the label `human-review` to always involve a person.
 
 ## What's where
 
 | Path | What it is |
 |---|---|
-| `site/wikipedia/` | Scraped Wikipedia pages and assets (from [applitools/demo-runner](https://github.com/applitools/demo-runner)) |
-| `server.mjs` | Zero-dependency static server: `/wikipedia` → portal |
-| `tests/wikipedia.spec.ts` | The two visual tests |
-| `playwright.config.ts` | Eyes + Ultrafast Grid config |
-| `.mcp.json` | Applitools MCP server for the agent |
-| `guidelines/review-rules.md` | **The agent's policy** — classes, thresholds, output format. Edit the thresholds table to tune the gate. |
-| `.github/workflows/visual-tests.yml` | The pipeline |
-| `scripts/compact-diff.mjs` | Shrinks diffs of minified lines to just the changed part, so the agent can read them |
-
-## Guardrails
-
-- The agent can **inspect, accept, reject and add match regions** in Eyes.
-- It **cannot save or reset baselines** (`eyes_resolve_save` / `eyes_resolve_reset` are disallowed), edit code, or run shell commands.
-- A human saves baselines in Eyes after approving the PR.
+| `site/` | The demo Wikipedia site |
+| `tests/` | Playwright + Eyes tests |
+| `guidelines/` | The rules the AI follows — plain text, edit to change its behaviour |
+| `.github/workflows/` | The pipeline |
+| `scripts/` | Helpers: Jira, Eyes, the PDF report |
 
 ## Setup
 
-Repository secrets (Settings → Secrets and variables → Actions):
-
-- `APPLITOOLS_API_KEY` — runs the tests
-- `APPLITOOLS_READ_KEY` — lets the MCP read results
-- `APPLITOOLS_WRITE_KEY` — lets the MCP accept/reject and add regions
-- `ANTHROPIC_API_KEY` **or** `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) — runs the Claude agent
-
-Baselines come from the first run on `main` (or a manual run via **Actions → Visual tests → Run workflow**).
-
-## Creating a branch from Jira
-
-On a ticket: **Development → Create branch** (GitHub for Atlassian), source branch `main`, keep the ticket key in the name (e.g. `WIKI-17-make-…`). The branch starts from the latest `main`, is linked to the ticket automatically, and [`sync-task-on-branch.yml`](.github/workflows/sync-task-on-branch.yml) adds the ticket copy `tasks/WIKI-17-….md` to it within a minute. Then either code it yourself (`git fetch && git switch WIKI-17-…`) or click **Run Agent 1** in Jira.
-
-## Agent 1 — implement a task from a commit
-
-Put task files in `tasks/` on your branch, named `<KEY>-<anything>.md` (e.g. `tasks/WIKI-101-remove-app-store-badge.md`).
-Push a commit whose message contains the key (e.g. `WIKI-101: hide the App Store badge on phones`) — **one task per commit**.
-
-[`implement-task.yml`](.github/workflows/implement-task.yml) then runs **Agent 1** ([instructions](guidelines/agent-implement.md)):
-
-1. reads `tasks/WIKI-101-*.md` from the branch, plus the design system and review rules from `main`;
-2. implements the task (only `site/` and `tests/` may change), finds the relevant tests and writes new ones if needed;
-3. runs the visual tests and analyses every difference with the Applitools Eyes MCP — **real change** (task + guidelines) → accepted, **bug** → rejected with evidence and a fix;
-4. publishes an **HTML report** (artifact `agent-report-WIKI-101`): what was implemented, tests, findings with evidence, baseline recommendations and why, bugs vs real changes;
-5. commits its implementation (`[agent] WIKI-101: …`) and opens a PR.
-
-**Automatic by default, a person when asked:** if the review finds **no bugs and nothing unresolved**, the pipeline (not the agent) saves the Eyes baselines, merges the PR, refreshes `main`'s baseline and moves the Jira ticket to Done. Add the label **`human-review`** to the Jira ticket (or the PR) and a person reviews, saves and merges instead. Bugs, design violations, unsure steps and merge conflicts **always** go to a person.
-
-**Report:** every run produces a **PDF** (`<KEY>-visual-report.pdf`), attached to the Jira ticket (and as HTML in the run's artifacts): a summary; each bug with *why it is a bug* (rule broken, evidence) and *how to fix it*; **before / after / differences-highlighted images for every changed area**, so nobody has to open the Eyes dashboard (links are there if you want to); and every test with links to its **code** (exact commit and line) and its **Eyes result**.
-
-## Jira
-
-Secrets `JIRA_BASE_URL` (`https://<site>.atlassian.net`), `JIRA_EMAIL` and `JIRA_API_TOKEN` connect the pipeline to Jira. Without them, the ticket comes from the branch snapshot `tasks/<KEY>-*.md` and no Jira comment is posted. Helper: `scripts/jira.mjs`.
+1. Install **GitHub for Atlassian** in Jira and connect this repository.
+2. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`,
+   `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
+3. Optional: a Jira Automation rule for the **Run Agent 1** button, calling this repo's
+   `implement-task.yml` workflow with the ticket key.
 
 ## Run locally
 
 ```bash
 npm ci && npx playwright install chromium
-npm start                # http://localhost:3001/wikipedia
-npx playwright test      # in a second terminal
+npm start              # http://localhost:3001/wikipedia
+npx playwright test    # in a second terminal
 ```
 
-## Demo script
+## Safety
 
-1. Show the open PR **"Remove the Apple App Store badge"** — the description says only the iOS badge goes.
-2. The diff also carries a one-character "tidy-up" in the mobile search CSS. Nobody mentions it.
-3. Open the PR's **Checks** tab → *Visual tests* → watch the tests run, then the agent review.
-4. The PR comment: the badge removal is **Expected** and accepted; the search button pushed off-screen on the Galaxy is a **Regression**, rejected, with the culprit line from the diff. Check is ❌.
-5. Push the one-line fix → the pipeline reruns → ✅. Approve, merge, save the baseline in Eyes.
+The AI can accept or reject changes in Eyes, but it can never save baselines, push or merge — the
+pipeline does that, and only when there are no bugs. It can change only `site/` and `tests/`.
+
+This is a demo that merges straight into `main`. Adapt it to your branches (staging, QA, release)
+and add a human code approval as your team needs.
