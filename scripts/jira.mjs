@@ -115,7 +115,9 @@ ${adfToText(f.description) || '_(no description)_'}`);
   form.append('file', new Blob([fs.readFileSync(file)]), name ?? file.split('/').pop());
   const res = await fetch(`${base}/rest/api/3/issue/${key}/attachments`, { method: 'POST', headers: { Authorization: auth, 'X-Atlassian-Token': 'no-check' }, body: form });
   if (!res.ok) throw new Error(`Jira attach → ${res.status} ${await res.text()}`);
-  console.log(`Attached ${name ?? file} to ${key}`);
+  const [att] = await res.json();
+  console.log(`Attached ${att.filename} to ${key}`);
+  console.log(`ATTACHMENT_URL=${base}/secure/attachment/${att.id}/${encodeURIComponent(att.filename)}`);
 } else if (command === 'labels') {
   const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
   console.log((issue.fields.labels ?? []).join(','));
@@ -130,7 +132,21 @@ ${adfToText(f.description) || '_(no description)_'}`);
 } else if (command === 'note') {
   // Post a plain-text comment (one paragraph per line of the given file).
   const lines = fs.readFileSync(rest[0], 'utf-8').split('\n').filter((l) => l.trim());
-  const body = { type: 'doc', version: 1, content: lines.map((l) => ({ type: 'paragraph', content: [{ type: 'text', text: l }] })) };
+  // [text](url) and bare https:// URLs become clickable links
+  const inline = (line) => {
+    const out = [];
+    const re = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s)]+)/g;
+    let last = 0, m;
+    while ((m = re.exec(line))) {
+      if (m.index > last) out.push({ type: 'text', text: line.slice(last, m.index) });
+      const href = m[2] ?? m[3];
+      out.push({ type: 'text', text: m[1] ?? href, marks: [{ type: 'link', attrs: { href } }] });
+      last = re.lastIndex;
+    }
+    if (last < line.length) out.push({ type: 'text', text: line.slice(last) });
+    return out;
+  };
+  const body = { type: 'doc', version: 1, content: lines.map((l) => ({ type: 'paragraph', content: inline(l) })) };
   await jira(`/rest/api/3/issue/${key}/comment`, { method: 'POST', body: JSON.stringify({ body }) });
   console.log(`Commented on ${key}`);
 } else {
