@@ -213,7 +213,7 @@ jobs:
           fi
           if node scripts/eyes-save.mjs "$B"; then
             echo "saved=yes" >> "$GITHUB_OUTPUT"
-            node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+            node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merges the PR automatically. Add the label human-review to the Jira ticket to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           else
             echo "saved=no" >> "$GITHUB_OUTPUT"; echo "Auto mode: Eyes guard refused to save — a person decides."
           fi
