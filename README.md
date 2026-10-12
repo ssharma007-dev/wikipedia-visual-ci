@@ -6,13 +6,16 @@ No bugs → it merges by itself. Otherwise, a person decides.
 
 ## The flow
 
-1. **Jira ticket** — what should change, and what must not.
-2. **Branch** — its name contains the ticket key (e.g. `feature/WIKI-17-…`), so it links to the ticket.
-3. **Build it** — a developer, or click **Run Agent 1** in Jira and the AI builds it and writes the tests.
-4. **Test** — Playwright + Applitools Eyes on desktop and mobile, compared with the branch the PR merges into.
-5. **AI review** — accepts what the ticket asked for, rejects bugs. If the AI wrote the code, it fixes its own bugs.
-6. **Report** — a PDF with before/after images is attached to the Jira ticket.
-7. **Merge** — automatic when there are no bugs. Add the label `human-review` to always involve a person.
+| Step | Who | What happens |
+|---|---|---|
+| 1. Link Jira with GitHub | Jira admin (once) | Installs **GitHub for Atlassian** and connects this repo. Each product gets a Jira key, e.g. **WIKI**, so tickets are numbered WIKI-1, WIKI-2, … |
+| 2. Create the ticket | PM or team lead | Writes what should change and what must not. Optional labels: `bug`, `hotfix`, `human-review`. Decides who builds it: a developer or the AI. |
+| 3. Create a branch | Developer, or Jira | **Development → Create branch** in the ticket, or `git switch -c feature/WIKI-17-…`. The key in the name links it to the ticket, and the ticket is copied to `tasks/WIKI-17-….md`. |
+| 4. Build it and write tests | Developer **or** AI | A developer codes it, adds Playwright tests and opens a PR. Or anyone clicks **Run Agent 1** in Jira: the AI builds it, writes the tests and opens the PR (creating the branch if needed). |
+| 5. Run the tests | GitHub Actions | Playwright drives the site; Applitools Eyes checks every screen on Chrome desktop and a Galaxy S25 Ultra, compared with the branch the PR merges into. |
+| 6. AI review | AI + Eyes MCP | Asked for by the ticket → accepted. Not asked for, or breaks the design system → rejected as a bug. Unsure → left for a person. If the AI wrote the code, it fixes its own bugs and re-tests (up to 2 rounds). |
+| 7. Report | Pipeline | A PDF (summary, bugs with evidence and fixes, before/after images) is attached to the Jira ticket, with a comment linking the PR and the Eyes results. |
+| 8. Decide and merge | Pipeline, or a person | No bugs → baselines saved, PR merged, ticket moves to Done. Bugs it can't fix, or `human-review` → a person reads the PDF, then fixes or approves, saves and merges. |
 
 ## What's where
 
