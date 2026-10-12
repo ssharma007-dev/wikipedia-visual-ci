@@ -15,3 +15,6 @@
 #pt-sitesupport-2 > a {
 	font-weight: 700;
 }
+
+/* tidy-up: a little more space above the portal footer */
+.footer { margin-top: 8px; }
