@@ -47,6 +47,7 @@ main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}h1{font-size:28px;mar
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:15px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--code)}
 img.evidence{max-width:100%;border:1px solid var(--line);border-radius:8px;margin-top:10px;background:#fff}.tag{font-size:13px;font-weight:600;padding:2px 8px;border-radius:6px}
 ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
+@media print{:root{--bg:#ffffff;--card:#ffffff;--ink:#14213d;--muted:#4a5568;--line:#cfd6dc;--code:#eef1f4}main{padding:0;max-width:none}.box,.card,tr,img.evidence{break-inside:avoid}h2{break-after:avoid}a{color:#1f4e8c}}
 </style></head><body><main>
 <p class="muted">Agent 1 · visual implementation report</p>
 <h1>${esc(r.task?.key)} — ${esc(r.task?.title)}</h1>
@@ -64,6 +65,10 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 <div class="box"><h3>Real changes</h3>${list(r.summary?.realChanges).length ? `<ul>${list(r.summary.realChanges).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None.</p>'}</div>
 <div class="box"><h3>Bugs</h3>${list(r.summary?.bugs).length ? `<ul>${list(r.summary.bugs).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None found.</p>'}</div>
 <div class="box"><h3>Next steps for the reviewer</h3>${list(r.summary?.nextSteps).length ? `<ul>${list(r.summary.nextSteps).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>'}</div>
+
+<h2>Bugs found — evidence and fixes</h2>
+${bugs.length ? bugs.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag bad">${esc(b.severity)}</span></h3>
+<p><b>Why it is a bug:</b> ${esc(b.whyBug)}</p><p class="meta">Rule: ${esc(b.guidelineRef)}</p><p><b>How to fix:</b> ${esc(b.fix)}</p>${evidenceBlock(b.evidence)}</div>`).join('') : '<p class="muted">No bugs found.</p>'}
 
 ${r.bugTicket ? `<h2>Bug: reproduce → fix</h2>
 <div class="box"><p><b>Reproduced:</b> ${r.bugTicket.reproduced ? 'yes' : 'no'}</p><p><b>Root cause:</b> ${esc(r.bugTicket.rootCause)}</p>
@@ -90,9 +95,6 @@ ${recs.length ? `<div class="wrap"><table><tr><th>Step</th><th>Environments</th>
 ${recs.map((x) => `<tr><td>${esc(x.step)}</td><td>${esc(list(x.environments).join(', '))}</td><td><b>${esc(x.action)}</b></td><td>${esc(x.why)}</td></tr>`).join('')}</table></div>` : '<p class="muted">No baseline changes recommended.</p>'}
 <p class="meta">Marked in Eyes: <b>${r.baseline?.updatedInEyes ? 'yes' : 'no'}</b> · Saved: <b>${r.baseline?.saved ? 'yes' : 'no — a person saves after review'}</b>${r.baseline?.note ? ` · ${esc(r.baseline.note)}` : ''}</p>
 
-<h2>Bugs</h2>
-${bugs.length ? bugs.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag bad">${esc(b.severity)}</span></h3>
-<p><b>Why it is a bug:</b> ${esc(b.whyBug)}</p><p class="meta">Rule: ${esc(b.guidelineRef)}</p><p><b>How to fix:</b> ${esc(b.fix)}</p>${evidenceBlock(b.evidence)}</div>`).join('') : '<p class="muted">No bugs found.</p>'}
 </main></body></html>`;
 
 fs.writeFileSync(htmlPath, html);
@@ -110,7 +112,7 @@ ${list(r.summary?.bugs).map((x) => `- ❌ ${x}`).join('\n')}
 
 **Next steps:** ${list(r.summary?.nextSteps).join(' · ') || '—'}
 
-📄 **Full HTML report** (evidence images, baseline reasoning): download the \`agent-report\` artifact from ${runUrl ? `[this run](${runUrl})` : 'the CI run'}.${r.tests?.batchUrl ? ` · [Eyes batch](${r.tests.batchUrl})` : ''}
+📄 **PDF + HTML report** (bugs with evidence and fixes, baseline reasoning): attached to the Jira ticket, and in the \`agent-report\` artifact of ${runUrl ? `[this run](${runUrl})` : 'the CI run'}.${r.tests?.batchUrl ? ` · [Eyes batch](${r.tests.batchUrl})` : ''}
 `;
 fs.writeFileSync(mdPath, md);
 console.log(`Report: ${htmlPath}`);
