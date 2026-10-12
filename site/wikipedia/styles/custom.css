@@ -7,8 +7,3 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
-
-/* Refactor: consolidate search bar and header menu styles */
-@media (max-width: 480px) {
-  .search-container .pure-form button { right: -9.6rem; }
-}
