@@ -96,6 +96,12 @@ jobs:
             fi
           else
             BR="${{ github.ref_name }}"
+            # Branch made by a developer (Jira "Create branch" or git): add the ticket snapshot if it's missing.
+            if ! ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md >/dev/null 2>&1 && node scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
+              SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
+              mkdir -p "$TASKS_DIR"; cp /tmp/task.md "$TASKS_DIR/$KEY-$SLUG.md"
+              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: task synced from Jira" && git push origin "HEAD:$BR"
+            fi
           fi
           echo "TASK_BRANCH=$BR" >> "$GITHUB_ENV"
           echo "EYES_BRANCH_NAME=${{ github.repository }}/$BR" >> "$GITHUB_ENV"
@@ -227,6 +233,13 @@ jobs:
         env:
           KEY: ${{ steps.task.outputs.key }}
         run: |
+          # Only commit code the agent finished verifying (it wrote its report); never half-done work.
+          if [ ! -f agent-report/report.json ]; then
+            if grep -q "session limit\|usage limit\|rate limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
+              echo "::error::Agent 1 stopped early: Claude usage limit reached — re-run later (Jira button or Actions → Run workflow)."
+            else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
+            exit 1
+          fi
           git add -A site tests
           if git diff --cached --quiet; then echo "No code changes to commit"; exit 0; fi
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
