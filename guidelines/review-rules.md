@@ -112,7 +112,7 @@ Set `propagate: "none"` on those calls when "Apply a decision to … other brows
   unresolved). If the review left a step **unresolved**, write "Left unresolved in Eyes → 👤 human
   decides" and list it under 👤 Needs a human.
 
-## Output — write both files before you finish
+## Output — write all three files before you finish
 
 ### `review/verdict.json`
 
@@ -125,6 +125,19 @@ Set `propagate: "none"` on those calls when "Apply a decision to … other brows
 ```
 
 `verdict` is `"pass"` or `"fail"`, per the thresholds above.
+
+### `review/report.json`
+
+The data for the PDF report that is attached to the Jira ticket. Same shape as Agent 1's report
+(see `guidelines/agent-implement.md` → `agent-report/report.json`), filled in from this review:
+
+- `source`: `"pr-review"`.
+- `task`: `{ "key": "<WIKI-xxx or empty>", "title": "<ticket title>", "file": "<Jira link or tasks/ file>", "workType": "<feature | bug | hotfix | …>" }`.
+- `verdict`: `"pass"` if Eyes found no differences, `"changes-detected"` if every difference is expected / noise / dynamic, `"bugs-found"` if there is at least one regression, missing element or design violation.
+- `implementation`: what **the developer's PR** changes (from `ci-context/pr.diff`), `summary` + `files`.
+- `tests`: `relevant` = the tests that ran (`name` exactly as in `test('…')`, `file`, `why`, `eyesUrl`); `added` = tests the PR adds or changes; `command`, `result`, `batchUrl`.
+- `findings`, `bugs` (with `whyBug`, `guidelineRef`, `fix`, `evidence`), `baseline.recommendations`, `baseline.updatedInEyes`, `baseline.saved: false`.
+- `summary`: `realChanges`, `bugs`, `nextSteps` (what the developer or reviewer should do).
 
 ### `review/summary.md`
 

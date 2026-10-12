@@ -159,13 +159,16 @@ jobs:
             --output-format stream-json --verbose \
             | tee review/agent-transcript.jsonl | node scripts/agent-progress.mjs
 
-      - name: Upload agent transcript
-        if: always() && env.PR != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: agent-review
-          path: review/
-          retention-days: 14
+      # Before / after / differences images for the PDF — must run before any save.
+      - name: Collect visual evidence from Eyes
+        if: env.PR != ''
+        env:
+          APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+          APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+        run: |
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
+          [ -n "$B" ] || { echo "No Eyes batch found — skipping evidence"; exit 0; }
+          node scripts/eyes-evidence.mjs "$B" review/evidence || true
 
       - name: Comment on the PR
         if: always() && env.PR != ''
@@ -186,19 +189,6 @@ jobs:
             gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
           The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
           fi
-
-      - name: Comment on the Jira ticket
-        if: always() && env.PR != '' && env.TICKET != ''
-        env:
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-        run: |
-          [ -f review/verdict.json ] || { echo "No verdict to post"; exit 0; }
-          BATCH=$(grep -oE 'https://eyes\.applitools\.com/app/(test-results|batches)/[0-9]+[^)]*' review/summary.md 2>/dev/null | grep -vE '/[0-9]+/[0-9]+' | tail -1 || true)
-          node scripts/jira.mjs comment "$TICKET" review/verdict.json \
-            "${{ github.server_url }}/${{ github.repository }}/pull/$PR" "$BATCH" \
-            || echo "::warning::Could not comment on Jira ticket $TICKET (Jira not configured or not reachable)"
 
       # Automatic review (default): a passing PR is saved and merged by the pipeline, unless a person asked
       # to review it (label human-review on the Jira ticket or on the PR). Anything else stays with a person.
@@ -222,6 +212,7 @@ jobs:
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           [ -n "$B" ] || { echo "No Eyes batch found — a person decides."; exit 0; }
           node scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
+          echo "saved=yes" >> "$GITHUB_OUTPUT"
           if gh pr merge "$PR" --squash --delete-branch; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."
@@ -229,6 +220,58 @@ jobs:
           else
             echo "::warning::Merge failed (e.g. conflict) — a person merges."
           fi
+
+      - name: Render the PDF report
+        if: always() && env.PR != ''
+        run: |
+          [ -f review/report.json ] || { echo "::warning::The AI review did not write review/report.json — no PDF"; exit 0; }
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
+          export REPORT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          if [ "${{ steps.auto.outputs.saved }}" = "yes" ]; then
+            node -e 'const f="./review/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merged the PR. Add the label human-review to the Jira ticket or the PR to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+          fi
+          node -e 'const f="./review/report.json",r=require(f);r.source="pr-review";r.task=r.task||{};r.task.key=r.task.key||process.env.TICKET||"PR-"+process.env.PR;require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+          node scripts/render-report.mjs review/report.json review/report.html review/report-summary.md "$RUN_URL"
+          NAME="${TICKET:-PR-$PR}-visual-report.pdf"
+          node scripts/report-pdf.mjs review/report.html "review/$NAME" || echo "::warning::PDF could not be created"
+
+      - name: "Jira: attach the PDF and comment"
+        if: always() && env.PR != '' && env.TICKET != ''
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          [ -f review/verdict.json ] || { echo "No verdict to post"; exit 0; }
+          PR_URL="${{ github.server_url }}/${{ github.repository }}/pull/$PR"
+          RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
+          PDF="review/$TICKET-visual-report.pdf"; PDF_URL=""
+          # Attach the PDF first, so the comment can link straight to it
+          if [ -f "$PDF" ]; then PDF_URL=$(node scripts/jira.mjs attach "$TICKET" "$PDF" | sed -n 's/^ATTACHMENT_URL=//p' || true); fi
+          V=$(node -p 'require("./review/report.json").verdict' 2>/dev/null || node -p 'require("./review/verdict.json").verdict')
+          S=$(node -p 'require("./review/verdict.json").summary' 2>/dev/null || echo "")
+          {
+            echo "🤖 AI visual review of PR #$PR — verdict: $V"
+            [ -n "$PDF_URL" ] && echo "📄 PDF report (summary, bugs with evidence and fixes, before/after images): [$TICKET-visual-report.pdf]($PDF_URL)"
+            [ -n "$S" ] && echo "Summary: $S"
+            echo "Pull request: [$PR_URL]($PR_URL)"
+            [ -n "$B" ] && echo "Eyes batch: [open in Eyes]($B)"
+            echo "CI run: [$RUN]($RUN)"
+            if [ "${{ steps.auto.outputs.merged }}" = "yes" ]; then echo "Automatic review: baselines saved and PR merged — ticket moved to Done."
+            else echo "👤 A person decides: review the PDF, then fix or approve, save the baselines in Eyes and merge."; fi
+          } > review/jira-note.txt
+          node scripts/jira.mjs note "$TICKET" review/jira-note.txt \
+            || echo "::warning::Could not comment on Jira ticket $TICKET (Jira not configured or not reachable)"
+
+      - name: Upload the review and report
+        if: always() && env.PR != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-review
+          path: review/
+          retention-days: 30
 
       - name: Enforce verdict
         if: env.PR != ''

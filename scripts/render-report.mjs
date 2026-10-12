@@ -58,6 +58,8 @@ const visualChanges = evidence.length ? evidence.map((e) => {
 const verdictLabel = { pass: 'Pass — no visual differences', 'changes-detected': 'Changes detected — all match the task', 'bugs-found': 'Bugs found' }[r.verdict] ?? r.verdict;
 const verdictTone = r.verdict === 'bugs-found' ? 'bad' : r.verdict === 'pass' ? 'good' : 'info';
 const findings = list(r.findings);
+const isReview = r.source === 'pr-review';   // a developer's PR reviewed by the AI (not written by Agent 1)
+const who = isReview ? 'AI visual review of the pull request' : 'Agent 1 · visual implementation report';
 const bugs = list(r.bugs);
 const recs = list(r.baseline?.recommendations);
 const count = (cls) => findings.filter((f) => f.class === cls).length;
@@ -84,7 +86,7 @@ img.evidence{max-width:100%;border:1px solid var(--line);border-radius:8px;margi
 ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 @media print{:root{--bg:#ffffff;--card:#ffffff;--ink:#14213d;--muted:#4a5568;--line:#cfd6dc;--code:#eef1f4}main{padding:0;max-width:none}.box,.card,tr,img.evidence{break-inside:avoid}h2{break-after:avoid}a{color:#1f4e8c}}
 </style></head><body><main>
-<p class="muted">Agent 1 · visual implementation report</p>
+<p class="muted">${who}</p>
 <h1>${esc(r.task?.key)} — ${esc(r.task?.title)}</h1>
 <p class="meta">Work type <b>${esc(r.task?.workType ?? 'feature')}</b> · Task file <code>${esc(r.task?.file)}</code>${runUrl ? ` · ${link(runUrl, 'CI run')}` : ''}${r.tests?.batchUrl ? ` · ${link(r.tests.batchUrl, 'Eyes batch')}` : ''}</p>
 <span class="pill ${verdictTone}">${esc(verdictLabel)}</span>
@@ -113,7 +115,7 @@ ${r.bugTicket ? `<h2>Bug: reproduce → fix</h2>
 ${r.bugTicket.regressionTest ? `<p><b>Regression test:</b> <code>${esc(r.bugTicket.regressionTest)}</code></p>` : ''}
 <div class="cards"><div><h3>Before (bug)</h3>${image(r.bugTicket.before)}</div><div><h3>After (fixed)</h3>${image(r.bugTicket.after)}</div></div></div>` : ''}
 
-<h2>What was implemented</h2>
+<h2>${isReview ? 'What the pull request changes' : 'What was implemented'}</h2>
 <div class="box"><p>${esc(r.implementation?.summary)}</p>
 ${list(r.implementation?.files).length ? `<ul>${list(r.implementation.files).map((f) => `<li><code>${esc(f.path)}</code> — ${esc(f.change)}</li>`).join('')}</ul>` : ''}</div>
 
@@ -137,7 +139,7 @@ ${recs.map((x) => `<tr><td>${esc(x.step)}</td><td>${esc(list(x.environments).joi
 
 fs.writeFileSync(htmlPath, html);
 
-const md = `## ${r.verdict === 'bugs-found' ? '❌' : '✅'} Agent 1 — ${r.task?.key}: ${verdictLabel}
+const md = `## ${r.verdict === 'bugs-found' ? '❌' : '✅'} ${isReview ? 'AI review' : 'Agent 1'} — ${r.task?.key}: ${verdictLabel}
 
 **Implemented:** ${r.implementation?.summary ?? '—'}
 

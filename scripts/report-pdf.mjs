@@ -12,7 +12,7 @@ await page.pdf({
   margin: { top: '16mm', bottom: '16mm', left: '14mm', right: '14mm' },
   displayHeaderFooter: true,
   headerTemplate: '<span></span>',
-  footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#777">Agent 1 visual report · page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+  footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#777">Visual report · page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
 });
 await browser.close();
 console.log(`PDF: ${pdf}`);
