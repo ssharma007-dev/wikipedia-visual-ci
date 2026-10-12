@@ -5,11 +5,11 @@ name: Agent 1 — implement task
 # results with the Applitools Eyes MCP and publish an HTML report. One task per commit.
 #
 # Review mode (per ticket):
-#   manual (default)                 → the agent accepts/rejects in Eyes; a person saves and merges.
-#   auto (Jira label visual-auto-approve, or a "visual-auto-approve" line in the task file)
-#                                    → if there are NO bugs and NO unresolved steps, the pipeline saves the
-#                                      baselines, merges the PR, refreshes main's baseline, and moves the ticket
-#                                      to Done. If anything is wrong, it falls back to a person.
+#   auto (default)                   → if there are NO bugs and NO unresolved steps, the pipeline saves the
+#                                      baselines, merges the PR, refreshes main's baseline and moves the ticket
+#                                      to Done. If anything needs judgement, it falls back to a person.
+#   manual (Jira label human-review, or "human-review" in the task file)
+#                                    → the agent accepts/rejects in Eyes; a person saves and merges.
 on:
   push:
     branches-ignore: [main]
@@ -53,7 +53,6 @@ jobs:
       APPLITOOLS_BATCH_ID: agent-${{ github.run_id }}-${{ github.run_attempt }}
       # Eyes branching: the task branch (set below), compared with main's baseline. New tests are NOT auto-saved.
       EYES_PARENT_BRANCH_NAME: ${{ github.repository }}/main
-      EYES_SAVE_NEW_TESTS: 'false'
 
     steps:
       - name: Find the task (commit message, or the key sent from Jira)
@@ -128,8 +127,11 @@ jobs:
           # Review mode: the Jira label wins; the task file can also opt in.
           JIRA=no; LABELS=""
           if LABELS=$(node scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
-          if echo ",$LABELS," | grep -q ',visual-auto-approve,' || grep -qi 'visual-auto-approve' "$FILE"; then MODE=auto; else MODE=manual; fi
+          if echo ",$LABELS," | grep -q ',human-review,' || grep -qi 'human-review' "$FILE"; then MODE=manual; else MODE=auto; fi
           echo "$MODE" > ci-context/mode.txt
+          # Auto mode lets Eyes save the first screenshot of tests the agent writes (on this PR's Eyes branch only);
+          # manual mode leaves them for a person.
+          [ "$MODE" = manual ] && echo "EYES_SAVE_NEW_TESTS=false" >> "$GITHUB_ENV"
           WT=""; [ "$JIRA" = yes ] && WT=$(node scripts/jira.mjs type "$KEY" 2>/dev/null || true)
           if [ -z "$WT" ] || [ "$WT" = feature ]; then
             case "$TASK_BRANCH" in bugfix/*|bug/*) WT=bug ;; hotfix/*) WT=hotfix ;; refactor/*) WT=refactor ;; chore/*) WT=chore ;;
@@ -203,7 +205,7 @@ jobs:
           fi
           if node scripts/eyes-save.mjs "$B"; then
             echo "saved=yes" >> "$GITHUB_OUTPUT"
-            node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Auto mode (Jira label visual-auto-approve): no bugs and nothing unresolved, so the pipeline saved the baselines.";require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+            node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           else
             echo "saved=no" >> "$GITHUB_OUTPUT"; echo "Auto mode: Eyes guard refused to save — a person decides."
           fi
@@ -214,6 +216,7 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if [ -f agent-report/report.json ]; then
             node scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
+            node scripts/report-pdf.mjs agent-report/report.html "agent-report/${{ steps.task.outputs.key }}-visual-report.pdf" || echo "::warning::PDF could not be created"
             printf '\n**Review mode:** %s\n' "$(cat ci-context/mode.txt)" >> agent-report/summary.md
             cat agent-report/summary.md >> "$GITHUB_STEP_SUMMARY"
           else
@@ -312,10 +315,13 @@ jobs:
             [ -n "$B" ] && echo "Eyes batch: $B"
             echo "HTML report: $RUN (artifact agent-report-$KEY)"
             if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then echo "Auto mode: no bugs, nothing unresolved → baselines saved and PR merged automatically."
-            elif [ "${{ steps.ctx.outputs.mode }}" = "auto" ]; then echo "Auto mode was ON, but the pipeline did not finish alone (bugs, unresolved steps or a merge conflict) → a person reviews, saves and merges."
-            else echo "Manual mode: a person reviews the report, saves the baselines in Eyes and merges the PR."; fi
+            elif [ "${{ steps.ctx.outputs.mode }}" = "auto" ]; then echo "Automatic review could not finish alone (bugs, unresolved steps or a merge conflict) → a person reviews, saves and merges."
+            else echo "human-review requested: a person reviews the report, saves the baselines in Eyes and merges the PR."; fi
           } > ci-context/jira-note.txt
+          PDF="agent-report/$KEY-visual-report.pdf"
+          [ -f "$PDF" ] && echo "PDF report attached to this ticket: $KEY-visual-report.pdf (bugs, evidence, fixes)." >> ci-context/jira-note.txt
           node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+          [ -f "$PDF" ] && node scripts/jira.mjs attach "$KEY" "$PDF" || true
           if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then node scripts/jira.mjs transition "$KEY" "Done" || true
           else node scripts/jira.mjs transition "$KEY" "In Review" || true; fi
 
