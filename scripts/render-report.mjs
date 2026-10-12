@@ -50,7 +50,7 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 </style></head><body><main>
 <p class="muted">Agent 1 · visual implementation report</p>
 <h1>${esc(r.task?.key)} — ${esc(r.task?.title)}</h1>
-<p class="meta">Task file <code>${esc(r.task?.file)}</code>${runUrl ? ` · ${link(runUrl, 'CI run')}` : ''}${r.tests?.batchUrl ? ` · ${link(r.tests.batchUrl, 'Eyes batch')}` : ''}</p>
+<p class="meta">Work type <b>${esc(r.task?.workType ?? 'feature')}</b> · Task file <code>${esc(r.task?.file)}</code>${runUrl ? ` · ${link(runUrl, 'CI run')}` : ''}${r.tests?.batchUrl ? ` · ${link(r.tests.batchUrl, 'Eyes batch')}` : ''}</p>
 <span class="pill ${verdictTone}">${esc(verdictLabel)}</span>
 
 <div class="cards">
@@ -64,6 +64,11 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 <div class="box"><h3>Real changes</h3>${list(r.summary?.realChanges).length ? `<ul>${list(r.summary.realChanges).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None.</p>'}</div>
 <div class="box"><h3>Bugs</h3>${list(r.summary?.bugs).length ? `<ul>${list(r.summary.bugs).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None found.</p>'}</div>
 <div class="box"><h3>Next steps for the reviewer</h3>${list(r.summary?.nextSteps).length ? `<ul>${list(r.summary.nextSteps).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>'}</div>
+
+${r.bugTicket ? `<h2>Bug: reproduce → fix</h2>
+<div class="box"><p><b>Reproduced:</b> ${r.bugTicket.reproduced ? 'yes' : 'no'}</p><p><b>Root cause:</b> ${esc(r.bugTicket.rootCause)}</p>
+${r.bugTicket.regressionTest ? `<p><b>Regression test:</b> <code>${esc(r.bugTicket.regressionTest)}</code></p>` : ''}
+<div class="cards"><div><h3>Before (bug)</h3>${image(r.bugTicket.before)}</div><div><h3>After (fixed)</h3>${image(r.bugTicket.after)}</div></div></div>` : ''}
 
 <h2>What was implemented</h2>
 <div class="box"><p>${esc(r.implementation?.summary)}</p>

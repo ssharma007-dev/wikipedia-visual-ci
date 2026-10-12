@@ -1,6 +1,6 @@
 ## Ticket
 
-<!-- Name your branch feature/WIKI-123-short-name — the visual review loads guidelines/tasks/WIKI-123-*.md automatically. -->
+<!-- Put the Jira key in the branch name (e.g. feature/WIKI-123-short-name) — the review reads that Jira ticket automatically. -->
 WIKI-
 
 ## What changed
