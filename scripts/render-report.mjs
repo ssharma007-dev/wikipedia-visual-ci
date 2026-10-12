@@ -99,7 +99,7 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 <h2>Summary</h2>
 <div class="box"><h3>Real changes</h3>${list(r.summary?.realChanges).length ? `<ul>${list(r.summary.realChanges).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None.</p>'}</div>
 <div class="box"><h3>Bugs</h3>${list(r.summary?.bugs).length ? `<ul>${list(r.summary.bugs).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None found.</p>'}</div>
-<div class="box"><h3>Next steps for the reviewer</h3>${list(r.summary?.nextSteps).length ? `<ul>${list(r.summary.nextSteps).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>'}</div>
+<div class="box"><h3>${r.baseline?.saved ? 'Agent notes — baselines were saved automatically, no action needed' : 'Next steps for the reviewer'}</h3>${list(r.summary?.nextSteps).length ? `<ul>${list(r.summary.nextSteps).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>'}</div>
 
 <h2>Bugs found — evidence and fixes</h2>
 ${bugs.length ? bugs.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag bad">${esc(b.severity)}</span></h3>
