@@ -11,7 +11,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 
 | File | What it is |
 |---|---|
-| `ci-context/task.md` | **The ticket** this branch implements — read from **Jira** by the key in the branch name (fallback: `guidelines/tasks/WIKI-xxx.md`). **Its acceptance criteria are the source of truth for what is expected to change** — and for what must stay unchanged. |
+| `ci-context/task.md` | **The ticket** this branch implements — read from **Jira** by the key in the branch name (fallback: the branch's snapshot `tasks/WIKI-xxx-*.md`). **Its acceptance criteria are the source of truth for what is expected to change** — and for what must stay unchanged. |
 | `ci-context/design-system.md` | **The design system** (`guidelines/design-system.md`, taken from `main`). Rules every page must follow in every PR. |
 | `ci-context/pr.md` | PR number, title, author and description — supporting detail. If it claims more than the ticket asks for, the ticket wins. |
 | `ci-context/pr.diff` | The code diff of this PR. Use it to tie a visual difference to the change that caused it. |
@@ -46,6 +46,10 @@ say in the comment that the PR has no ticket.
 | **Noise** | Rendering noise: anti-aliasing or sub-pixel shifts (see thresholds) with no DOM change | Accept |
 | **Regression** | Anything the ticket does not ask for — especially anything on its must-not-change list | Reject |
 | **Missing** | The PR says something changes, but on some environment it did not | Report as a regression (leave or reject that step) |
+| **Environment / infra** | The browser, OS or device rendering changed — not the code (e.g. a new Chrome version shifts font smoothing). The diff is not caused by `pr.diff` and appears on one browser only | Accept as an infra update; say which browser changed |
+| **Flaky capture** | The test captured at the wrong moment: animation mid-way, image not loaded, spinner, cookie banner | Leave **unresolved** (never accept a broken screenshot); recommend fixing the test, e.g. wait for load |
+| **Content change** | Text or images changed by editors/CMS data, not by the code diff | Leave **unresolved** for the content owner unless the ticket asks for it |
+| **Third-party** | An embedded widget, map, font or CDN asset changed outside this repo | Leave **unresolved**; recommend a match region if it is out of the team's control |
 
 ## Decision thresholds
 
