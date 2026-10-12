@@ -106,6 +106,10 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 <div class="box"><h3>Bugs</h3>${list(r.summary?.bugs).length ? `<ul>${list(r.summary.bugs).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None found.</p>'}</div>
 <div class="box"><h3>${r.baseline?.saved ? 'Agent notes — baselines were saved automatically, no action needed' : 'Next steps for the reviewer'}</h3>${list(r.summary?.nextSteps).length ? `<ul>${list(r.summary.nextSteps).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>'}</div>
 
+${list(r.failedTests).length ? `<h2>Functional checks that failed</h2>
+<p class="muted">These Playwright assertions failed. The pull request cannot merge until they pass.</p>
+${list(r.failedTests).map((t) => `<div class="box"><h3>${esc(t.name)} <span class="tag bad">failed</span></h3><p class="meta"><code>${esc(t.file)}:${esc(t.line)}</code></p><pre style="white-space:pre-wrap;font-size:13px">${esc(t.error)}</pre></div>`).join('')}` : ''}
+
 <h2>Bugs found — evidence and fixes</h2>
 ${bugs.length ? bugs.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag bad">${esc(b.severity)}</span></h3>
 <p><b>Why it is a bug:</b> ${esc(b.whyBug)}</p><p class="meta">Rule: ${esc(b.guidelineRef)}</p><p><b>How to fix:</b> ${esc(b.fix)}</p>${evidenceBlock(b.evidence)}</div>`).join('') : '<p class="muted">No bugs found.</p>'}

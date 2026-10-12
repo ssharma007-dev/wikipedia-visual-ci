@@ -8,6 +8,7 @@
 //   node scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
 //   node scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
 //   node scripts/jira.mjs attach <KEY> <file> [name]        → attaches a file (e.g. the PDF report)
+//   node scripts/jira.mjs needs-human <KEY> on|off          → label needs-human (+ assign to the reporter), or clear it
 // Needs JIRA_BASE_URL (https://<site>.atlassian.net), JIRA_EMAIL and JIRA_API_TOKEN.
 import fs from 'node:fs';
 
@@ -100,6 +101,10 @@ ${adfToText(f.description) || '_(no description)_'}`);
 } else if (command === 'subtask') {
   // Create a sub-task under <KEY>: subtask <KEY> <summary> <description-file>
   const [summary, file] = rest;
+  // Re-runs must not create the same bug twice: reuse an open sub-task with the same summary.
+  const existing = ((await jira(`/rest/api/3/issue/${key}?fields=subtasks`)).fields.subtasks ?? [])
+    .find((t) => t.fields?.summary === summary.slice(0, 250) && t.fields?.status?.statusCategory?.key !== 'done');
+  if (existing) { console.log(`${existing.key} (already open — not created again)`); process.exit(0); }
   const lines = fs.readFileSync(file, 'utf-8').split('\n').filter((l) => l.trim());
   const project = key.split('-')[0];
   const types = (await jira(`/rest/api/3/project/${project}`)).issueTypes;
@@ -118,6 +123,14 @@ ${adfToText(f.description) || '_(no description)_'}`);
   const [att] = await res.json();
   console.log(`Attached ${att.filename} to ${key}`);
   console.log(`ATTACHMENT_URL=${base}/secure/attachment/${att.id}/${encodeURIComponent(att.filename)}`);
+} else if (command === 'needs-human') {
+  // needs-human <KEY> on|off → add (or remove) the label needs-human; "on" also assigns the ticket to its reporter,
+  // so the person who asked for the change is notified that a decision is waiting.
+  const on = (rest[0] ?? 'on') !== 'off';
+  const f = (await jira(`/rest/api/3/issue/${key}?fields=reporter,assignee`)).fields;
+  const fields = on && f.reporter?.accountId ? { assignee: { accountId: f.reporter.accountId } } : {};
+  await jira(`/rest/api/3/issue/${key}`, { method: 'PUT', body: JSON.stringify({ fields, update: { labels: [on ? { add: 'needs-human' } : { remove: 'needs-human' }] } }) });
+  console.log(`${key}: needs-human ${on ? `on, assigned to ${f.reporter?.displayName ?? 'reporter'}` : 'off'}`);
 } else if (command === 'labels') {
   const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
   console.log((issue.fields.labels ?? []).join(','));

@@ -78,11 +78,18 @@ jobs:
           echo "Site did not start"; cat server.log; exit 1
 
       # Eyes differences do not fail Playwright here — the agent below decides.
-      - name: Run visual tests
+      # A failed functional check (expect) does not stop the pipeline either: the AI review, the PDF and the
+      # Jira comment still run, and the last step fails the build so the PR can't merge.
+      - name: Run the tests (functional and visual)
         run: |
           mkdir -p ci-context
           npx playwright test 2>&1 | tee ci-context/eyes-run.log
-          exit ${PIPESTATUS[0]}
+          CODE=${PIPESTATUS[0]}
+          node scripts/failed-tests.mjs test-results/results.json ci-context/failed-tests.json ci-context/failed-tests.md
+          if [ "$CODE" != 0 ]; then
+            echo "TESTS_FAILED=yes" >> "$GITHUB_ENV"
+            echo "::error::Functional checks failed — the review continues, but this PR can't merge until they pass."
+          fi
 
       - name: Upload Playwright report
         if: always()
@@ -119,7 +126,8 @@ jobs:
           if [ -n "$TICKET" ] && node scripts/jira.mjs fetch "$TICKET" > ci-context/task.md 2> ci-context/jira.err; then
             TASK="Jira $JIRA_BASE_URL/browse/$TICKET"
           elif [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
-          else printf 'No ticket found for branch `%s` (expected a Jira key such as WIKI-123 in the branch name).\n' "$BRANCH" > ci-context/task.md; TASK=""; fi
+          else printf 'No ticket found for branch `%s` (expected a Jira key such as WIKI-123 in the branch name).\n' "$BRANCH" > ci-context/task.md; TASK=""
+            echo "NO_TICKET=yes" >> "$GITHUB_ENV"; fi
           cat ci-context/jira.err 2>/dev/null || true
           # Design system + review rules: always from main, so a PR can't change the rules it is judged by
           git fetch -q --depth=1 origin "${{ github.base_ref || 'main' }}"
@@ -129,11 +137,14 @@ jobs:
           if [ -n "$CHANGED" ]; then
             printf '\n## ⚠️ This PR changes the review guidelines\n\n%s\n\nThese edits were NOT applied: the versions on main were used.\n' "$CHANGED" >> ci-context/pr.md
           fi
+          # Failed functional checks: the AI must mention them, and the verdict can't be pass
+          if [ -s ci-context/failed-tests.md ]; then printf '\n' >> ci-context/pr.md; cat ci-context/failed-tests.md >> ci-context/pr.md; fi
           echo "Ticket: ${TICKET:-none} (${TASK:-not found})"
           cat ci-context/pr.md ci-context/pr.diff
 
+      # No ticket → nothing to judge against: skip the AI review (the Ticket check explains how to fix it).
       - name: Agent review (Claude + Applitools MCP)
-        if: env.PR != ''
+        if: env.PR != '' && env.NO_TICKET != 'yes'
         env:
           # Claude auth: an Anthropic API key, or a Claude login token from `claude setup-token`
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -161,7 +172,7 @@ jobs:
 
       # Before / after / differences images for the PDF — must run before any save.
       - name: Collect visual evidence from Eyes
-        if: env.PR != ''
+        if: env.PR != '' && env.NO_TICKET != 'yes'
         env:
           APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
           APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
@@ -181,10 +192,17 @@ jobs:
               echo
               cat review/summary.md
               echo
+              [ -s ci-context/failed-tests.md ] && { cat ci-context/failed-tests.md; echo; }
               echo '---'
               echo '📏 **Decided using [the guidelines](https://github.com/ssharma007-dev/wikipedia-visual-ci/tree/main/guidelines)** (from main): not asked for by the ticket → reject · asked for but breaks the [design system](https://github.com/ssharma007-dev/wikipedia-visual-ci/blob/main/guidelines/design-system.md) → reject, a person decides · asked for and on-design → accept · shift of **2px or less** with no HTML change → noise · unsure → left for a person.'
             } > review/comment.md
             gh pr comment "$PR" --body-file review/comment.md
+          elif [ "$NO_TICKET" = yes ]; then
+            gh pr comment "$PR" --body "## ⏭️ AI visual review skipped: no Jira ticket
+          Without a ticket the AI has nothing to compare the changes against. See the **Ticket check** comment for how to fix the branch name.$( [ -s ci-context/failed-tests.md ] && printf '\n\n%s' "$(cat ci-context/failed-tests.md)" )"
+          elif grep -qi "session limit\|usage limit\|rate limit" review/agent-transcript.jsonl 2>/dev/null; then
+            gh pr comment "$PR" --body "## ⏸️ AI visual review paused: Claude usage limit reached
+          Nothing is wrong with the change itself. Re-run this check later (Actions → this run → Re-run jobs)."
           else
             gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
           The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
@@ -203,6 +221,7 @@ jobs:
           APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
           APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
         run: |
+          [ "$TESTS_FAILED" != yes ] || { echo "Functional checks failed — not merging."; exit 0; }
           V=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
           [ "$V" = "pass" ] || { echo "Verdict $V — a person decides."; exit 0; }
           LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(",")'),$( [ -n "$TICKET" ] && node scripts/jira.mjs labels "$TICKET" 2>/dev/null )"
@@ -231,13 +250,13 @@ jobs:
           if [ "${{ steps.auto.outputs.saved }}" = "yes" ]; then
             node -e 'const f="./review/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merged the PR. Add the label human-review to the Jira ticket or the PR to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           fi
-          node -e 'const f="./review/report.json",r=require(f);r.source="pr-review";r.task=r.task||{};r.task.key=r.task.key||process.env.TICKET||"PR-"+process.env.PR;require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+          node -e 'const f="./review/report.json",r=require(f);try{r.failedTests=JSON.parse(require("fs").readFileSync("ci-context/failed-tests.json"))}catch{};r.source="pr-review";r.task=r.task||{};r.task.key=r.task.key||process.env.TICKET||"PR-"+process.env.PR;require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           node scripts/render-report.mjs review/report.json review/report.html review/report-summary.md "$RUN_URL"
           NAME="${TICKET:-PR-$PR}-visual-report.pdf"
           node scripts/report-pdf.mjs review/report.html "review/$NAME" || echo "::warning::PDF could not be created"
 
       - name: "Jira: attach the PDF and comment"
-        if: always() && env.PR != '' && env.TICKET != ''
+        if: always() && env.PR != '' && env.TICKET != '' && env.NO_TICKET != 'yes'
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
@@ -256,6 +275,7 @@ jobs:
             echo "🤖 AI visual review of PR #$PR — verdict: $V"
             [ -n "$PDF_URL" ] && echo "📄 PDF report (summary, bugs with evidence and fixes, before/after images): [$TICKET-visual-report.pdf]($PDF_URL)"
             [ -n "$S" ] && echo "Summary: $S"
+            [ "$TESTS_FAILED" = yes ] && echo "❌ Functional checks failed: $(node -p 'require("./ci-context/failed-tests.json").map(t=>t.name).join("; ")' 2>/dev/null) — the PR can't merge until they pass."
             echo "Pull request: [$PR_URL]($PR_URL)"
             [ -n "$B" ] && echo "Eyes batch: [open in Eyes]($B)"
             echo "CI run: [$RUN]($RUN)"
@@ -273,13 +293,34 @@ jobs:
           path: review/
           retention-days: 30
 
+      # Tell people when a decision is waiting: label the PR, and label + assign the Jira ticket to its reporter.
+      - name: "Flag for a person when needed"
+        if: always() && env.PR != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.auto.outputs.merged }}" = yes ]; then
+            [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ] && node scripts/jira.mjs needs-human "$TICKET" off || true
+            exit 0
+          fi
+          gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
+          gh pr edit "$PR" --add-label needs-human || true
+          [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ] && node scripts/jira.mjs needs-human "$TICKET" on || true
+
       - name: Enforce verdict
         if: env.PR != ''
         run: |
           verdict=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
           echo "Agent verdict: $verdict"
           cat review/verdict.json 2>/dev/null || true
+          [ "$NO_TICKET" != yes ] || { echo "::error::No Jira ticket for this branch — see the Ticket check"; exit 1; }
           [ "$verdict" = "pass" ] || { echo "::error::Visual review verdict: $verdict"; exit 1; }
+
+      - name: Functional checks must pass
+        if: always() && env.TESTS_FAILED == 'yes'
+        run: |
+          cat ci-context/failed-tests.md 2>/dev/null || true
+          echo "::error::Functional checks failed"; exit 1
 
   # After an automatic merge (which does not trigger a push run), refresh main's Eyes baseline.
   main-baseline:

@@ -8,7 +8,7 @@ export default defineConfig<EyesFixture>({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 2 : undefined,
-  reporter: [['list'], ['html', { open: 'never' }], ['@applitools/eyes-playwright/reporter']],
+  reporter: [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/results.json' }], ['@applitools/eyes-playwright/reporter']],
   use: {
     eyesConfig: {
       appName: 'Wikipedia - agent workflow',

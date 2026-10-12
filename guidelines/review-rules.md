@@ -104,6 +104,9 @@ Set `propagate: "none"` on those calls when "Apply a decision to … other brows
 - **Never save baselines.** You may accept, reject and add match regions; saving is
   a human decision made in Eyes after the PR is approved.
 - Do not modify source files or tests. You only review.
+- If `ci-context/pr.md` has a **Functional checks failed** section, the verdict is `fail` whatever the
+  visual review finds. Say which checks failed at the top of the comment and, where the diff shows it,
+  the likely cause.
 - If `ci-context/pr.md` says the PR changes the guidelines, say so at the top of the comment:
   those changes were **not** applied; the versions on `main` were used.
 - Keep every Eyes URL exactly as the tools return it (do not strip trailing `~~`).

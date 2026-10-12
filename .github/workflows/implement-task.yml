@@ -89,18 +89,23 @@ jobs:
               case "$TYPE" in bug) PFX=bugfix ;; hotfix|refactor|chore|content|experiment|revert) PFX=$TYPE ;; *) PFX=feature ;; esac
               BR="$PFX/$KEY-$SLUG"; git switch -c "$BR" origin/main
             fi
-            if ! ls "$TASKS_DIR"/"$KEY"-*.md >/dev/null 2>&1; then
-              mkdir -p "$TASKS_DIR"; node scripts/jira.mjs fetch "$KEY" > "$TASKS_DIR/$KEY-${BR#*/$KEY-}.md"
-              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: task synced from Jira" && git push -u origin "$BR"
-            fi
           else
             BR="${{ github.ref_name }}"
-            # Branch made by a developer (Jira "Create branch" or git): add the ticket snapshot if it's missing.
-            if ! ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md >/dev/null 2>&1 && node scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
+          fi
+          # The ticket copy on the branch always matches Jira: added if missing, refreshed if the PM edited the ticket.
+          if node scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
+            FILE=$(ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md 2>/dev/null | head -1 || true)
+            if [ -z "$FILE" ]; then
               SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
-              mkdir -p "$TASKS_DIR"; cp /tmp/task.md "$TASKS_DIR/$KEY-$SLUG.md"
-              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: task synced from Jira" && git push origin "HEAD:$BR"
+              FILE="$TASKS_DIR/$KEY-$SLUG.md"; MSG="task synced from Jira"
+            else MSG="task refreshed from Jira (the ticket changed)"; fi
+            if [ ! -f "$FILE" ] || ! cmp -s /tmp/task.md "$FILE"; then
+              mkdir -p "$TASKS_DIR"; cp /tmp/task.md "$FILE"
+              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: $MSG" && git push -u origin "HEAD:$BR"
+              echo "$MSG → $FILE"
             fi
+          else
+            echo "::warning::Could not read $KEY from Jira — using the ticket copy already on the branch."
           fi
           echo "TASK_BRANCH=$BR" >> "$GITHUB_ENV"
           echo "EYES_BRANCH_NAME=${{ github.repository }}/$BR" >> "$GITHUB_ENV"
@@ -258,8 +263,9 @@ jobs:
           V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo missing)
           B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || echo "")
           BUGS=$(node -p '(require("./agent-report/report.json").bugs||[]).length' 2>/dev/null || echo 1)
-          if [ "$V" = "bugs-found" ] || [ "$BUGS" != "0" ] || [ -z "$B" ]; then
-            echo "Auto mode: NOT saving (verdict $V, bugs $BUGS) — a person decides."; echo "saved=no" >> "$GITHUB_OUTPUT"; exit 0
+          TR=$(node -p 'require("./agent-report/report.json").tests.result' 2>/dev/null || echo unknown)
+          if [ "$V" = "bugs-found" ] || [ "$BUGS" != "0" ] || [ -z "$B" ] || [ "$TR" = "failed" ]; then
+            echo "Auto mode: NOT saving (verdict $V, bugs $BUGS, tests $TR) — a person decides."; echo "saved=no" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if node scripts/eyes-save.mjs "$B"; then
             echo "saved=yes" >> "$GITHUB_OUTPUT"
@@ -365,8 +371,15 @@ jobs:
         if: always() && steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
         env:
           KEY: ${{ steps.task.outputs.key }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo "no report")
+          if [ "$V" = "no report" ] && grep -qi "session limit\|usage limit\|rate limit" agent-report/agent-transcript*.jsonl 2>/dev/null; then
+            printf '%s\n' "⏸️ Agent 1 paused on $KEY: the Claude usage limit was reached, so nothing was changed. Click Run Agent 1 again later." \
+              "CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > ci-context/jira-note.txt
+            node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+            exit 0
+          fi
           S=$(node -p 'require("./agent-report/report.json").implementation.summary' 2>/dev/null || echo "")
           B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || echo "")
           RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -387,8 +400,18 @@ jobs:
             else echo "human-review requested: a person reviews the PDF, saves the baselines in Eyes and merges the PR."; fi
           } > ci-context/jira-note.txt
           node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
-          if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then node scripts/jira.mjs transition "$KEY" "Done" || true
-          else node scripts/jira.mjs transition "$KEY" "In Review" || true; fi
+          if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then
+            node scripts/jira.mjs transition "$KEY" "Done" || true
+            node scripts/jira.mjs needs-human "$KEY" off || true
+          else
+            node scripts/jira.mjs transition "$KEY" "In Review" || true
+            # A decision is waiting: label the ticket and assign it to the person who wrote it, and label the PR.
+            node scripts/jira.mjs needs-human "$KEY" on || true
+            if [ -n "${{ steps.pr.outputs.number }}" ]; then
+              gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
+              gh pr edit "${{ steps.pr.outputs.number }}" --add-label needs-human || true
+            fi
+          fi
 
       - name: Verdict
         if: steps.task.outputs.key != ''
