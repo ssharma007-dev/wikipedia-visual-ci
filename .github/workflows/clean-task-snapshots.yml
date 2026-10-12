@@ -1,0 +1,24 @@
+name: Housekeeping — remove task snapshots from main
+
+# tasks/<KEY>-*.md is a per-branch snapshot of the Jira ticket. When a PR is merged it lands on main;
+# remove it again so main never accumulates other branches' tickets (the PR keeps it in its history).
+on:
+  push:
+    branches: [main]
+    paths: ['tasks/**']
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove tasks/ from main
+        run: |
+          [ -d tasks ] || exit 0
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rq tasks
+          git commit -m "[agent] Remove merged task snapshots from main [skip ci]"
+          git push
