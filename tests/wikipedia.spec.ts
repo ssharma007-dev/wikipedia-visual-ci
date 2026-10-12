@@ -44,3 +44,28 @@ test('Article header shows Donate, Join Wikipedia and Log in links (WIKI-15)', a
 
   await eyes.check('Article header links', { region: '#p-vector-user-menu-overflow', fully: false });
 });
+
+// WIKI-16: the "Donate" header link is bold (font-weight 700) on article pages, on both
+// desktop and phone, while its color and every other header link stay unchanged.
+test('Donate header link is bold, other header links are not (WIKI-16)', async ({ page }) => {
+  await page.goto(`${BASE}/wiki/Functional_testing`);
+
+  const donateWeight = await page.locator('#pt-sitesupport-2 a').evaluate(
+    (el) => getComputedStyle(el).fontWeight
+  );
+  expect(Number(donateWeight)).toBeGreaterThanOrEqual(700);
+
+  const joinWeight = await page.locator('#pt-createaccount-2 a').evaluate(
+    (el) => getComputedStyle(el).fontWeight
+  );
+  const loginWeight = await page.locator('#pt-login-2 a').evaluate(
+    (el) => getComputedStyle(el).fontWeight
+  );
+  expect(Number(joinWeight)).toBeLessThan(700);
+  expect(Number(loginWeight)).toBeLessThan(700);
+
+  const donateColor = await page.locator('#pt-sitesupport-2 a span').evaluate(
+    (el) => getComputedStyle(el).color
+  );
+  expect(donateColor).toBe('rgb(51, 102, 204)'); // color-progressive
+});
