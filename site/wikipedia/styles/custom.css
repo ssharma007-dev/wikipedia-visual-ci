@@ -12,4 +12,3 @@
 @media (max-width: 480px) {
   .search-container .pure-form button { right: -9.6rem; }
 }
-#p-vector-user-menu-overflow .vector-menu-content-list > li:first-child { display: none; }
