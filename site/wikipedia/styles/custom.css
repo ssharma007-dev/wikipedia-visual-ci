@@ -7,3 +7,11 @@
  * Tip: scope rules to the page you are changing — e.g. the portal's search bar is
  * `.search-container`, article pages use `.vector-header` / `.cdx-search-input`.
  */
+
+/* WIKI-16: bold the "Donate" header link on article pages (desktop + phone).
+   Color is untouched — only font-weight changes, per the design system's
+   Header links rule. Scoped to the Donate list items only. */
+#pt-sitesupport > a,
+#pt-sitesupport-2 > a {
+	font-weight: 700;
+}
