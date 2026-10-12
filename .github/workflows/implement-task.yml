@@ -96,6 +96,12 @@ jobs:
             fi
           else
             BR="${{ github.ref_name }}"
+            # Branch made by a developer (Jira "Create branch" or git): add the ticket snapshot if it's missing.
+            if ! ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md >/dev/null 2>&1 && node scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
+              SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
+              mkdir -p "$TASKS_DIR"; cp /tmp/task.md "$TASKS_DIR/$KEY-$SLUG.md"
+              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: task synced from Jira" && git push origin "HEAD:$BR"
+            fi
           fi
           echo "TASK_BRANCH=$BR" >> "$GITHUB_ENV"
           echo "EYES_BRANCH_NAME=${{ github.repository }}/$BR" >> "$GITHUB_ENV"
