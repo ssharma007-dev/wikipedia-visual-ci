@@ -90,6 +90,10 @@ Repository secrets (Settings → Secrets and variables → Actions):
 
 Baselines come from the first run on `main` (or a manual run via **Actions → Visual tests → Run workflow**).
 
+## Creating a branch from Jira
+
+On a ticket: **Development → Create branch** (GitHub for Atlassian), source branch `main`, keep the ticket key in the name (e.g. `WIKI-17-make-…`). The branch starts from the latest `main`, is linked to the ticket automatically, and [`sync-task-on-branch.yml`](.github/workflows/sync-task-on-branch.yml) adds the ticket copy `tasks/WIKI-17-….md` to it within a minute. Then either code it yourself (`git fetch && git switch WIKI-17-…`) or click **Run Agent 1** in Jira.
+
 ## Agent 1 — implement a task from a commit
 
 Put task files in `tasks/` on your branch, named `<KEY>-<anything>.md` (e.g. `tasks/WIKI-101-remove-app-store-badge.md`).
