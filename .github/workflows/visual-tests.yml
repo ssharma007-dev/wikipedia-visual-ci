@@ -111,9 +111,9 @@ jobs:
           # The ticket: from this PR's branch, matched by the ticket ID in the branch name
           BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
-          TASK=$(ls guidelines/tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
+          TASK=$(ls tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
           echo "TICKET=$TICKET" >> "$GITHUB_ENV"
-          # 1st choice: the ticket from Jira. Fallback: guidelines/tasks/<KEY>-*.md in the repo.
+          # 1st choice: the ticket from Jira. Fallback: the branch's own snapshot tasks/<KEY>-*.md.
           if [ -n "$TICKET" ] && node scripts/jira.mjs fetch "$TICKET" > ci-context/task.md 2> ci-context/jira.err; then
             TASK="Jira $JIRA_BASE_URL/browse/$TICKET"
           elif [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
