@@ -111,9 +111,9 @@ jobs:
           # The ticket: from this PR's branch, matched by the ticket ID in the branch name
           BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
-          TASK=$(ls guidelines/tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
+          TASK=$(ls tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
           echo "TICKET=$TICKET" >> "$GITHUB_ENV"
-          # 1st choice: the ticket from Jira. Fallback: guidelines/tasks/<KEY>-*.md in the repo.
+          # 1st choice: the ticket from Jira. Fallback: the branch's own snapshot tasks/<KEY>-*.md.
           if [ -n "$TICKET" ] && node scripts/jira.mjs fetch "$TICKET" > ci-context/task.md 2> ci-context/jira.err; then
             TASK="Jira $JIRA_BASE_URL/browse/$TICKET"
           elif [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
@@ -123,7 +123,7 @@ jobs:
           git fetch -q --depth=1 origin "${{ github.base_ref || 'main' }}"
           git show FETCH_HEAD:guidelines/design-system.md > ci-context/design-system.md
           git show FETCH_HEAD:guidelines/review-rules.md > ci-context/review-rules.md
-          CHANGED=$(git diff --name-only HEAD^1 HEAD -- guidelines ':(exclude)guidelines/tasks' || true)
+          CHANGED=$(git diff --name-only HEAD^1 HEAD -- guidelines || true)
           if [ -n "$CHANGED" ]; then
             printf '\n## ⚠️ This PR changes the review guidelines\n\n%s\n\nThese edits were NOT applied: the versions on main were used.\n' "$CHANGED" >> ci-context/pr.md
           fi

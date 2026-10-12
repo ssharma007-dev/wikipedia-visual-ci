@@ -6,7 +6,7 @@ tests run. It judges each visual difference Eyes finds using the files in this f
 | File | Question it answers | Owner | Read from |
 |---|---|---|---|
 | [`design-system.md`](design-system.md) | What must **always** be true, in every PR? | Design team | `main` |
-| [`tasks/WIKI-xxx-*.md`](tasks/) | What is **this** PR allowed to change — and what must stay unchanged? | Product | The PR's branch |
+| **The Jira ticket** (snapshot in `tasks/WIKI-xxx-*.md` on each branch) | What is **this** PR allowed to change — and what must stay unchanged? | Product | Jira (snapshot on the PR's branch) |
 | [`review-rules.md`](review-rules.md) | How does the AI decide (thresholds), and what may it do in Eyes? | QA / platform | `main` |
 
 ## Order of precedence
@@ -35,5 +35,6 @@ The AI **never saves baselines** — a person saves them in Eyes after approving
 
 ## Tickets and branches
 
-A feature branch is named after its ticket — `feature/WIKI-102-brand-search-button` — and the
-pipeline loads `tasks/WIKI-102-*.md` automatically.
+Tickets live in **Jira**. A branch is named after its ticket — e.g. `feature/WIKI-8-taller-search-phone` — and
+carries a snapshot of it in `tasks/WIKI-8-*.md`, so the PR records exactly what was asked even if the
+ticket is edited later. The rules in this folder exist **once, on `main`**: branches cannot change them.
