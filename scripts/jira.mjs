@@ -7,6 +7,7 @@
 //   node scripts/jira.mjs subtask <KEY> <summary> <file>    → creates a sub-task under <KEY>, prints its key
 //   node scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
 //   node scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
+//   node scripts/jira.mjs attach <KEY> <file> [name]        → attaches a file (e.g. the PDF report)
 // Needs JIRA_BASE_URL (https://<site>.atlassian.net), JIRA_EMAIL and JIRA_API_TOKEN.
 import fs from 'node:fs';
 
@@ -107,6 +108,14 @@ ${adfToText(f.description) || '_(no description)_'}`);
     description: { type: 'doc', version: 1, content: lines.map((l) => ({ type: 'paragraph', content: [{ type: 'text', text: l }] })) } } };
   const created = await jira('/rest/api/3/issue', { method: 'POST', body: JSON.stringify(body) });
   console.log(created.key);
+} else if (command === 'attach') {
+  // Attach a file to the ticket: attach <KEY> <file> [name]
+  const [file, name] = rest;
+  const form = new FormData();
+  form.append('file', new Blob([fs.readFileSync(file)]), name ?? file.split('/').pop());
+  const res = await fetch(`${base}/rest/api/3/issue/${key}/attachments`, { method: 'POST', headers: { Authorization: auth, 'X-Atlassian-Token': 'no-check' }, body: form });
+  if (!res.ok) throw new Error(`Jira attach → ${res.status} ${await res.text()}`);
+  console.log(`Attached ${name ?? file} to ${key}`);
 } else if (command === 'labels') {
   const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
   console.log((issue.fields.labels ?? []).join(','));
