@@ -40,6 +40,17 @@ npm start              # http://localhost:3001/wikipedia
 npx playwright test    # in a second terminal
 ```
 
+## Why trust an AI reviewer?
+
+An AI model is probabilistic: left alone, it might skim or stop early. The Applitools Eyes MCP adds
+**deterministic guardrails for probabilistic code**:
+
+- **No shortcuts** — the MCP walks the AI through every changed area, and the review isn't finished
+  until every difference has been looked at.
+- **Each decision from its own evidence** — every step is accepted, rejected or left unresolved based
+  on its own image diff, DOM change and the ticket.
+- **Nothing is final until saved** — accepts and rejects can be undone; saving is a separate step the AI never takes.
+
 ## Safety
 
 The AI can accept or reject changes in Eyes, but it can never save baselines, push or merge — the
