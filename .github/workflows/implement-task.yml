@@ -72,6 +72,7 @@ jobs:
       - name: Get the agent's GitHub App token
         id: app
         if: steps.task.outputs.key != '' && vars.BOT_APP_ID != ''
+        continue-on-error: true   # app not installed yet → fall back to the default token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ vars.BOT_APP_ID }}
