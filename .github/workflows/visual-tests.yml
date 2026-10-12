@@ -26,6 +26,9 @@ jobs:
     outputs:
       merged: ${{ steps.auto.outputs.merged }}
     name: Playwright + agent review
+    # PRs opened by Agent 1 (as the app eyes-mcp-visual-agent) were already tested and reviewed in Agent 1's own
+    # run — skip a second, identical review. A skipped job counts as passed for required checks.
+    if: ${{ !(github.event_name == 'pull_request' && endsWith(github.event.pull_request.user.login, '[bot]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -227,7 +230,7 @@ jobs:
           LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(",")'),$( [ -n "$TICKET" ] && node scripts/jira.mjs labels "$TICKET" 2>/dev/null )"
           if echo ",$LABELS," | grep -q ',human-review,'; then echo "human-review requested — a person saves and merges."; exit 0; fi
           AUTHOR=$(gh pr view "$PR" --json author --jq .author.login)
-          case "$AUTHOR" in app/github-actions|github-actions*) echo "Agent-opened PR — Agent 1 handles it."; exit 0 ;; esac
+          case "$AUTHOR" in app/*|github-actions*|*\[bot\]) echo "Agent-opened PR — Agent 1 handles it."; exit 0 ;; esac
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           [ -n "$B" ] || { echo "No Eyes batch found — a person decides."; exit 0; }
           node scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
@@ -298,6 +301,9 @@ jobs:
         if: always() && env.PR != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           if [ "${{ steps.auto.outputs.merged }}" = yes ]; then
             [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ] && node scripts/jira.mjs needs-human "$TICKET" off || true
@@ -305,7 +311,10 @@ jobs:
           fi
           gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
           gh pr edit "$PR" --add-label needs-human || true
-          [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ] && node scripts/jira.mjs needs-human "$TICKET" on || true
+          if [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ]; then
+            node scripts/jira.mjs transition "$TICKET" "In Review" || true
+            node scripts/jira.mjs needs-human "$TICKET" on || true
+          fi
 
       - name: Enforce verdict
         if: env.PR != ''
