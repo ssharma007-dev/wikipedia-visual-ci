@@ -80,7 +80,9 @@ explain in the baseline recommendation that the old baseline contained the bug.
    New tests you wrote appear as **New** steps — they are not saved automatically; recommend
    whether a person should save them.
 
-6. **Write the report data** to `agent-report/report.json` (exact shape below). Use Eyes MCP
+6. **Write the report data** to `agent-report/report.json` (exact shape below). For every test you list,
+   give `name` exactly as written in the `test('…')` call and its Eyes session link (`eyesUrl`, from
+   `eyes_inspect_sessions`) so the report can link to the test's code and its Eyes result. Use Eyes MCP
    evidence: for each finding include the image-diff file path that `eyes_inspect_image_diff` or
    `eyes_inspect_evidence` returned (the pipeline embeds it in the HTML), the Eyes step URL, and a
    one-line DOM-diff summary.
@@ -99,8 +101,8 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
     "files": [ { "path": "site/wikipedia/styles/custom.css", "change": "…" } ]
   },
   "tests": {
-    "relevant": [ { "name": "Portal page", "file": "tests/wikipedia.spec.ts", "why": "…" } ],
-    "added": [ { "name": "…", "file": "tests/….spec.ts", "why": "…" } ],
+    "relevant": [ { "name": "Portal page", "file": "tests/wikipedia.spec.ts", "why": "…", "eyesUrl": "https://eyes.applitools.com/app/test-results/<batch>/<session>?accountId=…" } ],
+    "added": [ { "name": "…", "file": "tests/….spec.ts", "why": "…", "eyesUrl": "…" } ],
     "command": "npx playwright test",
     "result": "passed | differences | failed",
     "batchUrl": "https://eyes.applitools.com/app/test-results/…"
