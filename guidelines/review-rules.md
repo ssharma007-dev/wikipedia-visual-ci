@@ -80,7 +80,7 @@ Edit the switches to give the AI more or less autonomy — for example, start a 
 | Auto-reject | **on** | Regression and Missing steps are **rejected** in Eyes |
 | Mask dynamic content | **on** | Confirmed-dynamic content gets a match region before the step is accepted |
 | Apply a decision to the same test on other browsers/devices | **on** | Uses the MCP's default propagation (same scenario, identical diff only) |
-| Save baselines | **never** | `eyes_resolve_save` and `eyes_resolve_reset` are blocked in CI; a person saves |
+| Save baselines | **never by the agent** | `eyes_resolve_save` and `eyes_resolve_reset` are blocked for the agent. **Automatic review (default):** the pipeline saves and merges when there are no bugs and nothing unresolved. **`human-review` label** (Jira ticket or PR): a person saves and merges |
 
 **Which MCP mode to use:**
 

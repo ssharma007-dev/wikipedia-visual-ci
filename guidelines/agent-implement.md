@@ -13,7 +13,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 | `ci-context/task.md` | **The task** — the `tasks/<KEY>-*.md` file on this branch, picked by the key in the commit message. Implement this and nothing else. |
 | `ci-context/commit.txt` | The commit message that triggered you (use its words to find relevant tests). |
 | `ci-context/worktype.txt` | The kind of work: `feature`, `bug`, `hotfix`, `refactor`, `chore`, `content`, `experiment`, `a11y` or `revert`. It changes what you should expect to see — see **Work types** below. |
-| `ci-context/mode.txt` | `manual` or `auto`. In **auto** mode, if your report has no bugs and nothing is left unresolved, the pipeline saves the baselines and merges — so be strict: anything you are unsure about must be left unresolved, never accepted. |
+| `ci-context/mode.txt` | `auto` (default) or `manual` (someone added the label `human-review`). In **auto** mode, if your report has no bugs and nothing is left unresolved, the pipeline saves the baselines and merges — so be strict: anything you are unsure about must be left unresolved, never accepted. |
 | `ci-context/design-system.md` | The design system (from `main`). Your change must follow it. |
 | `ci-context/review-rules.md` | How to classify differences and what you may do in Eyes (from `main`). Follow its classes, thresholds and "Eyes MCP behaviour" switches. |
 | `site/wikipedia/` | The site. `styles/custom.css` is the team stylesheet; `pages/` holds the HTML; `flags.json` holds demo feature flags. |
