@@ -107,7 +107,7 @@ Push a commit whose message contains the key (e.g. `WIKI-101: hide the App Store
 
 ## Jira
 
-Secrets `JIRA_BASE_URL` (`https://<site>.atlassian.net`), `JIRA_EMAIL` and `JIRA_API_TOKEN` connect the pipeline to Jira. Without them, tickets come from `guidelines/tasks/<KEY>-*.md` and no Jira comment is posted. Helper: `scripts/jira.mjs`.
+Secrets `JIRA_BASE_URL` (`https://<site>.atlassian.net`), `JIRA_EMAIL` and `JIRA_API_TOKEN` connect the pipeline to Jira. Without them, the ticket comes from the branch snapshot `tasks/<KEY>-*.md` and no Jira comment is posted. Helper: `scripts/jira.mjs`.
 
 ## Run locally
 
