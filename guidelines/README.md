@@ -8,6 +8,8 @@ tests run. It judges each visual difference Eyes finds using the files in this f
 | [`design-system.md`](design-system.md) | What must **always** be true, in every PR? | Design team | `main` |
 | **The Jira ticket** (snapshot in `tasks/WIKI-xxx-*.md` on each branch) | What is **this** PR allowed to change — and what must stay unchanged? | Product | Jira (snapshot on the PR's branch) |
 | [`review-rules.md`](review-rules.md) | How does the AI decide (thresholds), and what may it do in Eyes? | QA / platform | `main` |
+| [`agent-implement.md`](agent-implement.md) | How Agent 1 implements a ticket, writes tests and reports | QA / platform | `main` |
+| [`agent-fix.md`](agent-fix.md) | How Agent 1 fixes the bugs it found and re-tests (up to 2 rounds) | QA / platform | `main` |
 
 ## Order of precedence
 
@@ -25,7 +27,9 @@ Shift ≤ 2px with no HTML change                     → 👍 accept   (noise)
 Unsure                                              → 👤 left unresolved for a person
 ```
 
-The AI **never saves baselines** — a person saves them in Eyes after approving the PR.
+The AI **never saves baselines**. With no bugs, the pipeline saves and merges automatically (unless
+the ticket has `human-review`). When Agent 1 finds a bug caused by its own change, it fixes the code and
+re-tests, up to 2 rounds; anything it can't fix goes to a person.
 
 ## Governance
 

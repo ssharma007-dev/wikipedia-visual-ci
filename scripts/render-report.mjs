@@ -62,6 +62,8 @@ const isReview = r.source === 'pr-review';   // a developer's PR reviewed by the
 const who = isReview ? 'AI visual review of the pull request' : 'Agent 1 · visual implementation report';
 const bugs = list(r.bugs);
 const recs = list(r.baseline?.recommendations);
+const fixed = list(r.fixHistory).flatMap((h) => list(h.bugs).map((b) => ({ ...b, round: h.round, batchUrl: h.batchUrl })));
+const fixedCount = fixed.filter((b) => b.fixed).length;
 const count = (cls) => findings.filter((f) => f.class === cls).length;
 
 const evidenceBlock = (e = {}) => `
@@ -93,7 +95,8 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 
 <div class="cards">
   <div class="card"><div class="num">${count('real-change')}</div>real changes</div>
-  <div class="card"><div class="num">${bugs.length}</div>bugs</div>
+  <div class="card"><div class="num">${bugs.length}</div>bugs left</div>
+  ${fixed.length ? `<div class="card"><div class="num">${fixedCount}</div>bugs fixed by the AI</div>` : ''}
   <div class="card"><div class="num">${recs.length}</div>baseline recommendations</div>
   <div class="card"><div class="num">${r.baseline?.saved ? 'Yes' : 'No'}</div>baselines saved</div>
 </div>
@@ -106,6 +109,12 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 <h2>Bugs found — evidence and fixes</h2>
 ${bugs.length ? bugs.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag bad">${esc(b.severity)}</span></h3>
 <p><b>Why it is a bug:</b> ${esc(b.whyBug)}</p><p class="meta">Rule: ${esc(b.guidelineRef)}</p><p><b>How to fix:</b> ${esc(b.fix)}</p>${evidenceBlock(b.evidence)}</div>`).join('') : '<p class="muted">No bugs found.</p>'}
+
+${fixed.length ? `<h2>Bugs the AI found and fixed by itself</h2>
+<p class="muted">The AI rejected these in Eyes, fixed the code, ran the tests again in a new Eyes batch and reviewed the result.</p>
+${fixed.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag ${b.fixed ? 'good' : 'bad'}">${b.fixed ? 'fixed' : 'still present'}</span> <span class="tag info">fix round ${esc(b.round)}</span></h3>
+<p><b>Why it was a bug:</b> ${esc(b.whyBug)}</p>${b.rootCause ? `<p><b>Root cause:</b> ${esc(b.rootCause)}</p>` : ''}<p><b>What the AI changed:</b> ${esc(b.change)}</p>
+${evidenceBlock(b.evidence)}${b.batchUrl ? `<p class="meta">${link(b.batchUrl, 'Eyes batch after the fix')}</p>` : ''}</div>`).join('')}` : ''}
 
 <h2>Visual changes — before, after and differences</h2>
 ${visualChanges}
@@ -143,9 +152,9 @@ const md = `## ${r.verdict === 'bugs-found' ? '❌' : '✅'} ${isReview ? 'AI re
 
 **Implemented:** ${r.implementation?.summary ?? '—'}
 
-| Real changes | Bugs | Baseline recommendations | Baselines saved |
-|---|---|---|---|
-| ${count('real-change')} | ${bugs.length} | ${recs.length} | ${r.baseline?.saved ? 'yes' : 'no — a person saves'} |
+| Real changes | Bugs left | Bugs fixed by the AI | Baseline recommendations | Baselines saved |
+|---|---|---|---|---|
+| ${count('real-change')} | ${bugs.length} | ${fixedCount} | ${recs.length} | ${r.baseline?.saved ? 'yes' : 'no — a person saves'} |
 
 ${list(r.summary?.realChanges).map((x) => `- ✅ ${x}`).join('\n')}
 ${list(r.summary?.bugs).map((x) => `- ❌ ${x}`).join('\n')}
