@@ -1,0 +1,49 @@
+name: Add the Jira ticket to a new branch
+
+# When a branch whose name contains a Jira key is created (e.g. with "Create branch" in Jira),
+# copy that ticket into tasks/<KEY>-<summary>.md on the branch, so the task travels with the code.
+# It does not start Agent 1 — use the Jira "Run Agent 1" button or push a commit naming the key.
+on: create
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+    steps:
+      - name: Find the ticket key in the branch name
+        id: key
+        run: |
+          KEY=$(echo "${{ github.ref_name }}" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+          [ -n "$KEY" ] && echo "Branch ${{ github.ref_name }} → ticket $KEY" || echo "No ticket key in the branch name — nothing to do."
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.key != ''
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.key != ''
+        with:
+          node-version: 20
+
+      - name: Copy the ticket from Jira into tasks/
+        if: steps.key.outputs.key != ''
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          if ls tasks/"$KEY"-*.md tasks/"$KEY".md >/dev/null 2>&1; then echo "tasks/ already has $KEY"; exit 0; fi
+          node scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::warning::Could not read $KEY from Jira"; exit 0; }
+          SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
+          mkdir -p tasks && cp /tmp/task.md "tasks/$KEY-$SLUG.md"
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tasks && git commit -m "[agent] $KEY: task synced from Jira [skip ci]"
+          git push origin "HEAD:${{ github.ref_name }}"
+          echo "Added tasks/$KEY-$SLUG.md to ${{ github.ref_name }}"
