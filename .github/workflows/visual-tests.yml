@@ -14,7 +14,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write   # automatic review merges passing PRs
   pull-requests: write
 
 concurrency:
@@ -23,6 +23,8 @@ concurrency:
 
 jobs:
   visual:
+    outputs:
+      merged: ${{ steps.auto.outputs.merged }}
     name: Playwright + agent review
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -198,6 +200,36 @@ jobs:
             "${{ github.server_url }}/${{ github.repository }}/pull/$PR" "$BATCH" \
             || echo "::warning::Could not comment on Jira ticket $TICKET (Jira not configured or not reachable)"
 
+      # Automatic review (default): a passing PR is saved and merged by the pipeline, unless a person asked
+      # to review it (label human-review on the Jira ticket or on the PR). Anything else stays with a person.
+      - name: "Automatic review: save baselines and merge"
+        id: auto
+        if: env.PR != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+          APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+        run: |
+          V=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
+          [ "$V" = "pass" ] || { echo "Verdict $V — a person decides."; exit 0; }
+          LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(",")'),$( [ -n "$TICKET" ] && node scripts/jira.mjs labels "$TICKET" 2>/dev/null )"
+          if echo ",$LABELS," | grep -q ',human-review,'; then echo "human-review requested — a person saves and merges."; exit 0; fi
+          AUTHOR=$(gh pr view "$PR" --json author --jq .author.login)
+          case "$AUTHOR" in app/github-actions|github-actions*) echo "Agent-opened PR — Agent 1 handles it."; exit 0 ;; esac
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
+          [ -n "$B" ] || { echo "No Eyes batch found — a person decides."; exit 0; }
+          node scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
+          if gh pr merge "$PR" --squash --delete-branch; then
+            echo "merged=yes" >> "$GITHUB_OUTPUT"
+            gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."
+            [ -n "$TICKET" ] && node scripts/jira.mjs transition "$TICKET" "Done" || true
+          else
+            echo "::warning::Merge failed (e.g. conflict) — a person merges."
+          fi
+
       - name: Enforce verdict
         if: env.PR != ''
         run: |
@@ -205,3 +237,40 @@ jobs:
           echo "Agent verdict: $verdict"
           cat review/verdict.json 2>/dev/null || true
           [ "$verdict" = "pass" ] || { echo "::error::Visual review verdict: $verdict"; exit 1; }
+
+  # After an automatic merge (which does not trigger a push run), refresh main's Eyes baseline.
+  main-baseline:
+    name: "Automatic review: refresh main's baseline"
+    needs: visual
+    if: needs.visual.outputs.merged == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: main-baseline
+      cancel-in-progress: false
+    env:
+      APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
+      APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+      APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+      APPLITOOLS_BATCH_ID: main-baseline-${{ github.run_id }}-${{ github.run_attempt }}
+      APPLITOOLS_BATCH_NAME: "main · baseline after PR #${{ github.event.pull_request.number }} (automatic)"
+      EYES_BRANCH_NAME: ${{ github.repository }}/main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install and start the site
+        run: |
+          npm ci && npx playwright install --with-deps chromium
+          node server.mjs > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3001/wikipedia > /dev/null && break; sleep 1; done
+      - name: Run the visual tests on merged main
+        run: npx playwright test 2>&1 | tee main-run.log
+      - name: Accept and save (the merged change was approved by the automatic review)
+        run: |
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' main-run.log)
+          node scripts/eyes-save.mjs "$B" --accept-all
