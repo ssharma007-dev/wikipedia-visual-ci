@@ -350,6 +350,8 @@ jobs:
     name: "Auto mode: refresh main's baseline"
     needs: implement
     if: needs.implement.outputs.merged == 'yes'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:
@@ -367,6 +369,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - name: Keep main free of task snapshots
+        run: |
+          [ -d tasks ] || exit 0
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rq tasks && git commit -m "[agent] Remove merged task snapshots from main [skip ci]" && git push origin HEAD:main
       - name: Install and start the site
         run: |
           npm ci && npx playwright install --with-deps chromium
