@@ -14,7 +14,18 @@ jobs:
   clean:
     runs-on: ubuntu-latest
     steps:
+      # Pushes to main are protected; the app "Eyes MCP Visual Agent" is allowed to make this housekeeping commit.
+      - name: Get the agent's GitHub App token
+        id: app
+        if: vars.BOT_APP_ID != ''
+        continue-on-error: true
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app.outputs.token || github.token }}
       - name: Remove tasks/ from main
         run: |
           [ -d tasks ] || exit 0

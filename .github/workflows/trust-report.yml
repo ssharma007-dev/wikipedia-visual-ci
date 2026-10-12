@@ -1,0 +1,31 @@
+name: Trust report
+
+# How often do people agree with the AI reviewer? Runs every Monday and on demand (Actions → Trust report → Run).
+# The result is on the run's summary page.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      prs:
+        description: 'How many recent closed PRs to include'
+        default: '100'
+
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Compare AI verdicts with what people did
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/trust-report.mjs "${{ inputs.prs || 100 }}" | tee -a "$GITHUB_STEP_SUMMARY"

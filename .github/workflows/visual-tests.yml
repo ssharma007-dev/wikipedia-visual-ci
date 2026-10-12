@@ -19,12 +19,14 @@ permissions:
 
 concurrency:
   group: visual-${{ github.event.pull_request.number || inputs.pr || github.ref }}
-  cancel-in-progress: true
+  # PR runs: a newer push replaces the older run. Runs on main are never cancelled — each one saves main's baseline.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   visual:
     outputs:
       merged: ${{ steps.auto.outputs.merged }}
+      via_app: ${{ steps.auto.outputs.via_app }}
     name: Playwright + agent review
     # PRs opened by Agent 1 (as the app eyes-mcp-visual-agent) were already tested and reviewed in Agent 1's own
     # run — skip a second, identical review. A skipped job counts as passed for required checks.
@@ -40,6 +42,16 @@ jobs:
       APPLITOOLS_BATCH_NAME: "${{ github.event.pull_request.number && format('PR #{0} {1}', github.event.pull_request.number, github.event.pull_request.title) || inputs.pr && format('PR #{0} (manual run)', inputs.pr) || format('{0} @ {1}', github.ref_name, github.sha) }}"
 
     steps:
+      # Merges are made as the app "Eyes MCP Visual Agent", so they trigger the after-merge run on main.
+      - name: Get the agent's GitHub App token
+        id: app
+        if: vars.BOT_APP_ID != ''
+        continue-on-error: true
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2   # PR checkout is a merge commit; HEAD^1 is the base branch
@@ -217,7 +229,8 @@ jobs:
         id: auto
         if: env.PR != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          MERGE_POLICY: ${{ vars.MERGE_POLICY || 'auto' }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
@@ -235,12 +248,21 @@ jobs:
           [ -n "$B" ] || { echo "No Eyes batch found — a person decides."; exit 0; }
           node scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
           echo "saved=yes" >> "$GITHUB_OUTPUT"
+          # Merge policy (repo variable MERGE_POLICY): auto (default) merges now; code-approval waits for one
+          # person to approve the code, then GitHub merges by itself (auto-merge).
+          if [ "$MERGE_POLICY" = "code-approval" ]; then
+            gh pr merge "$PR" --auto --squash --delete-branch || true
+            gh pr comment "$PR" --body "🤖 **Visual review passed** and the baselines were saved on this branch. Waiting for **one code approval** — once a reviewer approves, GitHub merges this PR automatically."
+            echo "waiting=code-approval" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if gh pr merge "$PR" --squash --delete-branch; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
+            [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."
             [ -n "$TICKET" ] && node scripts/jira.mjs transition "$TICKET" "Done" || true
           else
-            echo "::warning::Merge failed (e.g. conflict) — a person merges."
+            echo "::warning::Merge failed (e.g. a conflict) — a person merges."
           fi
 
       - name: Render the PDF report
@@ -331,11 +353,38 @@ jobs:
           cat ci-context/failed-tests.md 2>/dev/null || true
           echo "::error::Functional checks failed"; exit 1
 
-  # After an automatic merge (which does not trigger a push run), refresh main's Eyes baseline.
+      # ---------- main only: every merged PR updates main's baseline and closes its ticket ----------
+      # A PR reaches main only after its review (automatic or a person's), so what is on main is approved:
+      # accept this run's differences and save, so main's baseline always matches main's code.
+      - name: "After a merge: update main's baseline and close the ticket"
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+          APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          PRJSON=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" --jq '[.[] | select(.merged_at != null)][0] // empty')
+          [ -n "$PRJSON" ] || { echo "Not a merged pull request — main's baseline is left as is."; exit 0; }
+          NUM=$(echo "$PRJSON" | node -pe 'JSON.parse(require("fs").readFileSync(0)).number')
+          HEADREF=$(echo "$PRJSON" | node -pe 'JSON.parse(require("fs").readFileSync(0)).head.ref')
+          echo "Merged PR #$NUM ($HEADREF)"
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
+          if [ -n "$B" ]; then node scripts/eyes-save.mjs "$B" --accept-all || echo "::warning::Could not save main's baseline"; fi
+          KEY=$(echo "$HEADREF" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
+          if [ -n "$KEY" ]; then
+            node scripts/jira.mjs transition "$KEY" "Done" || true
+            node scripts/jira.mjs needs-human "$KEY" off || true
+          fi
+
+  # Fallback when the GitHub App isn't configured: merges made with the default token don't trigger the
+  # after-merge run on main, so refresh main's Eyes baseline here instead.
   main-baseline:
     name: "Automatic review: refresh main's baseline"
     needs: visual
-    if: needs.visual.outputs.merged == 'yes'
+    if: needs.visual.outputs.merged == 'yes' && needs.visual.outputs.via_app != 'yes'
     permissions:
       contents: write
     runs-on: ubuntu-latest

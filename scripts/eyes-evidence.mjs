@@ -12,7 +12,8 @@ fs.mkdirSync(outDir, { recursive: true });
 
 const MAX_AREAS_PER_STEP = 3;
 const MAX_ITEMS = 16;
-const PAD = 60;
+const PAD = 120;          // context around each change, so small changes are readable in the PDF
+const MIN_W = 640, MIN_H = 300;
 
 const server = spawn('npx', ['-y', '@applitools/mcp@0.8.5'], { stdio: ['pipe', 'pipe', 'ignore'], env: process.env });
 let buffer = '';
@@ -75,15 +76,21 @@ try {
       const list = areas.length ? areas.slice(0, MAX_AREAS_PER_STEP) : [null];
       for (const [n, a] of list.entries()) {
         if (items.length >= MAX_ITEMS) break;
-        const rect = a && {
-          left: Math.max(0, a.left - PAD), top: Math.max(0, a.top - PAD),
-          width: Math.max(a.width + 2 * PAD, 360), height: Math.max(a.height + 2 * PAD, 160),
-        };
+        // Centre small changes in a crop of at least MIN_W × MIN_H, so a one-word change still shows its surroundings.
+        // Never wider than the screen it came from (a phone is ~384px wide).
+        const screenW = env.width || Infinity;
+        const big = a && (() => {
+          const width = Math.min(Math.max(a.width + 2 * PAD, MIN_W), screenW), height = Math.max(a.height + 2 * PAD, MIN_H);
+          const left = Math.min(Math.max(0, Math.round(a.left + a.width / 2 - width / 2)), Math.max(0, screenW - width));
+          return { left, top: Math.max(0, Math.round(a.top + a.height / 2 - height / 2)), width, height };
+        })();
+        const small = a && { left: Math.max(0, a.left - 60), top: Math.max(0, a.top - 60), width: a.width + 120, height: a.height + 120 };
         const id = `${items.length + 1}`;
-        const args = rect ? { rect } : {};
-        const before = step.baseline?.id ? copy(await tool('eyes_inspect_image', { sessionUrl: sUrl, imageId: step.baseline.id, ...args }), `${id}-before.png`) : null;
-        const after = step.checkpoint?.id ? copy(await tool('eyes_inspect_image', { sessionUrl: sUrl, imageId: step.checkpoint.id, ...args }), `${id}-after.png`) : null;
-        const diff = copy(await tool('eyes_inspect_image_diff', { sessionUrl: sUrl, stepIndex, ...args }), `${id}-diff.png`);
+        // Try the roomy crop first; if Eyes rejects it (e.g. past the image edge), fall back to a tight one.
+        const grab = async (fn) => { for (const rect of [big, small, null]) { try { return await fn(rect ? { rect } : {}); } catch {} } return null; };
+        const before = step.baseline?.id ? copy(await grab((x) => tool('eyes_inspect_image', { sessionUrl: sUrl, imageId: step.baseline.id, ...x })), `${id}-before.png`) : null;
+        const after = step.checkpoint?.id ? copy(await grab((x) => tool('eyes_inspect_image', { sessionUrl: sUrl, imageId: step.checkpoint.id, ...x })), `${id}-after.png`) : null;
+        const diff = copy(await grab((x) => tool('eyes_inspect_image_diff', { sessionUrl: sUrl, stepIndex, ...x })) ?? '', `${id}-diff.png`);
         items.push({ ...base, area: a ? `${a.width}×${a.height} at (${a.left}, ${a.top})` : 'whole step', before, after, diff,
           newTest: !step.baseline?.id });
         console.log(`evidence ${id}: ${s.sessionName} [${base.environment}] ${base.decision}`);

@@ -49,6 +49,7 @@ jobs:
     outputs:
       key: ${{ steps.task.outputs.key }}
       merged: ${{ steps.merge.outputs.merged }}
+      via_app: ${{ steps.merge.outputs.via_app }}
     env:
       APPLITOOLS_BATCH_ID: agent-${{ github.run_id }}-${{ github.run_attempt }}
       # Eyes branching: the task branch (set below), compared with main's baseline. New tests are NOT auto-saved.
@@ -375,11 +376,19 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
         run: |
           N="${{ steps.pr.outputs.number }}"
+          # Merge policy (repo variable MERGE_POLICY): code-approval → wait for one person to approve the code;
+          # GitHub then merges by itself (auto-merge), and the after-merge run on main finishes the job.
+          if [ "${{ vars.MERGE_POLICY }}" = "code-approval" ]; then
+            gh pr merge "$N" --auto --squash --delete-branch || true
+            gh pr comment "$N" --body "🤖 **Visual review passed** and the baselines were saved on this branch. Waiting for **one code approval** — once a reviewer approves, GitHub merges this PR automatically."
+            echo "merged=waiting" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           # The PR's own checks (Ticket check, ...) run on the agent's PR too: wait for the required ones first.
           sleep 20
           gh pr checks "$N" --required --watch --interval 15 --fail-fast 2>&1 | tail -5 || true
           if gh pr merge "$N" --squash --delete-branch; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
+            [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
           else
             echo "merged=no" >> "$GITHUB_OUTPUT"; echo "::warning::Auto-merge failed (e.g. a conflict with main) — a person merges."
           fi
@@ -413,6 +422,7 @@ jobs:
             [ -n "$B" ] && [ "$B" != "undefined" ] && echo "Eyes batch (optional): [open in Eyes]($B)"
             echo "CI run and HTML report: [run ${{ github.run_id }}]($RUN)"
             if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then echo "Automatic review: no bugs, nothing unresolved → baselines saved and PR merged automatically."
+            elif [ "${{ steps.merge.outputs.merged }}" = "waiting" ]; then echo "✅ Visual review passed and baselines saved on the branch → waiting for one code approval on the PR; it then merges automatically."
             elif [ "${{ steps.ctx.outputs.mode }}" = "auto" ]; then echo "Automatic review could not finish alone (bugs, unresolved steps or a merge conflict) → a person reviews the PDF, saves and merges."
             else echo "human-review requested: a person reviews the PDF, saves the baselines in Eyes and merges the PR."; fi
           } > ci-context/jira-note.txt
@@ -442,7 +452,8 @@ jobs:
   main-baseline:
     name: "Auto mode: refresh main's baseline"
     needs: implement
-    if: needs.implement.outputs.merged == 'yes'
+    # Only needed without the GitHub App: app merges trigger the after-merge run on main (visual-tests.yml).
+    if: needs.implement.outputs.merged == 'yes' && needs.implement.outputs.via_app != 'yes'
     permissions:
       contents: write
     runs-on: ubuntu-latest
