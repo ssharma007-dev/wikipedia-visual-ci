@@ -16,6 +16,16 @@
 	font-weight: 700;
 }
 
+/* WIKI-7: highlight the "Donate" header link in red (#D73333) for the fundraising
+   campaign, on article pages, desktop + phone. Implemented as the ticket asks so the
+   visual diff is real evidence for review — but #D73333 is not one of the design
+   system's color tokens, and the Header links rule pins Donate to color-progressive.
+   See agent-report/report.json for the design-system conflict this creates. */
+#pt-sitesupport > a,
+#pt-sitesupport-2 > a {
+	color: #D73333;
+}
+
 /* WIKI-8: make the portal search input and Search button 48px tall on phone
    (<= 480px) for easier tapping. Desktop/tablet keep the design system's
    default 44px. `.search-container` only exists on the portal, so this
