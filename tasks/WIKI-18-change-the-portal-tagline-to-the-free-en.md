@@ -1,8 +1,8 @@
 # WIKI-18 — Change the portal tagline to "The Free Encyclopedia for everyone"
 
-**Type:** Task · **Priority:** Medium · **Status:** In Progress · **Reporter:** Shreya Sharma
+**Type:** Task · **Priority:** Medium · **Status:** In Review · **Reporter:** Shreya Sharma
 **Source:** Jira — https://testing-visual-ci.atlassian.net/browse/WIKI-18
-**Labels:** content
+**Labels:** content, needs-human
 
 #### Why
 
