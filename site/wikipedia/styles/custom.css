@@ -15,3 +15,13 @@
 #pt-sitesupport-2 > a {
 	font-weight: 700;
 }
+
+/* WIKI-1: brand teal (color-brand-primary, #0E7C7B) for the portal "Search" button,
+   on desktop and phone. Only background and border change — the magnifier icon's
+   color is untouched and stays white. Scoped to .search-container, which only exists
+   on the portal; article pages use .vector-header / .cdx-search-input and keep their
+   current progressive-blue secondary button (a later ticket). */
+.search-container .pure-button-primary-progressive {
+	background-color: #0E7C7B;
+	border-color: #0E7C7B;
+}

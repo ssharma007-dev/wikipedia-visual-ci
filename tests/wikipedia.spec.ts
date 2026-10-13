@@ -23,6 +23,29 @@ test('Search button is fully visible on phone (WIKI-12)', async ({ page }) => {
   expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth);
 });
 
+// WIKI-1: the portal "Search" button uses the brand teal color (color-brand-primary,
+// #0E7C7B) for background and border, on desktop and phone, while the article header's
+// (secondary) search button keeps its current look untouched.
+test('Portal Search button is brand teal, article header search button is unchanged (WIKI-1)', async ({ page }) => {
+  await page.goto(BASE);
+
+  const portalButton = page.locator('.search-container .pure-form button');
+  const portalBg = await portalButton.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const portalBorder = await portalButton.evaluate((el) => getComputedStyle(el).borderColor);
+  expect(portalBg).toBe('rgb(14, 124, 123)'); // color-brand-primary
+  expect(portalBorder).toBe('rgb(14, 124, 123)');
+
+  await page.setViewportSize({ width: 384, height: 854 });
+  await page.goto(BASE);
+  const portalBgPhone = await portalButton.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(portalBgPhone).toBe('rgb(14, 124, 123)');
+
+  await page.goto(`${BASE}/wiki/Functional_testing`);
+  const articleButton = page.locator('#searchform .cdx-search-input__end-button');
+  const articleBg = await articleButton.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(articleBg).not.toBe('rgb(14, 124, 123)');
+});
+
 test('Search for "functional testing"', async ({ page, eyes }) => {
   await page.goto(BASE);
 
