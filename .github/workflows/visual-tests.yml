@@ -16,6 +16,7 @@ on:
 permissions:
   contents: write   # automatic review merges passing PRs
   pull-requests: write
+  statuses: write   # posts the "Visual review" result on the PR (a required check on main)
 
 concurrency:
   group: visual-${{ github.event.pull_request.number || inputs.pr || github.ref }}
@@ -30,7 +31,8 @@ jobs:
     name: Playwright + agent review
     # PRs opened by Agent 1 (as the app eyes-mcp-visual-agent) were already tested and reviewed in Agent 1's own
     # run — skip a second, identical review. A skipped job counts as passed for required checks.
-    if: ${{ !(github.event_name == 'pull_request' && endsWith(github.event.pull_request.user.login, '[bot]')) }}
+    # Later pushes to such a PR (e.g. a person fixing a bug) are reviewed normally.
+    if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'opened' && endsWith(github.event.pull_request.user.login, '[bot]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -222,6 +224,23 @@ jobs:
             gh pr comment "$PR" --body "## ⚠️ Visual review did not complete
           The agent did not produce a summary. See the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
           fi
+
+      # The result as a PR check called "Visual review", required on main: a PR can't be merged by hand while
+      # the review failed, functional checks failed, or there is no ticket.
+      - name: Report the review result on the PR
+        if: always() && env.PR != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"; [ -n "$SHA" ] || SHA=$(gh pr view "$PR" --json headRefOid --jq .headRefOid)
+          V=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
+          if [ "$NO_TICKET" = yes ]; then STATE=failure; DESC="No Jira ticket for this branch"
+          elif [ "$TESTS_FAILED" = yes ]; then STATE=failure; DESC="Functional checks failed"
+          elif [ "$V" = pass ]; then STATE=success; DESC="AI visual review passed"
+          else STATE=failure; DESC="AI visual review: $V — see the PR comment and PDF"; fi
+          gh api "repos/${{ github.repository }}/statuses/$SHA" -f state="$STATE" -f context="Visual review" \
+            -f description="$DESC" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
+          echo "Visual review → $STATE ($DESC)"
 
       # Automatic review (default): a passing PR is saved and merged by the pipeline, unless a person asked
       # to review it (label human-review on the Jira ticket or on the PR). Anything else stays with a person.
