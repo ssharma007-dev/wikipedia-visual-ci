@@ -95,4 +95,8 @@ An AI model is probabilistic: left alone, it might skim or stop early. The Appli
 
 The AI can accept or reject changes in Eyes, but it can never save baselines, push or merge — the pipeline does that, and only when there are no bugs. It can change only `site/` and `tests/`.
 
+`main` is protected: every change goes through a pull request, and two checks must pass before anyone can merge: **Branch links to a Jira ticket** and **Visual review** (the AI review, functional checks included). The AI works as its own GitHub account, `eyes-mcp-visual-agent[bot]`, so everything it does is visible and checked like a developer's.
+
+Want a person to approve every change too? Run `scripts/set-merge-policy.sh code-approval` (back with `auto`). How often people agree with the AI: **Actions → Trust report**.
+
 This is a demo that merges straight into `main`. Adapt it to your branches (staging, QA, release) and add a human code approval as your team needs.
