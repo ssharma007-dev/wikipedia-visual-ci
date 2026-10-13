@@ -8,6 +8,8 @@
 //   node scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
 //   node scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
 //   node scripts/jira.mjs attach <KEY> <file> [name]        → attaches a file (e.g. the PDF report)
+//   node scripts/jira.mjs create <PROJECT>-0 <summary> <description.md> [labels] → creates a ticket, prints its key
+//   node scripts/jira.mjs inspect <KEY>                     → status, labels, attachments, last comments
 //   node scripts/jira.mjs needs-human <KEY> on|off          → label needs-human (+ assign to the reporter), or clear it
 // Needs JIRA_BASE_URL (https://<site>.atlassian.net), JIRA_EMAIL and JIRA_API_TOKEN.
 import fs from 'node:fs';
@@ -131,6 +133,34 @@ ${adfToText(f.description) || '_(no description)_'}`);
   const fields = on && f.reporter?.accountId ? { assignee: { accountId: f.reporter.accountId } } : {};
   await jira(`/rest/api/3/issue/${key}`, { method: 'PUT', body: JSON.stringify({ fields, update: { labels: [on ? { add: 'needs-human' } : { remove: 'needs-human' }] } }) });
   console.log(`${key}: needs-human ${on ? `on, assigned to ${f.reporter?.displayName ?? 'reporter'}` : 'off'}`);
+} else if (command === 'create') {
+  // create <PROJECT> <summary> <description-file> [labels,comma,separated] → prints the new key
+  const project = key.split('-')[0];
+  const [summary, file, labels = ''] = rest;
+  const md = fs.readFileSync(file, 'utf-8').split('\n');
+  const content = [];
+  for (const line of md) {
+    if (!line.trim()) continue;
+    if (/^#+ /.test(line)) content.push({ type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: line.replace(/^#+ /, '') }] });
+    else if (/^- /.test(line)) {
+      const item = { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: line.slice(2) }] }] };
+      const last = content.at(-1);
+      if (last?.type === 'bulletList') last.content.push(item); else content.push({ type: 'bulletList', content: [item] });
+    } else content.push({ type: 'paragraph', content: [{ type: 'text', text: line }] });
+  }
+  const types = (await jira(`/rest/api/3/project/${project}`)).issueTypes;
+  const type = types.find((t) => t.name === 'Task') ?? types.find((t) => !t.subtask);
+  const created = await jira('/rest/api/3/issue', { method: 'POST', body: JSON.stringify({ fields: {
+    project: { key: project }, issuetype: { id: type.id }, summary, labels: labels.split(',').filter(Boolean),
+    description: { type: 'doc', version: 1, content } } }) });
+  console.log(created.key);
+} else if (command === 'inspect') {
+  // inspect <KEY> → status, labels, attachments and the last comments (to check what the pipeline posted)
+  const f = (await jira(`/rest/api/3/issue/${key}?fields=summary,status,labels,assignee,attachment,comment,subtasks`)).fields;
+  console.log(`${key} — ${f.summary}\nStatus: ${f.status?.name} · Labels: ${(f.labels ?? []).join(', ') || '-'} · Assignee: ${f.assignee?.displayName ?? '-'}`);
+  console.log(`Attachments: ${(f.attachment ?? []).map((a) => `${a.filename} (${Math.round(a.size / 1024)} KB)`).join(', ') || 'none'}`);
+  console.log(`Sub-tasks: ${(f.subtasks ?? []).map((t) => `${t.key} ${t.fields.summary}`).join('; ') || 'none'}`);
+  for (const c of (f.comment?.comments ?? []).slice(-3)) console.log(`--- comment ${c.created}\n${(c.body?.content ?? []).map((p) => (p.content ?? []).map((t) => t.text ?? '').join('')).join('\n')}`);
 } else if (command === 'labels') {
   const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
   console.log((issue.fields.labels ?? []).join(','));

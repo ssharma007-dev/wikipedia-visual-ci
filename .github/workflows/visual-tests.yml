@@ -312,7 +312,14 @@ jobs:
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           PDF="review/$TICKET-visual-report.pdf"; PDF_URL=""
           # Attach the PDF first, so the comment can link straight to it
-          if [ -f "$PDF" ]; then PDF_URL=$(node scripts/jira.mjs attach "$TICKET" "$PDF" | sed -n 's/^ATTACHMENT_URL=//p' || true); fi
+          if [ -f "$PDF" ]; then
+            node scripts/jira.mjs attach "$TICKET" "$PDF" > ci-context/attach.out 2>&1 || true
+            cat ci-context/attach.out
+            PDF_URL=$(sed -n 's/^ATTACHMENT_URL=//p' ci-context/attach.out)
+            [ -n "$PDF_URL" ] || echo "::warning::The PDF was NOT attached to $TICKET — see the error above. It is in this run's artifacts."
+          else
+            echo "::warning::No PDF was produced for $TICKET."
+          fi
           V=$(node -p 'require("./review/report.json").verdict' 2>/dev/null || node -p 'require("./review/verdict.json").verdict')
           S=$(node -p 'require("./review/verdict.json").summary' 2>/dev/null || echo "")
           {
