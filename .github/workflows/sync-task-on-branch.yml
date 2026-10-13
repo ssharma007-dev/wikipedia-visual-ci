@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   sync:
-    if: github.ref_type == 'branch'
+    # Branches made by Agent 1 (the app's bot account) already get the ticket copy from Agent 1 itself.
+    if: github.ref_type == 'branch' && !endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     env:
       JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
