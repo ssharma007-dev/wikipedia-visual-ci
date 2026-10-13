@@ -255,8 +255,15 @@ jobs:
         if: steps.task.outputs.key != ''
         run: |
           git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > ci-context/changed.txt || true
+          # New files are kept only if the agent's report mentions them (implementation files, tests it added).
+          # Scratch files it made while investigating (probes, temp specs, empty files) are dropped.
+          git ls-files --others --exclude-standard > ci-context/new-files.txt
           while read -r f; do
-            case "$f" in site/*|tests/*) echo "kept:      $f" ;;
+            case "$f" in
+              site/*|tests/*)
+                if grep -qxF "$f" ci-context/new-files.txt && { [ ! -s "$f" ] || ! grep -qF "$f" agent-report/report.json 2>/dev/null; }; then
+                  echo "::warning::Agent left a scratch file $f (empty or not in its report) — discarded"; rm -f "$f"
+                else echo "kept:      $f"; fi ;;
               *) echo "::warning::Agent changed $f — discarded (only site/ and tests/ are allowed)"; git checkout -- "$f" 2>/dev/null || rm -f "$f" ;;
             esac
           done < ci-context/changed.txt
