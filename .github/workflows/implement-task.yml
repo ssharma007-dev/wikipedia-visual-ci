@@ -437,7 +437,14 @@ jobs:
           RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Attach the PDF first, so the comment can link straight to it
           PDF="agent-report/$KEY-visual-report.pdf"; PDF_URL=""
-          if [ -f "$PDF" ]; then PDF_URL=$(node scripts/jira.mjs attach "$KEY" "$PDF" | sed -n 's/^ATTACHMENT_URL=//p' || true); fi
+          if [ -f "$PDF" ]; then
+            node scripts/jira.mjs attach "$KEY" "$PDF" > ci-context/attach.out 2>&1 || true
+            cat ci-context/attach.out
+            PDF_URL=$(sed -n 's/^ATTACHMENT_URL=//p' ci-context/attach.out)
+            [ -n "$PDF_URL" ] || echo "::warning::The PDF was NOT attached to $KEY — see the error above. It is in this run's artifacts."
+          else
+            echo "::warning::No PDF was produced for $KEY."
+          fi
           {
             echo "🤖 Agent 1 implemented $KEY — verdict: $V (review mode: ${{ steps.ctx.outputs.mode }})"
             [ -n "$PDF_URL" ] && echo "📄 PDF report (summary, bugs with evidence and fixes, before/after images): [$KEY-visual-report.pdf]($PDF_URL)"
