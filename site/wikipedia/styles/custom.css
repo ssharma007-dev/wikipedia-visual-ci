@@ -15,3 +15,9 @@
 #pt-sitesupport-2 > a {
 	font-weight: 700;
 }
+
+/* WIKI-10: make the account link ("Join Wikipedia") bold to improve sign-ups. */
+#pt-createaccount > a,
+#pt-createaccount-2 > a {
+	font-weight: 700;
+}
