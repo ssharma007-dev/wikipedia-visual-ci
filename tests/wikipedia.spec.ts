@@ -32,6 +32,33 @@ test('Search for "functional testing"', async ({ page, eyes }) => {
   await eyes.check('Functional testing page', { fully: true });
 });
 
+// WIKI-8: on phone the portal search input and Search button are both 48px tall and
+// aligned, with the button directly to the right of the input. Desktop/tablet must keep
+// the design system's default 44px (the ticket's "Must not change" list).
+test('Portal search bar is 48px tall and aligned on phone (WIKI-8)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(BASE);
+
+  const input = page.locator('#searchInput');
+  const button = page.locator('.search-container .pure-form button');
+
+  const inputBox = await input.boundingBox();
+  const buttonBox = await button.boundingBox();
+  expect(inputBox).not.toBeNull();
+  expect(buttonBox).not.toBeNull();
+
+  expect(inputBox!.height).toBeCloseTo(48, 0);
+  expect(buttonBox!.height).toBeCloseTo(48, 0);
+  expect(inputBox!.y).toBeCloseTo(buttonBox!.y, 0);
+  expect(buttonBox!.x).toBeCloseTo(inputBox!.x + inputBox!.width, 0);
+
+  await page.setViewportSize({ width: 1200, height: 800 });
+  const inputDesktopBox = await input.boundingBox();
+  const buttonDesktopBox = await button.boundingBox();
+  expect(inputDesktopBox!.height).toBeCloseTo(44, 0);
+  expect(buttonDesktopBox!.height).toBeCloseTo(44, 0);
+});
+
 // WIKI-15: the "Create account" header link is renamed to "Join Wikipedia" on article
 // pages, on both desktop and phone. "Donate" and "Log in" must stay unchanged.
 test('Article header shows Donate, Join Wikipedia and Log in links (WIKI-15)', async ({ page, eyes }) => {

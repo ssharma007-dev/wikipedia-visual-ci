@@ -15,3 +15,18 @@
 #pt-sitesupport-2 > a {
 	font-weight: 700;
 }
+
+/* WIKI-8: make the portal search input and Search button 48px tall on phone
+   (<= 480px) for easier tapping. Desktop/tablet keep the design system's
+   default 44px. `.search-container` only exists on the portal, so this
+   can't reach the article header search. Both elements use box-sizing:
+   border-box, so height/min-height already include padding and border. */
+@media only screen and (max-width: 480px) {
+	.search-container #searchInput {
+		height: 48px;
+	}
+
+	.search-container .pure-form button {
+		min-height: 48px;
+	}
+}
