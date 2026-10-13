@@ -24,6 +24,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  statuses: write   # posts the "Visual review" result on the agent's PR (a required check on main)
 
 concurrency:
   group: agent-${{ inputs.key || github.ref }}
@@ -356,6 +357,24 @@ jobs:
           fi
           echo "number=$N" >> "$GITHUB_OUTPUT"
           echo "url=${{ github.server_url }}/${{ github.repository }}/pull/$N" >> "$GITHUB_OUTPUT"
+
+      # Agent 1's verdict as the PR check "Visual review" (required on main), so a PR with bugs can't be merged by hand.
+      - name: Report the review result on the PR
+        if: always() && steps.task.outputs.key != '' && steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(gh pr view "${{ steps.pr.outputs.number }}" --json headRefOid --jq .headRefOid)
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo missing)
+          BUGS=$(node -p '(require("./agent-report/report.json").bugs||[]).length' 2>/dev/null || echo 1)
+          TR=$(node -p 'require("./agent-report/report.json").tests.result' 2>/dev/null || echo unknown)
+          if [ "$V" = missing ]; then STATE=failure; DESC="Agent 1 did not finish its review"
+          elif [ "$V" = bugs-found ] || [ "$BUGS" != 0 ]; then STATE=failure; DESC="Agent 1 found $BUGS bug(s) — see the PDF"
+          elif [ "$TR" = failed ]; then STATE=failure; DESC="Functional checks failed"
+          else STATE=success; DESC="Agent 1 review passed ($V)"; fi
+          gh api "repos/${{ github.repository }}/statuses/$SHA" -f state="$STATE" -f context="Visual review" \
+            -f description="$DESC" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
+          echo "Visual review → $STATE ($DESC)"
 
       - name: "Jira: create a sub-task for each bug found"
         if: always() && steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
