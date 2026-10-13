@@ -317,6 +317,11 @@ jobs:
             cat ci-context/attach.out
             PDF_URL=$(sed -n 's/^ATTACHMENT_URL=//p' ci-context/attach.out)
             [ -n "$PDF_URL" ] || echo "::warning::The PDF was NOT attached to $TICKET — see the error above. It is in this run's artifacts."
+            # The PR gets the PDF link too, so reviewers on GitHub find the report without going to Jira.
+            if [ -n "$PDF_URL" ] && [ -n "$PR" ]; then
+              GH_TOKEN="${GH_TOKEN:-${{ github.token }}}" gh pr comment "$PR" -R "${{ github.repository }}" \
+                --body "📄 **PDF report:** [$(basename "$PDF")]($PDF_URL) — attached to Jira [$TICKET](${JIRA_BASE_URL%/}/browse/$TICKET): summary, every visual change with before / after / difference images, and each bug with why it is a bug and how to fix it." || true
+            fi
           else
             echo "::warning::No PDF was produced for $TICKET."
           fi
