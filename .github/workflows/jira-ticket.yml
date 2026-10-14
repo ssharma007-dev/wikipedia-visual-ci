@@ -54,7 +54,9 @@ jobs:
           elif [ "$ACTION" = site-labels ]; then
             node scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = remove-label ]; then
-            node scripts/jira.mjs remove-label "${KEY%%-*}-0" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
+            # A project key (WIKI) removes the label from every ticket; a ticket key (WIKI-18) from that ticket only.
+            T="$KEY"; echo "$KEY" | grep -q -- '-' || T="$KEY-0"
+            node scripts/jira.mjs remove-label "$T" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
           else
             node scripts/jira.mjs inspect "$KEY" | tee -a "$GITHUB_STEP_SUMMARY"
           fi

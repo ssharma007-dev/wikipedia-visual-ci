@@ -407,7 +407,7 @@ jobs:
                 `Pull request: ${process.argv[2]}`];
               require("fs").writeFileSync("ci-context/fixed.txt", L.filter(Boolean).join("\n"));
               require("fs").writeFileSync("ci-context/fixed-title.txt", "Fixed by AI: "+b.title);' "$i" "${{ steps.pr.outputs.url }}"
-            SUB=$(node scripts/jira.mjs subtask "$KEY" "$(cat ci-context/fixed-title.txt)" ci-context/fixed.txt "visual,bug,found-by-agent,fixed-by-ai" | grep -oE '^[A-Z]+-[0-9]+' || true)
+            SUB=$(node scripts/jira.mjs subtask "$KEY" "$(cat ci-context/fixed-title.txt)" ci-context/fixed.txt "bug,found-by-agent,fixed-by-ai" | grep -oE '^[A-Z]+-[0-9]+' || true)
             [ -n "$SUB" ] && node scripts/jira.mjs transition "$SUB" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
           done
           # Bugs the AI could not fix: one open sub-task each, for a person.
