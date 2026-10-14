@@ -42,7 +42,7 @@ flowchart LR
    Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
 3. Build the change ( Jira status: In Progress ): the Ready ticket is picked up in one of two ways.
    - (1) Developer: the developer assigns the ticket to themselves [ or ] the team lead or dev manager assigns it to a developer. The developer moves it to In Progress and builds the change. Tip: a Jira Automation rule "Assignee changed → transition to In Progress" can move it automatically.
-   - (2) AI agent: the team lead, dev manager or developer clicks ⚡ Automation → Run Agent 1 on the ticket ( not the "Agents" button, which is Atlassian's own AI ). The ticket moves to In Progress automatically. The AI agent then:
+   - (2) AI agent: the team lead, dev manager or developer clicks the ⚡ ( Automation ) button on the ticket → **Agent 1** ( not the "Agents" button, which is Atlassian's own AI ). The ticket moves to In Progress automatically. The AI agent then:
      - creates a new branch by itself, following the naming convention ( e.g. `feature/WIKI-21-…`, `bugfix/…` or `hotfix/…` from the ticket's type );
      - follows the steps written in the Jira ticket ( Should change, Must not change, Test on below devices );
      - writes the test cases and runs them with Applitools Eyes;
@@ -51,9 +51,9 @@ flowchart LR
 
    Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
 
-   | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ Automation → Run Agent 1 | The AI agent at work in GitHub Actions |
+   | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ ( Automation ) → Agent 1 | The AI agent at work in GitHub Actions |
    |---|---|---|
-   | <img src="docs/images/jira-create-branch.png" width="260" alt="Create branch from the Jira ticket"> | <img src="docs/installation/images/p13-jira-run-agent.png" width="260" alt="Run Agent 1 in the Jira Automation menu"> | <img src="docs/installation/images/05-actions-run.png" width="260" alt="The Agent 1 run in GitHub Actions"> |
+   | <img src="docs/images/jira-create-branch.png" width="260" alt="Create branch from the Jira ticket"> | <img src="docs/images/jira-run-agent-1.png" width="260" alt="The Agent 1 custom agent in the Jira Automation menu"> | <img src="docs/installation/images/05-actions-run.png" width="260" alt="The Agent 1 run in GitHub Actions"> |
 4. Test cases ( Jira status: In Progress ):
    - AI agent: creates the test cases ( functional and visual ), using the Applitools Eyes MCP Server to add the visual checkpoints, and runs them.
    - Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them. The AI continues on the developer's branch, so it also completes anything still missing from the ticket.
@@ -72,7 +72,7 @@ flowchart LR
 
 ## Jira status: who is involved when
 
-The Jira ticket moves through five statuses: New → Ready → In Progress → In Review → Done. Anyone ( dev manager, team lead, developer ) can involve the AI agent at any time before Done by clicking ⚡ Automation → Run Agent 1 on the ticket. If a developer has already started, the AI continues on the same branch.
+The Jira ticket moves through five statuses: New → Ready → In Progress → In Review → Done. Anyone ( dev manager, team lead, developer ) can involve the AI agent at any time before Done by clicking the ⚡ ( Automation ) button on the ticket → Agent 1. If a developer has already started, the AI continues on the same branch.
 
 | Jira status | Who | What happens | Screenshot |
 |---|---|---|---|

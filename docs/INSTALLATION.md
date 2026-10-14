@@ -284,7 +284,7 @@ From now on every change goes through a pull request. A PR without a valid Jira 
 
 ---
 
-## Step 10: Add the ⚡ Run Agent 1 button in Jira (one-time setup)
+## Step 10: Add the custom agent button ( Agent 1 ) in Jira (one-time setup)
 
 **Requirement:** a Jira project admin, and a GitHub token that can start workflows.
 
@@ -307,7 +307,7 @@ From now on every change goes through a pull request. A PR without a valid Jira 
 
 Recommended: add the condition **Status is not Done** to the rule, so the button is not used on finished tickets.
 
-Name it **⚡ Run Agent 1** and turn it on.
+Name it **Agent 1** ( this is the name shown in the ticket's ⚡ menu ) and turn it on.
 
 ![Jira automation rule](installation/images/p12-jira-automation-rule.png)
 
@@ -329,9 +329,9 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 **1. The PM or team lead creates the ticket** with two lists: *what should change* and *what must not change*.
 Optional labels: `bug`, `hotfix`, `human-review`.
 
-**2. In Ready, the team lead or dev manager ( or anyone ) clicks ⚡ Automation → Run Agent 1** on the ticket. It moves to **In Progress**.
+**2. In Ready, the team lead or dev manager ( or anyone ) clicks the ⚡ ( Automation ) button → Agent 1** on the ticket. It moves to **In Progress**.
 
-![Run Agent 1 in Jira](installation/images/p13-jira-run-agent.png)
+![Running the custom agent: ⚡ ( Automation ) → Agent 1](../docs/images/jira-run-agent-1.png)
 
 **3. Agent 1 works in GitHub Actions.** It creates the branch, builds the change, writes the tests, runs
 them in Eyes and reviews every difference with the Eyes MCP. If it caused a bug, it fixes it and tests again.
