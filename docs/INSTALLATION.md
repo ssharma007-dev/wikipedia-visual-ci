@@ -170,7 +170,7 @@ tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
 ![Jira workflow: the START arrow must point to New](installation/images/jira-workflow.png)
 
-In the screenshot, START still points to Done: that is the setting to change.
+In the screenshot, START points to New and every status has the Any marker: this is the correct setup.
 
 Board: the columns should be the same four ( Board → ⋯ → Configure board → Columns ). A board without sprints works best ( Space settings → Features → Sprints off ): a Scrum board only shows tickets in the current sprint, so new tickets would only appear in the Backlog.
 
