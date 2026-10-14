@@ -12,7 +12,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 
    Create it from the board: Board → **New** column → **+ Create** → type the summary → Enter, then open the ticket to add the description and labels. ( The **+ Create** button at the top of Jira puts the ticket in the Backlog instead of on the board. )
 
-   <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column on the Jira board, then adding the text label">
+   <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column, adding the description and the text label">
 2. Review the ticket ( Jira status: New ): while the ticket is still New, the team lead or dev manager reviews it and adds more details. It moves to In Progress when the work starts. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
