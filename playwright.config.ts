@@ -26,7 +26,9 @@ export default defineConfig<EyesFixture>({
       ...(process.env.EYES_PARENT_BRANCH_NAME ? { compareWithParentBranch: true } : {}),
       matchLevel: 'Strict',
       type: 'ufg',
-      browsersInfo: [
+      // Devices: the ticket's "Test on below devices:" list when it has one ( set by CI as EYES_DEVICES,
+      // see scripts/devices.mjs ), otherwise these defaults.
+      browsersInfo: process.env.EYES_DEVICES ? JSON.parse(process.env.EYES_DEVICES) : [
         { name: 'chrome', width: 1200, height: 800 },
         { chromeEmulationInfo: { deviceName: 'Galaxy S25 Ultra', screenOrientation: 'portrait' } },
       ],

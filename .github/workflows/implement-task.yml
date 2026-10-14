@@ -151,6 +151,10 @@ jobs:
           if echo ",$LABELS," | grep -q ',human-review,' || grep -qi 'human-review' "$FILE"; then MODE=manual; else MODE=auto; fi
           echo "$MODE" > ci-context/mode.txt
           echo "$SITE_URL" > ci-context/app-url.txt   # where the app runs in CI (vars.APP_URL)
+          # Devices: the ticket's "Test on below devices:" list, if it has one; otherwise playwright.config.ts defaults.
+          DEV=$(node scripts/devices.mjs ci-context/task.md || true)
+          if [ -n "$DEV" ]; then echo "EYES_DEVICES=$DEV" >> "$GITHUB_ENV"; echo "$DEV" > ci-context/devices.json; echo "Devices from the ticket: $DEV"
+          else echo "Devices: playwright.config.ts defaults"; fi
           # Auto mode lets Eyes save the first screenshot of tests the agent writes (on this PR's Eyes branch only);
           # manual mode leaves them for a person.
           [ "$MODE" = manual ] && echo "EYES_SAVE_NEW_TESTS=false" >> "$GITHUB_ENV"

@@ -123,7 +123,7 @@ Files:
 
 ## Step 4: The tests run
 
-What happens: GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on every browser and device in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.
+What happens: GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on the devices listed in the ticket under "Test on below devices" ( read by `scripts/devices.mjs` ), or on the defaults in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.
 
 Who: GitHub Actions, Playwright, Applitools Eyes.
 

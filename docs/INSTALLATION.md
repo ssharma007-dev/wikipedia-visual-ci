@@ -378,5 +378,6 @@ images for every change:
 - Applitools Eyes MCP Server: https://applitools.com/docs/eyes/integrations/mcp-servers/applitools-mcp
 - Reviewing test results in Eyes: https://applitools.com/docs/eyes/concepts/reviewing-tests/test-maintenance
 - Playwright with Applitools Eyes: https://applitools.com/tutorials/playwright
+- Ultrafast Grid browsers and devices: https://applitools.com/docs/eyes/concepts/test-execution/ultrafast-grid-devices-browsers
 - GitHub for Atlassian: https://support.atlassian.com/jira-cloud-administration/docs/integrate-with-github/
 - GitHub rulesets: https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets

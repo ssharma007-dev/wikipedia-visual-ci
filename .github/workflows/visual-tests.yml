@@ -96,6 +96,24 @@ jobs:
           done
           echo "Site did not start"; cat server.log; exit 1
 
+      # Devices: the Jira ticket's "Test on below devices:" list ( ticket found by the key in the branch name ),
+      # otherwise the defaults in playwright.config.ts.
+      - name: Devices from the Jira ticket
+        if: env.PR != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
+          KEY=$(echo "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
+          [ -n "$KEY" ] || { echo "No ticket key: default devices"; exit 0; }
+          node scripts/jira.mjs fetch "$KEY" > /tmp/ticket.md 2>/dev/null || cp tasks/"$KEY"-*.md /tmp/ticket.md 2>/dev/null || { echo "Ticket not readable: default devices"; exit 0; }
+          DEV=$(node scripts/devices.mjs /tmp/ticket.md || true)
+          if [ -n "$DEV" ]; then echo "EYES_DEVICES=$DEV" >> "$GITHUB_ENV"; echo "Devices from $KEY: $DEV"
+          else echo "Devices: playwright.config.ts defaults"; fi
+
       # Eyes differences do not fail Playwright here — the agent below decides.
       # A failed functional check (expect) does not stop the pipeline either: the AI review, the PDF and the
       # Jira comment still run, and the last step fails the build so the PR can't merge.

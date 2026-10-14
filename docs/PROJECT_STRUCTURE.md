@@ -104,6 +104,7 @@ Importance: high, but you rarely need to change them.
 | `render-report.mjs` | Builds the HTML report (and the PR summary) from the AI's results | Keep |
 | `report-pdf.mjs` | Turns the HTML report into the PDF that is attached to Jira | Keep |
 | `failed-tests.mjs` | Lists the functional checks (Playwright `expect`) that failed, for the PR, PDF and Jira | Keep |
+| `devices.mjs` | Reads the ticket's "Test on below devices" list and turns it into Applitools devices for this run | Keep |
 | `compact-diff.mjs` | Shortens code diffs so the AI can read them | Keep |
 | `agent-progress.mjs` | Prints the AI's progress in the GitHub Actions log | Keep |
 | `trust-report.mjs` | Calculates how often people agree with the AI | Optional |
@@ -148,7 +149,7 @@ Reuse: Keep. Nothing to do: the folder is created and removed automatically, and
 
 ## playwright.config.ts: Playwright and Applitools Eyes settings
 
-What it does: sets the Applitools app name, the browsers and devices Eyes checks (here Chrome desktop and Galaxy S25 Ultra), Eyes branching (compare each branch with the branch it merges into), and `failTestsOnDiff: false` so that the AI decides about differences instead of Playwright.
+What it does: sets the Applitools app name, the default browsers and devices Eyes checks (here Chrome desktop and Galaxy S25 Ultra; a ticket can list its own), Eyes branching (compare each branch with the branch it merges into), and `failTestsOnDiff: false` so that the AI decides about differences instead of Playwright.
 
 Importance: high.
 
