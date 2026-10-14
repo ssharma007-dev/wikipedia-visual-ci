@@ -8,23 +8,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 
 ## Ticket flow
 
-```mermaid
-flowchart LR
-    N["<b>New</b><br/>👩‍💼 product manager<br/>creates the ticket"] --> R["<b>Ready</b><br/>🧑‍💼 team lead / dev manager<br/>reviews it and chooses:<br/>developer or AI agent"]
-    R --> P["<b>In Progress</b><br/>👩‍💻 developer or 🤖 AI agent<br/>builds and tests,<br/>the AI reviews"]
-    P -->|"no bugs"| D["<b>Done</b><br/>✅ merged automatically,<br/>PDF in Jira"]
-    P -->|"bugs it can't fix,<br/>unsure, human-review"| V["<b>In Review</b><br/>👤 a person decides"]
-    V -->|"fix pushed"| P
-    V -->|"approved"| D
-    classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
-    classDef work fill:#E8F1FF,stroke:#4A7BD0,color:#14284B
-    classDef good fill:#DFF3E4,stroke:#2E8B57,color:#123D24,stroke-width:2px
-    classDef decide fill:#FBE9E7,stroke:#C8553D,color:#4A1C12,stroke-width:2px
-    class N,R person
-    class P work
-    class D good
-    class V decide
-```
+![Ticket flow: New → Ready → In Progress → In Review or Done](docs/images/ticket-flow.png)
 
 ## How it works
 
