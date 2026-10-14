@@ -177,6 +177,17 @@ ${adfToText(f.description) || '_(no description)_'}`);
     const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(`labels = "${label}"`)}&fields=summary&maxResults=50`);
     console.log(`${label}: ${(r.issues ?? []).map((i) => i.key).join(', ') || '(no tickets)'}`);
   }
+} else if (command === 'query') {
+  // query <ANY-KEY> <JQL> → key, project, type, status, created ( to check where tickets are and why a board hides them )
+  const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(rest.join(' '))}&fields=project,issuetype,status,created,summary&maxResults=100`);
+  for (const i of r.issues ?? []) console.log(`${i.key} | project ${i.fields.project?.key} (${i.fields.project?.id}) | ${i.fields.issuetype?.name} | ${i.fields.status?.name} | ${i.fields.created?.slice(0, 10)} | ${i.fields.summary?.slice(0, 50)}`);
+  if (!(r.issues ?? []).length) console.log('No work items');
+} else if (command === 'board') {
+  // board <ANY-KEY> <boardId> → the board's filter ( which work items it shows )
+  const id = rest[0] || '1';
+  const b = await jira(`/rest/agile/1.0/board/${id}/configuration`);
+  console.log(`Board ${id}: ${b.name} · type ${b.type} · filter ${b.filter?.id}`);
+  try { const f = await jira(`/rest/api/3/filter/${b.filter?.id}`); console.log(`Filter JQL: ${f.jql}`); } catch (e) { console.log(`Filter not readable: ${e.message}`); }
 } else if (command === 'add-label') {
   // add-label <KEY> <label> → adds the label to that ticket
   await jira(`/rest/api/3/issue/${key}`, { method: 'PUT', body: JSON.stringify({ update: { labels: [{ add: rest[0] }] } }) });
