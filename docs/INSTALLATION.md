@@ -130,7 +130,7 @@ You need three keys:
 - **Read key:** lets the AI look at the results.
 - **Write key:** lets the AI accept or reject differences.
 
-![Applitools API keys](docs/installation/images/p05-applitools-keys.png)
+![Applitools API keys](installation/images/p05-applitools-keys.png)
 
 ---
 
@@ -147,7 +147,7 @@ claude setup-token
 
 Copy the token it prints. You can use an Anthropic API key (`ANTHROPIC_API_KEY`) instead.
 
-![Claude token](docs/installation/images/p06-claude-token.png)
+![Claude token](installation/images/p06-claude-token.png)
 
 ---
 
@@ -158,24 +158,24 @@ Copy the token it prints. You can use an Anthropic API key (`ANTHROPIC_API_KEY`)
 **6.1 Create one project per product.** The key (e.g. `WIKI`) is how Jira and GitHub find each other:
 tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
-![Create the Jira project](docs/installation/images/p01-jira-create-project.png)
+![Create the Jira project](installation/images/p01-jira-create-project.png)
 
 **6.2 Statuses.** The pipeline moves tickets to **In Progress**, **In Review** and **Done**. Make sure
 your workflow has these three statuses.
 
-![Jira statuses](docs/installation/images/p02-jira-statuses.png)
+![Jira statuses](installation/images/p02-jira-statuses.png)
 
 **6.3 Connect GitHub.** A Jira admin installs **GitHub for Atlassian** (Jira → Apps → Explore more apps),
 connects your GitHub organisation and selects your repository. Branches, commits and pull requests then
 appear on each ticket under **Development**.
 
-![GitHub for Atlassian](docs/installation/images/p04-github-for-atlassian.png)
+![GitHub for Atlassian](installation/images/p04-github-for-atlassian.png)
 
 **6.4 Create an API token** for the pipeline at
 [id.atlassian.com → Security → API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
 Use a service account if you have one, not a personal login.
 
-![Atlassian API token](docs/installation/images/p03-jira-api-token.png)
+![Atlassian API token](installation/images/p03-jira-api-token.png)
 
 ---
 
@@ -195,9 +195,9 @@ The AI works with its own GitHub account. This way its pull requests are checked
 7. Click **Create GitHub App**. Copy the **App ID**, then click **Generate a private key**. A `.pem` file downloads.
 8. Click **Install App** → **Only select repositories** → choose your repository.
 
-![New GitHub App](docs/installation/images/p07-github-app-permissions.png)
+![New GitHub App](installation/images/p07-github-app-permissions.png)
 
-![Install the GitHub App](docs/installation/images/p08-github-app-install.png)
+![Install the GitHub App](installation/images/p08-github-app-install.png)
 
 ---
 
@@ -220,7 +220,7 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 | `JIRA_API_TOKEN` | The Jira API token (Step 6.4) |
 | `BOT_APP_PRIVATE_KEY` | The whole content of the `.pem` file (Step 7). Delete the file afterwards |
 
-![Repository secrets](docs/installation/images/p09-repo-secrets.png)
+![Repository secrets](installation/images/p09-repo-secrets.png)
 
 **Variables** tab:
 
@@ -232,7 +232,7 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 | `AGENT_ALLOWED_PATHS` | Folders Agent 1 may change (Step 2) |
 | `MERGE_POLICY` | `auto` (merge when the AI review passes) or `code-approval` (also needs one person's approval) |
 
-![Repository variables](docs/installation/images/p10-repo-variables.png)
+![Repository variables](installation/images/p10-repo-variables.png)
 
 ---
 
@@ -252,7 +252,7 @@ Go to your repository → **Settings → Rules → Rulesets → New branch rules
 
 From now on every change goes through a pull request. A PR without a valid Jira ticket, or with a failed review, cannot be merged.
 
-![Protect main](docs/installation/images/p11-ruleset.png)
+![Protect main](installation/images/p11-ruleset.png)
 
 ---
 
@@ -279,7 +279,7 @@ From now on every change goes through a pull request. A PR without a valid Jira 
 
 Name it **⚡ Run Agent 1** and turn it on.
 
-![Jira automation rule](docs/installation/images/p12-jira-automation-rule.png)
+![Jira automation rule](installation/images/p12-jira-automation-rule.png)
 
 ---
 
@@ -301,39 +301,39 @@ Optional labels: `bug`, `hotfix`, `human-review`.
 
 **2. Anyone clicks ⚡ Automation → Run Agent 1** on the ticket. It moves to **In Progress**.
 
-![Run Agent 1 in Jira](docs/installation/images/p13-jira-run-agent.png)
+![Run Agent 1 in Jira](installation/images/p13-jira-run-agent.png)
 
 **3. Agent 1 works in GitHub Actions.** It creates the branch, builds the change, writes the tests, runs
 them in Eyes and reviews every difference with the Eyes MCP. If it caused a bug, it fixes it and tests again.
 
-![The Agent 1 run](docs/installation/images/05-actions-run.png)
+![The Agent 1 run](installation/images/05-actions-run.png)
 
 **4. The pull request is opened by the AI's account,** with a summary of what changed:
 
-![Pull request opened by the bot](docs/installation/images/06-pr-opened-by-bot.png)
+![Pull request opened by the bot](installation/images/06-pr-opened-by-bot.png)
 
 **5. The checks run on the PR.** The Ticket check confirms which Jira ticket it belongs to:
 
-![Ticket check](docs/installation/images/07-pr-ticket-check.png)
+![Ticket check](installation/images/07-pr-ticket-check.png)
 
 **6. The PDF report** is attached to the Jira ticket and linked on the PR:
 
-![PDF link on the PR](docs/installation/images/09-pr-pdf-link.png)
+![PDF link on the PR](installation/images/09-pr-pdf-link.png)
 
 It contains the summary, each bug with why it's a bug and how to fix it, and before / after / difference
 images for every change:
 
-![PDF report summary](docs/installation/images/10-pdf-summary.png)
+![PDF report summary](installation/images/10-pdf-summary.png)
 
-![Before, after and differences](docs/installation/images/11-pdf-before-after.png)
+![Before, after and differences](installation/images/11-pdf-before-after.png)
 
 **7. The decision:**
 - No bugs found: the baselines are saved, the PR is merged and the ticket moves to Done. No manual effort is needed.
 - Bugs the AI cannot fix, or the `human-review` label: the PR and the ticket get the label `needs-human`, the ticket moves to In Review and is assigned to the person who created it, and the PR is blocked.
 
-![A PR blocked because of a bug](docs/installation/images/12-pr-blocked-bugs.png)
+![A PR blocked because of a bug](installation/images/12-pr-blocked-bugs.png)
 
-![The ticket afterwards](docs/installation/images/p14-jira-result.png)
+![The ticket afterwards](installation/images/p14-jira-result.png)
 
 ### (2) A developer builds it
 

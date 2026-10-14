@@ -25,14 +25,11 @@ wikipedia-visual-ci/
 ├── site/                   The sample app (Wikipedia copy)
 ├── server.mjs              Starts the sample app locally
 ├── tasks/                  Copy of the Jira ticket, only on feature branches
-├── docs/installation/      Screenshots used in INSTALLATION.md
+├── docs/                   The documents: FLOW, INSTALLATION, PROJECT_STRUCTURE ( + screenshots )
 ├── playwright.config.ts    Playwright + Applitools Eyes settings
 ├── .mcp.json               Connects the AI to the Applitools Eyes MCP Server
 ├── package.json            Test tools (Playwright, Applitools Eyes)
-├── README.md               What it is, who it is for, the flow in short
-├── FLOW.md                 How it works, step by step, with the files involved
-├── INSTALLATION.md         Step-by-step setup for your own project
-└── PROJECT_STRUCTURE.md    This document
+├── README.md               What it is, who it is for, the flow in short ( start here )
 ```
 
 How to read the "Reuse" notes below:
@@ -177,9 +174,9 @@ Reuse: Adapt. Add these two packages to your own `package.json` instead of copyi
 
 ---
 
-## docs/installation/: screenshots for the guide
+## docs/: the documents
 
-What it does: the images used in [INSTALLATION.md](INSTALLATION.md). Files starting with `p` are placeholders for screenshots you take in your own Jira and GitHub setup.
+What it does: FLOW.md ( how it works ), INSTALLATION.md ( setup for your own project ), PROJECT_STRUCTURE.md ( this document ), and in `docs/installation/images/` the screenshots used in INSTALLATION.md. Files starting with `p` are placeholders for screenshots you take in your own Jira and GitHub setup.
 
 Reuse: Optional.
 
@@ -189,6 +186,6 @@ Reuse: Optional.
 
 | Keep as it is | Adapt | Replace with your own | Leave out |
 |---|---|---|---|
-| `.github/workflows/`, `scripts/`, `guidelines/agent-fix.md`, `guidelines/README.md`, `.mcp.json` | `playwright.config.ts`, `guidelines/review-rules.md`, `guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `site/` and `server.mjs` (your app), `tests/` (your test cases), `guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (only needed for the guide) |
+| `.github/workflows/`, `scripts/`, `guidelines/agent-fix.md`, `guidelines/README.md`, `.mcp.json` | `playwright.config.ts`, `guidelines/review-rules.md`, `guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `site/` and `server.mjs` (your app), `tests/` (your test cases), `guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (keep it if you want the guides in your repository) |
 
 Note: the only values you set per project are repository variables (`APP_START_COMMAND`, `APP_URL`, `AGENT_ALLOWED_PATHS`, `MERGE_POLICY`, `BOT_APP_ID`) and secrets. Everything else is the same for every project.
