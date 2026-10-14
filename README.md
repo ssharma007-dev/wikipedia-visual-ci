@@ -11,7 +11,9 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
 2. Review the ticket ( Jira status: To Do ): the team lead or dev manager reviews the ticket, adds more details and moves it to To Do ( ready to be picked up ). If the work starts right away, they can move it straight to Doing instead. Optional labels: `bug`, `hotfix`, `feature`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
-   <img src="docs/images/jira-labels.png" width="420" alt="Adding a label in the Jira ticket's Details panel">
+   <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
+
+   Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
 3. Build the change ( Jira status: In Progress ): a developer picks it up [ or ] anyone ( dev manager, team lead, developer ) clicks ⚡ Run Agent 1 in Jira and the AI agent builds it. Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
 
    | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ Automation → Run Agent 1 | The AI agent at work in GitHub Actions |
