@@ -9,7 +9,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 ## How it works
 
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
-2. Review the ticket ( Jira status: To Do ): the team lead or dev manager reviews the ticket, adds more details and moves it to To Do ( ready to be picked up ). If the work starts right away, they can move it straight to Doing instead. Optional labels: `bug`, `hotfix`, `content`, `human-review`. To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
+2. Review the ticket ( Jira status: To Do ): the team lead or dev manager reviews the ticket, adds more details and moves it to To Do ( ready to be picked up ). If the work starts right away, they can move it straight to Doing instead. Optional labels: `bug`, `hotfix`, `feature`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    <img src="docs/images/jira-labels.png" width="420" alt="Adding a label in the Jira ticket's Details panel">
 3. Build the change ( Jira status: In Progress ): a developer picks it up [ or ] anyone ( dev manager, team lead, developer ) clicks ⚡ Run Agent 1 in Jira and the AI agent builds it. Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
@@ -88,7 +88,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Devices | Optional | e.g. "phone only", "desktop and phone" | Tells the AI on which devices the change is expected. Without it, the AI expects the change on all devices. The devices that are tested are set in `playwright.config.ts` |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
-| Labels | Optional | `bug`, `hotfix`, `content`, `refactor`, `a11y`, `human-review` | Tells the AI the type of work. `human-review` means a person approves before the merge |
+| Labels | Optional | `bug`, `hotfix`, `feature`, `human-review` ( more types: `content`, `refactor`, `a11y` ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
 | Work type | Optional | Task ( default, treated as a feature ) or Bug | A Bug work type is treated like the `bug` label |
 
 *Template ( copy into the Jira description )*
