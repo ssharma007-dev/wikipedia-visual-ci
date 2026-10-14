@@ -15,6 +15,24 @@ A product manager writes a Jira ticket. A developer, or the AI, builds it. Playw
 7. Report: a PDF summary report of the actions it took is attached to the Jira ticket and linked on the pull request.
 8. Merge: if no bugs are found, it is merged automatically. Otherwise, a person decides.
 
+## Jira status: who is involved when
+
+The Jira ticket moves through four statuses. The pipeline moves it automatically, so the status always shows where the work is and who has it.
+
+| Jira status | What happens | AI agent path | Developer path |
+|---|---|---|---|
+| To Do | The product manager creates the ticket. The team lead reviews it and adds more details. | People only | People only |
+| In Progress | The change is being built and tested. | Someone clicks ⚡ Run Agent 1, and the ticket moves to In Progress automatically. The AI creates the branch, builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server, and fixes its own bugs. | The developer moves the ticket to In Progress ( or Jira does it when the branch is created, see note ), builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. |
+| In Review | A person needs to decide: bugs the AI could not fix, unclear changes, failed functional checks, or the `human-review` label. The ticket gets the label `needs-human` and is assigned to the person who created it. | A person reads the PDF report and fixes or approves. | The developer reads the PDF report and pushes a fix. The AI reviews again. |
+| Done | The pull request is merged. The baselines in Eyes are updated. | Automatic when there are no bugs | Automatic when the AI review passes ( or after a person merges ) |
+
+*Who is involved, in order*
+
+- AI agent path: product manager and team lead ( To Do ) → anyone clicks Run Agent 1 → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
+- Developer path: product manager and team lead ( To Do ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
+
+Note: to move the ticket to In Progress automatically when a developer creates a branch, add a Jira Automation rule: trigger "Branch created", action "Transition work item to In Progress".
+
 ## Documents
 
 All the documents are in the [`docs/`](docs/) folder. Please read them in this order:
