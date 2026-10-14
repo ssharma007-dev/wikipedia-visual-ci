@@ -1,0 +1,30 @@
+%%{init: {"flowchart": {"wrappingWidth": 300, "nodeSpacing": 40, "rankSpacing": 50}}}%%
+flowchart TD
+    A["👩‍💼 <b>PM or team lead</b><br/>creates the Jira ticket:<br/><i>what should change, what must not</i>"] --> B{"Who builds it?"}
+
+    B -->|"a developer"| C["👩‍💻 <b>Developer</b><br/>creates the branch from Jira, codes it, writes the test cases and opens a pull request"]
+    B -->|"⚡ Run Agent 1 in Jira"| D["🤖 <b>AI agent</b><br/>creates the branch, codes it, writes the test cases and opens a pull request"]
+
+    C --> E["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on desktop and mobile"]
+    D --> E
+
+    E --> F["🔍 <b>AI review with the Eyes MCP Server</b><br/>every difference is checked against the ticket and the design system"]
+
+    F --> G{"Any bugs?"}
+    G -->|"a bug the AI caused"| H["🔧 <b>AI fixes it</b><br/>and tests again <i>( up to 2 rounds )</i>"]
+    H --> E
+
+    G -->|"no bugs"| I["✅ <b>Merged automatically</b><br/>baselines saved, ticket Done, PDF report in Jira and on the PR"]
+    G -->|"bugs it can't fix, unsure,<br/>or label human-review"| J["👤 <b>A person decides</b><br/>ticket In Review, label needs-human, PDF report in Jira and on the PR"]
+    J --> K["👤 Person fixes or approves, saves the baselines and merges"]
+
+    classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
+    classDef ai fill:#E8F1FF,stroke:#4A7BD0,color:#14284B
+    classDef auto fill:#EEF7F0,stroke:#4E9A64,color:#173B22
+    classDef good fill:#DFF3E4,stroke:#2E8B57,color:#123D24,stroke-width:2px
+    classDef decide fill:#FBE9E7,stroke:#C8553D,color:#4A1C12,stroke-width:2px
+    class A,C,K person
+    class D,F,H ai
+    class E auto
+    class I good
+    class J decide
