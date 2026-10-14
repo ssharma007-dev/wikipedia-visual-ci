@@ -40,7 +40,16 @@ flowchart LR
    <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
 
    Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
-3. Build the change ( Jira status: In Progress ): the assigned developer builds it [ or ] the AI agent builds it after Run Agent 1 is clicked. Anyone ( dev manager, team lead, developer ) can also click Run Agent 1 later, at any time before Done. Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
+3. Build the change ( Jira status: In Progress ): the Ready ticket is picked up in one of two ways.
+   - (1) Developer: the developer assigns the ticket to themselves [ or ] the team lead or dev manager assigns it to a developer. The developer moves it to In Progress and builds the change. Tip: a Jira Automation rule "Assignee changed → transition to In Progress" can move it automatically.
+   - (2) AI agent: the team lead, dev manager or developer clicks ⚡ Automation → Run Agent 1 on the ticket ( not the "Agents" button, which is Atlassian's own AI ). The ticket moves to In Progress automatically. The AI agent then:
+     - creates a new branch by itself, following the naming convention ( e.g. `feature/WIKI-21-…`, `bugfix/…` or `hotfix/…` from the ticket's type );
+     - follows the steps written in the Jira ticket ( Should change, Must not change, Test on below devices );
+     - writes the test cases and runs them with Applitools Eyes;
+     - accepts or rejects every difference automatically; with the `human-review` label, a person approves before anything is saved or merged;
+     - opens the pull request, with a detailed PDF summary report attached to the Jira ticket and linked on the pull request.
+
+   Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
 
    | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ Automation → Run Agent 1 | The AI agent at work in GitHub Actions |
    |---|---|---|
