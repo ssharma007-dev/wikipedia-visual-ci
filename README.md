@@ -17,7 +17,10 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
    | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ Automation → Run Agent 1 | The AI agent at work in GitHub Actions |
    |---|---|---|
    | <img src="docs/images/jira-create-branch.png" width="260" alt="Create branch from the Jira ticket"> | <img src="docs/installation/images/p13-jira-run-agent.png" width="260" alt="Run Agent 1 in the Jira Automation menu"> | <img src="docs/installation/images/05-actions-run.png" width="260" alt="The Agent 1 run in GitHub Actions"> |
-4. Test cases ( Jira status: In Progress ): the AI agent creates the test cases ( functional and visual ) and runs them. When a developer builds it, the developer adds the test cases. Applitools Eyes visually tests every screen on desktop and mobile.
+4. Test cases ( Jira status: In Progress ):
+   - AI agent: creates the test cases ( functional and visual ), using the Applitools Eyes MCP Server to add the visual checkpoints, and runs them.
+   - Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them. The AI continues on the developer's branch, so it also completes anything still missing from the ticket.
+   - Applitools Eyes visually tests every screen, component or important area that the Jira ticket names: the full page, or only a component ( e.g. the header links ) when the change is local. It runs on the devices defined in `playwright.config.ts` ( here Chrome desktop and Galaxy S25 Ultra ). The ticket's "Devices" line tells the AI on which of these devices the change is expected.
 5. AI review ( Jira status: In Progress ): once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
 6. Acceptance ( Jira status: In Progress ):
    - Without the `human-review` label: the AI automatically accepts or rejects each change based on the available information ( the ticket, the design system, the image and DOM differences ).
@@ -82,7 +85,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Must not change | Required | What must stay exactly as it is ( other pages, other devices, nearby elements ) | Anything on this list that changes is reported as a bug |
 | Why | Optional | The reason for the change | Helps the reviewer and the AI understand the intent |
 | Pages / screens | Optional | Where the change is visible | Helps the AI find the relevant test cases |
-| Devices | Optional | e.g. "phone only", "desktop and phone" | Without it, the AI expects the change on all devices |
+| Devices | Optional | e.g. "phone only", "desktop and phone" | Tells the AI on which devices the change is expected. Without it, the AI expects the change on all devices. The devices that are tested are set in `playwright.config.ts` |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
 | Labels | Optional | `bug`, `hotfix`, `content`, `refactor`, `a11y`, `human-review` | Tells the AI the type of work. `human-review` means a person approves before the merge |

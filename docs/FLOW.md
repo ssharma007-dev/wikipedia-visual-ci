@@ -109,7 +109,8 @@ Files:
 
 What happens:
 - (1) A developer implements the change, adds or updates the test cases, and opens a pull request.
-- (2) Someone clicks ⚡ Run Agent 1 in Jira. A Jira Automation rule calls GitHub, which starts Agent 1. The AI reads the ticket and the guidelines, implements the change, writes the test cases ( and a regression test for a bug ), and runs them. The ticket moves to In Progress.
+- (2) Someone clicks ⚡ Run Agent 1 in Jira. A Jira Automation rule calls GitHub, which starts Agent 1. The AI reads the ticket and the guidelines, implements the change, writes the test cases ( and a regression test for a bug ) using the Eyes MCP Server to add the visual checkpoints, and runs them. The ticket moves to In Progress.
+- A developer can also write their own code and let the AI write the test cases: click Run Agent 1 on the ticket, and the AI continues on the developer's branch.
 
 Who: developer [ or ] AI agent.
 
