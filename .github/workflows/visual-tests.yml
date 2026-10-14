@@ -46,6 +46,9 @@ jobs:
       APPLITOOLS_BATCH_NAME: "${{ github.event.pull_request.number && format('PR #{0} {1}', github.event.pull_request.number, github.event.pull_request.title) || inputs.pr && format('PR #{0} (manual run)', inputs.pr) || format('{0} @ {1}', github.ref_name, github.sha) }}"
 
     steps:
+      - name: Note the start time ( for the report )
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       # Merges are made as the app "Eyes MCP Visual Agent", so they trigger the after-merge run on main.
       - name: Get the agent's GitHub App token
         id: app
@@ -311,6 +314,8 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
           export REPORT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          export MERGE_POLICY="${{ vars.MERGE_POLICY || 'auto' }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
+          export PR_URL="${{ github.server_url }}/${{ github.repository }}/pull/$PR"
           if [ "${{ steps.auto.outputs.saved }}" = "yes" ]; then
             node -e 'const f="./review/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merged the PR. Add the label human-review to the Jira ticket or the PR to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           fi

@@ -54,6 +54,7 @@ const items = [];
 // Counts for the report's "Results at a glance": every checkpoint in the batch, not only the ones with images.
 // One entry per environment the batch ran on ( browser + version, device, OS, viewport ), from the Eyes MCP.
 const environments = new Map();
+const screens = new Set();
 const stats = { tests: 0, checkpoints: 0, noDifference: 0, differences: 0, accepted: 0, rejected: 0, unresolved: 0, newCheckpoints: 0 };
 try {
   await send('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'eyes-evidence', version: '1' } });
@@ -66,6 +67,7 @@ try {
 
   for (const s of info.sessions) {
     stats.tests++;
+    screens.add(s.sessionName);
     const e = s.environment ?? {};
     const envKey = `${e.device}|${e.browser}|${e.os}|${e.width}x${e.height}`;
     if (!environments.has(envKey)) environments.set(envKey, {
@@ -116,7 +118,7 @@ try {
 } catch (err) {
   console.error(`Evidence collection stopped: ${err.message}`);
 }
-fs.writeFileSync(path.join(outDir, 'evidence.json'), JSON.stringify({ batchUrl, stats: { ...stats, environments: [...environments.values()] }, items }, null, 2));
+fs.writeFileSync(path.join(outDir, 'evidence.json'), JSON.stringify({ batchUrl, stats: { ...stats, screens: screens.size, environments: [...environments.values()] }, items }, null, 2));
 console.log(`Batch: ${JSON.stringify(stats)}`);
 console.log(`${items.length} changed area(s) captured → ${path.join(outDir, 'evidence.json')}`);
 server.kill();

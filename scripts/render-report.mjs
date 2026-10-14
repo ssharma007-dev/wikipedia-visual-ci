@@ -73,6 +73,45 @@ const evidenceBlock = (e = {}) => `
   ${image(e.imageDiff)}
   <p class="meta">${link(e.eyesUrl, 'Open this step in Eyes')}${e.dom ? ` · DOM: <code>${esc(e.dom)}</code>` : ''}</p>`;
 
+// ---------- Summary for QA and leaders ----------
+// Time: the run's start ( RUN_STARTED_AT, set by CI ) to now; AI time: the agent transcripts' own durations.
+const started = process.env.RUN_STARTED_AT ? new Date(process.env.RUN_STARTED_AT) : null;
+const finished = new Date();
+const mins = (ms) => `${Math.max(1, Math.round(ms / 60000))} min`;
+const hhmm = (d) => d.toISOString().slice(11, 16) + ' UTC';
+let aiMs = 0;
+for (const f of fs.readdirSync(path.dirname(jsonPath)).filter((x) => /^agent-transcript.*\.jsonl$/.test(x))) {
+  for (const line of fs.readFileSync(path.join(path.dirname(jsonPath), f), 'utf-8').split('\n')) {
+    if (!line.includes('"type":"result"')) continue;
+    try { aiMs += JSON.parse(line).duration_ms ?? 0; } catch {}
+  }
+}
+const sev = (lvl) => bugs.filter((b) => (b.severity ?? '').toLowerCase() === lvl).length;
+const failedCount = testStats?.failed ?? list(r.failedTests).length;
+const unresolved = batchStats?.unresolved ?? 0;
+const humanReview = /human-review/.test(process.env.REVIEW_MODE ?? '') || process.env.REVIEW_MODE === 'manual';
+const risk = (bugs.some((b) => /high|critical/i.test(b.severity ?? '')) || failedCount) ? ['bad', 'High']
+  : (bugs.length || unresolved) ? ['info', 'Medium'] : ['good', 'Low'];
+const policy = process.env.MERGE_POLICY || 'auto';
+const outcome = r.baseline?.saved && !bugs.length && !failedCount && !unresolved && !humanReview
+  ? (policy === 'code-approval' ? ['good', 'Passed: waits for one code approval, then merges automatically'] : ['good', 'Passed: merged automatically, ticket moves to Done'])
+  : ['bad', `Waiting for a person ( ${[bugs.length ? `${bugs.length} bug(s) left` : '', failedCount ? `${failedCount} failed functional check(s)` : '', unresolved ? `${unresolved} unclear difference(s)` : '', humanReview ? 'human-review label' : ''].filter(Boolean).join(', ') || 'see below'} ): ticket moves to In Review`];
+const minutesPerCheckpoint = Number(process.env.REPORT_MINUTES_PER_CHECKPOINT || 2);
+const reviewedByAi = batchStats ? batchStats.checkpoints : 0;
+const jiraUrl = process.env.JIRA_BASE_URL && r.task?.key ? `${process.env.JIRA_BASE_URL.replace(/\/+$/, '')}/browse/${r.task.key}` : '';
+const leaderRows = [
+  ['Outcome', `<span class="tag ${outcome[0]}">${esc(outcome[1])}</span>`],
+  ['Risk', `<span class="tag ${risk[0]}">${risk[1]}</span> <span class="meta">based on bugs left, failed checks and unclear differences</span>`],
+  started ? ['Time', `Started ${hhmm(started)} · finished ${hhmm(finished)} · <b>${mins(finished - started)}</b> in total${aiMs ? ` · AI work ${mins(Math.min(aiMs, finished - started))}` : ''}`] : null,
+  ['Coverage', [batchStats?.screens ? `<b>${batchStats.screens}</b> screens` : '', batchStats?.environments?.length ? `<b>${batchStats.environments.length}</b> environments` : '', batchStats ? `<b>${batchStats.checkpoints}</b> visual checkpoints` : '', testStats ? `<b>${testStats.total}</b> test cases${list(r.tests?.added).length ? ` ( ${list(r.tests.added).length} new )` : ''}` : ''].filter(Boolean).join(' · ') || '—'],
+  ['Quality', [testStats ? `Functional checks <b>${testStats.passed}/${testStats.total}</b> passed ( ${testStats.total ? Math.round(100 * testStats.passed / testStats.total) : 0}% )` : '', `Bugs left: <b>${bugs.length}</b>${bugs.length ? ` ( high ${sev('high') + sev('critical')} · medium ${sev('medium')} · low ${sev('low')} )` : ''}`, `fixed by the AI: <b>${fixedCount}</b>`].filter(Boolean).join(' · ')],
+  batchStats ? ['AI decisions', `<b>${batchStats.accepted}</b> accepted as real change · <b>${batchStats.rejected}</b> rejected as bug · <b>${batchStats.unresolved}</b> left for a person`] : null,
+  reviewedByAi ? ['Manual review saved ( estimate )', `${reviewedByAi} checkpoints reviewed by the AI ≈ <b>${mins(reviewedByAi * minutesPerCheckpoint * 60000)}</b> of manual comparison <span class="meta">( ${minutesPerCheckpoint} min per checkpoint )</span>`] : null,
+  ['Traceability', [jiraUrl ? link(jiraUrl, `Jira ${r.task.key}`) : esc(r.task?.key ?? ''), process.env.PR_URL ? link(process.env.PR_URL, 'Pull request') : '', repoUrl && sha ? link(`${repoUrl}/commit/${sha}`, `Commit ${sha.slice(0, 7)}`) : '', r.tests?.batchUrl ? link(r.tests.batchUrl, 'Eyes batch') : '', runUrl ? link(runUrl, 'CI run') : ''].filter(Boolean).join(' · ')],
+].filter(Boolean);
+const leaderSummary = `<h2>Summary for QA and leaders</h2>
+<div class="wrap"><table>${leaderRows.map(([k, v]) => `<tr><th style="width:28%">${k}</th><td>${v}</td></tr>`).join('')}</table></div>`;
+
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(r.task?.key)} visual report</title>
@@ -95,6 +134,10 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
 <h1>${esc(r.task?.key)} — ${esc(r.task?.title)}</h1>
 <p class="meta">Work type <b>${esc(r.task?.workType ?? 'feature')}</b> · Task file <code>${esc(r.task?.file)}</code>${runUrl ? ` · ${link(runUrl, 'CI run')}` : ''}${r.tests?.batchUrl ? ` · ${link(r.tests.batchUrl, 'Eyes batch')}` : ''}</p>
 <span class="pill ${verdictTone}">${esc(verdictLabel)}</span>
+
+${leaderSummary}
+<div style="height:20px"></div>
+
 
 <div class="cards">
   <div class="card"><div class="num">${count('real-change')}</div>real changes</div>
