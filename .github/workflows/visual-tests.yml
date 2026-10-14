@@ -272,7 +272,7 @@ jobs:
         if: env.PR != ''
         env:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
-          MERGE_POLICY: ${{ vars.MERGE_POLICY || 'auto' }}
+          MERGE_POLICY: ${{ vars.MERGE_POLICY || 'code-approval' }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
@@ -284,13 +284,17 @@ jobs:
           [ "$V" = "pass" ] || { echo "Verdict $V — a person decides."; exit 0; }
           LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(",")'),$( [ -n "$TICKET" ] && node scripts/jira.mjs labels "$TICKET" 2>/dev/null )"
           if echo ",$LABELS," | grep -q ',human-review,'; then echo "human-review requested — a person saves and merges."; exit 0; fi
+          # Label auto-ai-merge ( on the Jira ticket or the PR ) → the pipeline merges by itself; otherwise a person approves first.
+          if echo ",$LABELS," | grep -q ',auto-ai-merge,'; then MERGE_POLICY=auto; fi
+          echo "EFFECTIVE_POLICY=$MERGE_POLICY" >> "$GITHUB_ENV"
           AUTHOR=$(gh pr view "$PR" --json author --jq .author.login)
           case "$AUTHOR" in app/*|github-actions*|*\[bot\]) echo "Agent-opened PR — Agent 1 handles it."; exit 0 ;; esac
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           [ -n "$B" ] || { echo "No Eyes batch found — a person decides."; exit 0; }
           node scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
           echo "saved=yes" >> "$GITHUB_OUTPUT"
-          # Merge policy (repo variable MERGE_POLICY): auto (default) merges now; code-approval waits for one
+          # Merge policy: code-approval ( default ) waits for one person to approve the code; label auto-ai-merge merges now.
+          # code-approval: wait for one
           # person to approve the code, then GitHub merges by itself (auto-merge).
           if [ "$MERGE_POLICY" = "code-approval" ]; then
             gh pr merge "$PR" --auto --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed." || true
@@ -314,7 +318,7 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
           export REPORT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          export MERGE_POLICY="${{ vars.MERGE_POLICY || 'auto' }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
+          export MERGE_POLICY="${EFFECTIVE_POLICY:-${{ vars.MERGE_POLICY || 'code-approval' }}}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
           export PR_URL="${{ github.server_url }}/${{ github.repository }}/pull/$PR"
           if [ "${{ steps.auto.outputs.saved }}" = "yes" ]; then
             node -e 'const f="./review/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merged the PR. Add the label human-review to the Jira ticket or the PR to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'

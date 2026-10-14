@@ -9,7 +9,7 @@ This guide explains how to set up the sample project's flow in your own project.
 - Tests: Playwright and Applitools Eyes run the test cases on the defined devices ( set in `playwright.config.ts` ).
 - AI review: the AI checks every visual difference against the ticket and the design system, using the Eyes MCP Server ( deterministic agentic workflow ).
 - Report: a PDF report is attached to the Jira ticket.
-- Merge: if no bugs are found, it is merged automatically. If bugs are found, a person decides.
+- Merge: if no bugs are found, a person approves the pull request ( or, with the label `auto-ai-merge`, it is merged automatically ). If bugs are found, a person decides.
 
 Time needed: about one hour. Requirement: admin rights on the GitHub repository and the Jira project.
 
@@ -258,7 +258,7 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 | `APP_START_COMMAND` | How to start your app (Step 2) |
 | `APP_URL` | Where your app runs in CI (Step 2) |
 | `AGENT_ALLOWED_PATHS` | Folders Agent 1 may change (Step 2) |
-| `MERGE_POLICY` | `auto` (merge when the AI review passes) or `code-approval` (also needs one person's approval) |
+| `MERGE_POLICY` | `code-approval` ( default: one person approves the PR ) or `auto` ( merge when the AI review passes ). The Jira label `auto-ai-merge` always merges automatically |
 
 ![Repository variables](installation/images/p10-repo-variables.png)
 
@@ -335,7 +335,7 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 ### (1) The AI agent builds it
 
 **1. The PM or team lead creates the ticket** with two lists: *what should change* and *what must not change*.
-Optional labels: `bug`, `hotfix`, `human-review`.
+Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`.
 
 **2. In Ready, the team lead or dev manager ( or anyone ) clicks the ⚡ ( Automation ) button → Agent 1** on the ticket. It moves to **In Progress**.
 
@@ -388,7 +388,8 @@ images for every change:
 | What | How |
 |---|---|
 | A person must approve this ticket | Add the label `human-review` to the Jira ticket |
-| A person must approve every change's code | `scripts/set-merge-policy.sh code-approval` (back with `auto`) |
+| Merge a ticket without waiting for approval | Add the label `auto-ai-merge` to the Jira ticket |
+| Merge everything without approval ( repository-wide ) | `scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
 | How strict the AI is | Edit `guidelines/review-rules.md` |
 | Your design rules | Edit `guidelines/design-system.md` |
 | Browsers and devices | `browsersInfo` in `playwright.config.ts` |

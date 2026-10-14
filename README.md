@@ -2,7 +2,7 @@
 
 A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. Once the ticket is Ready, they choose who builds it: a developer [ or ] the AI agent ( ⚡ Run Agent 1 in Jira ). Playwright and Applitools Eyes test the change on the devices listed in the ticket ( or the defaults in `playwright.config.ts` ), and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
 
-If no bugs are found, the change is merged automatically and the ticket moves to Done, with a PDF report attached. If the AI caused a bug, it fixes it and tests again. If there are bugs it cannot fix, or the ticket has the `human-review` label, the ticket moves to In Review and a person decides.
+If no bugs are found, a person approves the pull request with one click and it is merged, or, with the label `auto-ai-merge`, it is merged automatically. The ticket then moves to Done, with a PDF report attached. If the AI caused a bug, it fixes it and tests again. If there are bugs it cannot fix, or the ticket has the `human-review` label, the ticket moves to In Review and a person decides.
 
 The goal: QA and developers no longer compare screenshots by hand. People only step in when a decision is really needed.
 
@@ -15,7 +15,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
 
    <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column, adding the description and the text label">
-2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. In Ready, they choose who handles it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
+2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. In Ready, they choose who handles it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    Moving the ticket from New to Ready: open the ticket → click the status ( New ) → Ready.
 
@@ -53,7 +53,9 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 7. Auto fix ( Jira status: In Progress ): if the AI's change causes an issue, the AI fixes it and tests again ( up to 2 rounds ). For every bug it fixed, it creates a Jira sub-task in Done status with the details: what the issue was, why it was a bug, what it fixed and how. If it cannot fix a bug, it creates an open sub-task for a person.
 8. Report ( Jira status: In Progress ): after each execution, a PDF summary report is attached to the Jira ticket and linked on the pull request. It shows the results at a glance ( test cases run, passed and failed, visual checkpoints with and without differences, differences accepted or rejected by the AI, bugs found, fixed and left ), the actions the AI took, and the before / after / difference images for every change.
 9. Decision ( Jira status: Done or In Review ):
-   - No bugs found ( Jira status: Done ): the change is merged automatically and the baselines in Eyes are saved.
+   - No bugs found: the baselines in Eyes are saved, and:
+     - by default, a person approves the pull request ( one click ). GitHub then merges it, and the ticket moves to Done;
+     - with the label `auto-ai-merge`, the pipeline merges it by itself, and the ticket moves to Done.
    - Bugs it cannot fix, unclear changes, or the `human-review` label ( Jira status: In Review ): the ticket gets the label `needs-human` and is assigned to the person who created it. A person reads the PDF and fixes or approves. When the developer pushes a fix, the AI reviews it again.
 
    Note: In Review means the work is waiting for a person's decision. It is not used for reviewing the ticket itself ( that happens between New and Ready ).
@@ -113,7 +115,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Test on below devices | Optional | e.g. "Galaxy S25 Ultra", "Chrome desktop 1200×800" | The devices Applitools Eyes tests this ticket on. Without it, the defaults in `playwright.config.ts` are used |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
-| Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review` ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
+| Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review`, `auto-ai-merge` ( merge without waiting for a person's approval ) ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
 | Work type | Optional | Task ( default, treated as a feature ) or Bug | A Bug work type is treated like the `bug` label |
 
 *Template ( copy into the Jira description )*
@@ -267,7 +269,7 @@ flowchart TD
     E --> F
     F --> G
     G --> H
-    H -->|"no bugs: merged automatically"| K
+    H -->|"no bugs: approved, or auto-ai-merge"| K
     H -->|"a bug the AI caused"| I
     I --> F
     H -->|"bugs it can't fix · unsure · human-review"| J

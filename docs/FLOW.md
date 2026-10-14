@@ -54,7 +54,7 @@ flowchart TD
     E --> F
     F --> G
     G --> H
-    H -->|"no bugs: merged automatically"| K
+    H -->|"no bugs: approved, or auto-ai-merge"| K
     H -->|"a bug the AI caused"| I
     I --> F
     H -->|"bugs it can't fix · unsure · human-review"| J
@@ -84,7 +84,7 @@ How to read it: each grey or coloured band is a Jira status ( New → Ready → 
 
 ## Step 1: The ticket is created
 
-What happens: the PM or team lead creates a ticket in Jira with two lists, what should change and what must not change. Optional labels: `bug`, `hotfix` ( changes how strict the AI is ) and `human-review` ( a person must approve before the merge ).
+What happens: the PM or team lead creates a ticket in Jira with two lists, what should change and what must not change. Optional labels: `bug`, `hotfix`, `text`, `auto-ai-merge` ( merge without a person's approval ), `human-review` ( changes how strict the AI is ) and `human-review` ( a person must approve before the merge ).
 
 Who: PM or team lead.
 
@@ -188,7 +188,7 @@ Files:
 ## Step 8: Decide and merge
 
 What happens:
-- No bugs found: the pipeline saves the baselines in Eyes, merges the PR and moves the ticket to Done. No manual effort is needed.
+- No bugs found: the pipeline saves the baselines in Eyes. By default, a person then approves the pull request ( one click ) and GitHub merges it. With the label `auto-ai-merge`, the pipeline merges it by itself. Either way the ticket moves to Done.
 - Bugs the AI can't fix, unclear changes, or the `human-review` label: the PR and the ticket get the label `needs-human`, the ticket moves to In Review and is assigned to the person who created it. A person reads the PDF, then fixes or approves, saves the baselines and merges.
 - Optional: with `MERGE_POLICY=code-approval`, a passing PR also waits for one person's code approval, then GitHub merges it automatically.
 
@@ -226,7 +226,7 @@ Status names can be changed with the repository variables `JIRA_STATUS_IN_PROGRE
 | Accept or reject a difference in Eyes | yes | | yes |
 | Fix a bug it caused | yes ( up to 2 rounds ) | | |
 | Save baselines in Eyes | never | yes, only when there are no bugs and nothing unresolved | yes |
-| Merge the PR | never | yes, only when the checks pass | yes |
+| Merge the PR | never | only with the label `auto-ai-merge` ( after the checks pass ) | yes: approves the PR ( default ), then GitHub merges |
 | Change the rules ( `guidelines/` ) | never | | yes, with CODEOWNERS approval |
 
 ---
