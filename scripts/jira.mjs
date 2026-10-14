@@ -166,9 +166,11 @@ ${adfToText(f.description) || '_(no description)_'}`);
   console.log((issue.fields.labels ?? []).join(','));
 } else if (command === 'transition') {
   // Move the ticket to the named status, if the workflow allows it from where it is now.
-  const target = rest.join(' ').toLowerCase();
+  // Several names can be given with "|", e.g. "In Progress|Doing": the first one the workflow allows is used.
+  const targets = rest.join(' ').toLowerCase().split('|').map((x) => x.trim());
+  const target = targets.join(' / ');
   const { transitions } = await jira(`/rest/api/3/issue/${key}/transitions`);
-  const t = transitions.find((x) => x.to?.name?.toLowerCase() === target || x.name.toLowerCase() === target);
+  const t = targets.map((n) => transitions.find((x) => x.to?.name?.toLowerCase() === n || x.name.toLowerCase() === n)).find(Boolean);
   if (!t) { console.log(`${key}: no transition to "${target}" (now available: ${transitions.map((x) => x.to?.name).join(', ')})`); process.exit(0); }
   await jira(`/rest/api/3/issue/${key}/transitions`, { method: 'POST', body: JSON.stringify({ transition: { id: t.id } }) });
   console.log(`${key} → ${t.to?.name ?? t.name}`);

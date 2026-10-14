@@ -4,7 +4,7 @@ A product manager writes a Jira ticket. A developer, or the AI, builds it. Playw
 
 ## How it works
 
-1. Jira ticket: the product manager creates the task in Jira with what should change and what must not change. The team lead can review the task and add more details.
+1. Jira ticket: the product manager creates the task in Jira ( New ) with what should change and what must not change. The team lead or dev manager reviews the task and adds more details ( To Do ).
 2. Implementation: a developer [ or ] the AI agent builds the change.
 3. Test cases: the AI agent creates the test cases ( functional and visual ) and runs them. When a developer builds it, the developer adds the test cases. Applitools Eyes visually tests every screen on desktop and mobile.
 4. AI review: once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
@@ -17,21 +17,25 @@ A product manager writes a Jira ticket. A developer, or the AI, builds it. Playw
 
 ## Jira status: who is involved when
 
-The Jira ticket moves through four statuses. The pipeline moves it automatically, so the status always shows where the work is and who has it.
+The Jira ticket moves through five statuses. Anyone ( dev manager, team lead, developer ) can choose at any time to involve the AI agent by clicking ⚡ Automation → Run Agent 1 on the ticket. If a developer has already started, the AI continues on the same branch.
 
-| Jira status | What happens | AI agent path | Developer path |
+| Jira status | Who | What happens | Screenshot |
 |---|---|---|---|
-| To Do | The product manager creates the ticket. The team lead reviews it and adds more details. | People only | People only |
-| In Progress | The change is being built and tested. | Someone clicks ⚡ Run Agent 1, and the ticket moves to In Progress automatically. The AI creates the branch, builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server, and fixes its own bugs. | The developer moves the ticket to In Progress ( or Jira does it when the branch is created, see note ), builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. |
-| In Review | A person needs to decide: bugs the AI could not fix, unclear changes, failed functional checks, or the `human-review` label. The ticket gets the label `needs-human` and is assigned to the person who created it. | A person reads the PDF report and fixes or approves. | The developer reads the PDF report and pushes a fix. The AI reviews again. |
-| Done | The pull request is merged. The baselines in Eyes are updated. | Automatic when there are no bugs | Automatic when the AI review passes ( or after a person merges ) |
+| New | Product manager | Creates the ticket with what should change and what must not change. | <img src="docs/images/status-1-new.png" width="260" alt="Jira ticket in New"> |
+| To Do | Team lead or dev manager | Reviews the ticket and adds more details. The ticket is ready to be picked up. | <img src="docs/images/status-2-todo.png" width="260" alt="Jira ticket in To Do"> |
+| In Progress / Doing | Developer [ or ] AI agent | (1) Developer: moves the ticket to In Progress, builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. (2) AI agent: someone clicks Run Agent 1, the ticket moves to In Progress automatically, and the AI builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server and fixes its own bugs. | <img src="docs/images/status-3-in-progress.png" width="260" alt="Jira ticket in In Progress"> |
+| In Review | A person ( developer, team lead or dev manager ) | Only when a person needs to decide: bugs the AI could not fix, unclear changes, failed functional checks, or the `human-review` label. The ticket gets the label `needs-human`, is assigned to the person who created it, and has the PDF report attached. The developer fixes and pushes, and the AI reviews again. | <img src="docs/images/status-4-in-review.png" width="260" alt="Jira ticket in In Review"> |
+| Done | Pipeline ( automatic ) | The pull request is merged and the baselines in Eyes are updated. The PDF report stays attached to the ticket. | <img src="docs/images/status-5-done.png" width="260" alt="Jira ticket in Done"> |
 
 *Who is involved, in order*
 
-- AI agent path: product manager and team lead ( To Do ) → anyone clicks Run Agent 1 → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
-- Developer path: product manager and team lead ( To Do ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
+- AI agent path: product manager ( New ) → team lead or dev manager ( To Do ) → anyone clicks Run Agent 1 → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
+- Developer path: product manager ( New ) → team lead or dev manager ( To Do ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
 
-Note: to move the ticket to In Progress automatically when a developer creates a branch, add a Jira Automation rule: trigger "Branch created", action "Transition work item to In Progress".
+Note:
+- The pipeline moves the ticket to In Progress ( AI path ), In Review and Done. New and To Do are set by people.
+- If your Jira uses other names ( e.g. "Doing" ), the pipeline accepts "In Progress" or "Doing" by default. You can set your own names with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
+- To move the ticket to In Progress automatically when a developer creates a branch, add a Jira Automation rule: trigger "Branch created", action "Transition work item to In Progress".
 
 ## Documents
 

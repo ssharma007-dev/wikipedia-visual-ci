@@ -160,8 +160,7 @@ tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
 ![Create the Jira project](installation/images/p01-jira-create-project.png)
 
-**6.2 Statuses.** The pipeline moves tickets to **In Progress**, **In Review** and **Done**. Make sure
-your workflow has these three statuses.
+**6.2 Statuses.** Recommended workflow: New → To Do → In Progress → In Review → Done. The pipeline moves tickets to In Progress, In Review and Done; New and To Do are set by people. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 
 ![Jira statuses](installation/images/p02-jira-statuses.png)
 
