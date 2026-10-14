@@ -97,6 +97,8 @@ ${adfToText(f.description) || '_(no description)_'}`);
   const f = (await jira(`/rest/api/3/issue/${key}?fields=issuetype,labels,priority`)).fields;
   const labels = (f.labels ?? []).map((l) => l.toLowerCase());
   const it = (f.issuetype?.name ?? '').toLowerCase();
+  // `text` is the label for a text-only change ( `content` still works for older tickets ).
+  if (labels.includes('text')) labels.push('content');
   const order = ['hotfix', 'bug', 'refactor', 'chore', 'content', 'experiment', 'a11y', 'revert'];
   const fromLabel = order.find((t) => labels.includes(t));
   console.log(fromLabel === 'hotfix' ? 'hotfix' : it === 'bug' ? 'bug' : fromLabel ?? 'feature');
