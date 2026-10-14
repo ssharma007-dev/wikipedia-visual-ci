@@ -24,7 +24,7 @@ For what each folder contains, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 300, "nodeSpacing": 40, "rankSpacing": 50}}}%%
 flowchart TD
-    A["👩‍💼 <b>PM or team lead</b><br/>creates the Jira ticket:<br/><i>what should change, what must not</i>"] --> B{"Who builds it?"}
+    A["👩‍💼 <b>Product manager</b><br/>creates the Jira ticket:<br/><i>what should change, what must not</i><br/>the team lead reviews it and adds more"] --> B{"Who builds it?"}
 
     B -->|"a developer"| C["👩‍💻 <b>Developer</b><br/>creates the branch from Jira, codes it, writes the test cases and opens a pull request"]
     B -->|"⚡ Run Agent 1 in Jira"| D["🤖 <b>AI agent</b><br/>creates the branch, codes it, writes the test cases and opens a pull request"]
@@ -39,7 +39,7 @@ flowchart TD
     H --> E
 
     G -->|"no bugs"| I["✅ <b>Merged automatically</b><br/>baselines saved, ticket Done, PDF report in Jira and on the PR"]
-    G -->|"bugs it can't fix, unsure,<br/>or label human-review"| J["👤 <b>A person decides</b><br/>ticket In Review, label needs-human, PDF report in Jira and on the PR"]
+    G -->|"bugs it can't fix, unsure,<br/>or label human-review"| J["👤 <b>A person decides</b><br/>ticket In Review, label needs-human, a Jira sub-task for each bug, PDF report in Jira and on the PR"]
     J --> K["👤 Person fixes or approves, saves the baselines and merges"]
 
     classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
