@@ -5,9 +5,9 @@ flowchart TD
     end
     subgraph S2["Jira status: Ready"]
         B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket, adds details and moves it to Ready"]
+        C{"Who builds it?"}
     end
     subgraph S3["Jira status: In Progress"]
-        C{"Who builds it?"}
         D["👩‍💻 <b>Developer</b><br/>builds the change, writes the test cases, opens a pull request"]
         E["🤖 <b>AI agent</b><br/>builds the change, writes the test cases, opens a pull request"]
         F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on the defined devices"]
@@ -23,9 +23,9 @@ flowchart TD
     end
 
     A -->|"ready for review"| B
-    B -->|"picked up"| C
-    C -->|"a developer picks it up"| D
-    C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
+    B --> C
+    C -->|"assign a developer"| D
+    C -->|"⚡ Run Agent 1"| E
     D --> F
     E --> F
     F --> G

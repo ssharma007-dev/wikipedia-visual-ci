@@ -1,22 +1,42 @@
 # From Jira ticket to merged pull request, reviewed by AI
 
-A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. A developer picks it up, or anyone clicks ⚡ Run Agent 1 in Jira ( at any time before the ticket is Done ) and the AI agent builds it. Playwright and Applitools Eyes test the change on the devices listed in the ticket ( or the defaults in `playwright.config.ts` ), and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
+A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. Once the ticket is Ready, they choose who builds it: a developer [ or ] the AI agent ( ⚡ Run Agent 1 in Jira ). Playwright and Applitools Eyes test the change on the devices listed in the ticket ( or the defaults in `playwright.config.ts` ), and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
 
 If no bugs are found, the change is merged automatically and the ticket moves to Done, with a PDF report attached. If the AI caused a bug, it fixes it and tests again. If there are bugs it cannot fix, or the ticket has the `human-review` label, the ticket moves to In Review and a person decides.
 
 The goal: QA and developers no longer compare screenshots by hand. People only step in when a decision is really needed.
+
+## Ticket flow
+
+```mermaid
+flowchart LR
+    N["<b>New</b><br/>👩‍💼 product manager<br/>creates the ticket"] --> R["<b>Ready</b><br/>🧑‍💼 team lead / dev manager<br/>reviews it and chooses:<br/>developer or AI agent"]
+    R --> P["<b>In Progress</b><br/>👩‍💻 developer or 🤖 AI agent<br/>builds and tests,<br/>the AI reviews"]
+    P -->|"no bugs"| D["<b>Done</b><br/>✅ merged automatically,<br/>PDF in Jira"]
+    P -->|"bugs it can't fix,<br/>unsure, human-review"| V["<b>In Review</b><br/>👤 a person decides"]
+    V -->|"fix pushed"| P
+    V -->|"approved"| D
+    classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
+    classDef work fill:#E8F1FF,stroke:#4A7BD0,color:#14284B
+    classDef good fill:#DFF3E4,stroke:#2E8B57,color:#123D24,stroke-width:2px
+    classDef decide fill:#FBE9E7,stroke:#C8553D,color:#4A1C12,stroke-width:2px
+    class N,R person
+    class P work
+    class D good
+    class V decide
+```
 
 ## How it works
 
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
 
    <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column, adding the description and the text label">
-2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
+2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. In Ready, they choose who handles it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
 
    Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
-3. Build the change ( Jira status: In Progress ): a developer picks up the Ready ticket [ or ] anyone ( dev manager, team lead, developer ) clicks ⚡ Run Agent 1 in Jira and the AI agent builds it. Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
+3. Build the change ( Jira status: In Progress ): the assigned developer builds it [ or ] the AI agent builds it after Run Agent 1 is clicked. Anyone ( dev manager, team lead, developer ) can also click Run Agent 1 later, at any time before Done. Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
 
    | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ Automation → Run Agent 1 | The AI agent at work in GitHub Actions |
    |---|---|---|
@@ -44,15 +64,15 @@ The Jira ticket moves through five statuses: New → Ready → In Progress → I
 | Jira status | Who | What happens | Screenshot |
 |---|---|---|---|
 | New | Product manager | Creates the ticket with what should change and what must not change. | <img src="docs/images/status-1-new.png" width="260" alt="Jira ticket in New"> |
-| Ready | Team lead or dev manager | Reviews the ticket, adds more details and moves it to Ready. The ticket is ready to be picked up by a developer or the AI agent. | <img src="docs/images/status-2-ready.png" width="260" alt="Jira ticket in Ready"> |
-| In Progress | Developer [ or ] AI agent | (1) Developer: moves the ticket to In Progress, builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. (2) AI agent: someone clicks Run Agent 1, the ticket moves to In Progress automatically, and the AI builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server and fixes its own bugs. | <img src="docs/images/status-3-in-progress.png" width="260" alt="Jira ticket in In Progress"> |
+| Ready | Team lead or dev manager | Reviews the ticket, adds more details and moves it to Ready. Then chooses who handles it: assigns a developer [ or ] clicks ⚡ Run Agent 1 for the AI agent. | <img src="docs/images/status-2-ready.png" width="260" alt="Jira ticket in Ready"> |
+| In Progress | Developer [ or ] AI agent | (1) Developer: the assigned developer moves the ticket to In Progress, builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. (2) AI agent: after Run Agent 1 is clicked, the ticket moves to In Progress automatically, and the AI builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server and fixes its own bugs. | <img src="docs/images/status-3-in-progress.png" width="260" alt="Jira ticket in In Progress"> |
 | In Review | A person ( developer, team lead or dev manager ) | Only when a person needs to decide: bugs the AI could not fix, unclear changes, failed functional checks, or the `human-review` label. The ticket gets the label `needs-human`, is assigned to the person who created it, and has the PDF report attached. The developer fixes and pushes, and the AI reviews again. | <img src="docs/images/status-4-in-review.png" width="260" alt="Jira ticket in In Review"> |
 | Done | Pipeline ( automatic ) | The pull request is merged and the baselines in Eyes are updated. The PDF report stays attached to the ticket. | <img src="docs/images/status-5-done.png" width="260" alt="Jira ticket in Done"> |
 
 *Who is involved, in order*
 
-- AI agent path: product manager ( New ) → team lead or dev manager ( Ready ) → anyone clicks Run Agent 1 → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
-- Developer path: product manager ( New ) → team lead or dev manager ( Ready ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
+- AI agent path: product manager ( New ) → team lead or dev manager ( Ready, clicks Run Agent 1 ) → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
+- Developer path: product manager ( New ) → team lead or dev manager ( Ready, assigns a developer ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
 
 Note:
 - The pipeline moves the ticket to In Progress ( AI path ), In Review and Done. New is the status of every new ticket; the team lead or dev manager moves it to Ready.
@@ -221,9 +241,9 @@ flowchart TD
     end
     subgraph S2["Jira status: Ready"]
         B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket, adds details and moves it to Ready"]
+        C{"Who builds it?"}
     end
     subgraph S3["Jira status: In Progress"]
-        C{"Who builds it?"}
         D["👩‍💻 <b>Developer</b><br/>builds the change, writes the test cases, opens a pull request"]
         E["🤖 <b>AI agent</b><br/>builds the change, writes the test cases, opens a pull request"]
         F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on the defined devices"]
@@ -239,9 +259,9 @@ flowchart TD
     end
 
     A -->|"ready for review"| B
-    B -->|"picked up"| C
-    C -->|"a developer picks it up"| D
-    C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
+    B --> C
+    C -->|"assign a developer"| D
+    C -->|"⚡ Run Agent 1"| E
     D --> F
     E --> F
     F --> G
@@ -298,7 +318,7 @@ Either way, the branch is linked to the ticket, and a copy of the ticket is adde
 ### Step 4: Build it and write the tests
 
 - **A developer** makes the change, adds or updates the Playwright tests, and opens a pull request.
-- **Or the AI:** anyone clicks ⚡ **Run Agent 1** in Jira. The AI makes the change, writes the tests (plus a regression test for a bug), runs them, and opens the pull request. If there's no branch yet, it creates one.
+- **Or the AI:** in Ready, the team lead or dev manager ( or anyone ) clicks ⚡ **Run Agent 1** in Jira. The AI makes the change, writes the tests (plus a regression test for a bug), runs them, and opens the pull request. If there's no branch yet, it creates one.
 
 The tests check both behaviour (Playwright) and appearance (Applitools Eyes).
 

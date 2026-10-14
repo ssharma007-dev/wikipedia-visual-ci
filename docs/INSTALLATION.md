@@ -329,7 +329,7 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 **1. The PM or team lead creates the ticket** with two lists: *what should change* and *what must not change*.
 Optional labels: `bug`, `hotfix`, `human-review`.
 
-**2. Anyone clicks ⚡ Automation → Run Agent 1** on the ticket. It moves to **In Progress**.
+**2. In Ready, the team lead or dev manager ( or anyone ) clicks ⚡ Automation → Run Agent 1** on the ticket. It moves to **In Progress**.
 
 ![Run Agent 1 in Jira](installation/images/p13-jira-run-agent.png)
 

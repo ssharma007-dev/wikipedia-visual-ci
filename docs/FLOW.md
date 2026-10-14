@@ -29,9 +29,9 @@ flowchart TD
     end
     subgraph S2["Jira status: Ready"]
         B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket, adds details and moves it to Ready"]
+        C{"Who builds it?"}
     end
     subgraph S3["Jira status: In Progress"]
-        C{"Who builds it?"}
         D["👩‍💻 <b>Developer</b><br/>builds the change, writes the test cases, opens a pull request"]
         E["🤖 <b>AI agent</b><br/>builds the change, writes the test cases, opens a pull request"]
         F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on the defined devices"]
@@ -47,9 +47,9 @@ flowchart TD
     end
 
     A -->|"ready for review"| B
-    B -->|"picked up"| C
-    C -->|"a developer picks it up"| D
-    C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
+    B --> C
+    C -->|"assign a developer"| D
+    C -->|"⚡ Run Agent 1"| E
     D --> F
     E --> F
     F --> G
@@ -109,7 +109,7 @@ Files:
 
 What happens:
 - (1) A developer implements the change, adds or updates the test cases, and opens a pull request.
-- (2) Someone clicks ⚡ Run Agent 1 in Jira. A Jira Automation rule calls GitHub, which starts Agent 1. The AI reads the ticket and the guidelines, implements the change, writes the test cases ( and a regression test for a bug ) using the Eyes MCP Server to add the visual checkpoints, and runs them. The ticket moves to In Progress.
+- (2) In Ready, the team lead or dev manager ( or anyone ) clicks ⚡ Run Agent 1 in Jira. A Jira Automation rule calls GitHub, which starts Agent 1. The AI reads the ticket and the guidelines, implements the change, writes the test cases ( and a regression test for a bug ) using the Eyes MCP Server to add the visual checkpoints, and runs them. The ticket moves to In Progress.
 - A developer can also write their own code and let the AI write the test cases: click Run Agent 1 on the ticket, and the AI continues on the developer's branch.
 
 Who: developer [ or ] AI agent.
@@ -209,7 +209,7 @@ Files:
 | Status | Set by | When |
 |---|---|---|
 | New | Product manager | The ticket is created |
-| Ready | Team lead or dev manager | The ticket is reviewed, details are added, and it is ready to be picked up |
+| Ready | Team lead or dev manager | The ticket is reviewed and details are added. In Ready they choose who handles it: assign a developer [ or ] click Run Agent 1 |
 | In Progress | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts. Anyone can click Run Agent 1 at any time before Done to involve the AI; on an existing branch it continues the work |
 | In Review | The pipeline | The work is waiting for a person's decision ( label `needs-human`, assigned to the person who created the ticket ). Not used for reviewing the ticket itself |
 | Done | The pipeline | The pull request is merged |
