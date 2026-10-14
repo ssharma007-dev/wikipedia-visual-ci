@@ -327,6 +327,11 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
           export REPORT_SHA="${{ steps.commit.outputs.sha }}"
+          # Test totals from the agent's last test run, and any failed functional checks, for "Results at a glance"
+          node scripts/failed-tests.mjs test-results/results.json agent-report/failed-tests.json /dev/null agent-report/test-stats.json || true
+          if [ -f agent-report/report.json ] && [ -s agent-report/failed-tests.json ]; then
+            node -e 'const fs=require("fs"),f="agent-report/report.json",r=JSON.parse(fs.readFileSync(f));const t=JSON.parse(fs.readFileSync("agent-report/failed-tests.json"));if(t.length)r.failedTests=t;fs.writeFileSync(f,JSON.stringify(r,null,2))' || true
+          fi
           if [ -f agent-report/report.json ]; then
             node scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
             node scripts/report-pdf.mjs agent-report/report.html "agent-report/${{ steps.task.outputs.key }}-visual-report.pdf" || echo "::warning::PDF could not be created"

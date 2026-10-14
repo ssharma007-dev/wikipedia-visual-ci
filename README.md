@@ -17,7 +17,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
    - Without the `human-review` label: the AI automatically accepts or rejects each change based on the available information ( the ticket, the design system, the image and DOM differences ).
    - With the `human-review` label: the AI gives its review, and a person approves before anything is saved or merged.
 7. Auto fix ( Jira status: In Progress ): if the AI's change causes an issue, the AI fixes it and tests again ( up to 2 rounds ). If it cannot fix a bug, it creates a sub-task for it in Jira.
-8. Report ( Jira status: In Progress ): a PDF summary report of the actions the AI took is attached to the Jira ticket and linked on the pull request.
+8. Report ( Jira status: In Progress ): after each execution, a PDF summary report is attached to the Jira ticket and linked on the pull request. It shows the results at a glance ( test cases run, passed and failed, visual checkpoints with and without differences, differences accepted or rejected by the AI, bugs found, fixed and left ), the actions the AI took, and the before / after / difference images for every change.
 9. Decision ( Jira status: Done or In Review ):
    - No bugs found ( Jira status: Done ): the change is merged automatically and the baselines in Eyes are saved.
    - Bugs it cannot fix, unclear changes, or the `human-review` label ( Jira status: In Review ): the ticket gets the label `needs-human` and is assigned to the person who created it. A person reads the PDF and fixes or approves. When the developer pushes a fix, the AI reviews it again.

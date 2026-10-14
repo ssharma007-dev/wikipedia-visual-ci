@@ -51,6 +51,8 @@ const copy = (src, name) => {
 const decision = { accepted: 'accepted', rejected: 'rejected', none: 'unresolved' };
 
 const items = [];
+// Counts for the report's "Results at a glance": every checkpoint in the batch, not only the ones with images.
+const stats = { tests: 0, checkpoints: 0, noDifference: 0, differences: 0, accepted: 0, rejected: 0, unresolved: 0, newCheckpoints: 0 };
 try {
   await send('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'eyes-evidence', version: '1' } });
   server.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
@@ -61,11 +63,17 @@ try {
   const info = await tool('eyes_inspect_sessions', { batchUrl });
 
   for (const s of info.sessions) {
-    if (items.length >= MAX_ITEMS) break;
+    stats.tests++;
     const sUrl = sessionUrl(s.sessionId);
     const steps = (await tool('eyes_inspect_steps', { sessionUrl: sUrl })).steps ?? [];
     for (const [stepIndex, step] of steps.entries()) {
-      if (step.isMatching !== false || items.length >= MAX_ITEMS) continue;
+      stats.checkpoints++;
+      if (!step.baseline?.id) stats.newCheckpoints++;
+      if (step.isMatching !== false) { stats.noDifference++; continue; }
+      stats.differences++;
+      const d = decision[step.resolution] ?? 'unresolved';
+      stats[d in stats ? d : 'unresolved']++;
+      if (items.length >= MAX_ITEMS) continue;
       const { areas = [] } = await tool('eyes_inspect_changed_areas', { sessionUrl: sUrl, stepIndex });
       const env = s.environment ?? {};
       const base = {
@@ -100,7 +108,8 @@ try {
 } catch (err) {
   console.error(`Evidence collection stopped: ${err.message}`);
 }
-fs.writeFileSync(path.join(outDir, 'evidence.json'), JSON.stringify({ batchUrl, items }, null, 2));
+fs.writeFileSync(path.join(outDir, 'evidence.json'), JSON.stringify({ batchUrl, stats, items }, null, 2));
+console.log(`Batch: ${JSON.stringify(stats)}`);
 console.log(`${items.length} changed area(s) captured → ${path.join(outDir, 'evidence.json')}`);
 server.kill();
 process.exit(0);

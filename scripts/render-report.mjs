@@ -45,6 +45,9 @@ function testLinks(t) {
 // Before / after / differences images collected from Eyes by scripts/eyes-evidence.mjs.
 let evidence = [];
 try { evidence = JSON.parse(fs.readFileSync(path.join(path.dirname(jsonPath), 'evidence', 'evidence.json'), 'utf-8')).items ?? []; } catch {}
+let batchStats = null, testStats = null;
+try { batchStats = JSON.parse(fs.readFileSync(path.join(path.dirname(jsonPath), 'evidence', 'evidence.json'), 'utf-8')).stats ?? null; } catch {}
+try { testStats = JSON.parse(fs.readFileSync(path.join(path.dirname(jsonPath), 'test-stats.json'), 'utf-8')); } catch {}
 const decisionTag = (d) => ({ accepted: ['good', 'accepted — real change'], rejected: ['bad', 'rejected — bug'], unresolved: ['info', 'left for a person'] }[d] ?? ['info', d]);
 const shot = (p, label) => `<div class="shot"><p class="meta"><b>${label}</b></p>${p ? image(p) : '<p class="muted">Not available</p>'}</div>`;
 const visualChanges = evidence.length ? evidence.map((e) => {
@@ -100,6 +103,15 @@ ul{margin:6px 0 0;padding-left:20px}.wrap{overflow-x:auto}
   <div class="card"><div class="num">${recs.length}</div>baseline recommendations</div>
   <div class="card"><div class="num">${r.baseline?.saved ? 'Yes' : 'No'}</div>baselines saved</div>
 </div>
+
+${(testStats || batchStats || fixed.length || bugs.length) ? `<h2>Results at a glance</h2>
+<div class="wrap"><table><tr><th>Area</th><th>Result</th></tr>
+${testStats ? `<tr><td>Test cases ( Playwright )</td><td><b>${testStats.total}</b> run · <b>${testStats.passed}</b> passed · <b>${testStats.failed}</b> failed${testStats.skipped ? ` · ${testStats.skipped} skipped` : ''}</td></tr>` : ''}
+${batchStats ? `<tr><td>Visual checkpoints ( Applitools Eyes )</td><td><b>${batchStats.checkpoints}</b> checked ( desktop and mobile ) · <b>${batchStats.noDifference}</b> no difference · <b>${batchStats.differences}</b> with differences${batchStats.newCheckpoints ? ` · ${batchStats.newCheckpoints} new` : ''}</td></tr>
+<tr><td>Differences, decided by the AI</td><td><b>${batchStats.accepted}</b> accepted as real change · <b>${batchStats.rejected}</b> rejected as bug · <b>${batchStats.unresolved}</b> left for a person</td></tr>` : ''}
+<tr><td>Bugs</td><td><b>${bugs.length + fixedCount}</b> found · <b>${fixedCount}</b> fixed by the AI · <b>${bugs.length}</b> left</td></tr>
+<tr><td>Baselines</td><td>${r.baseline?.saved ? 'saved in Eyes' : 'not saved yet, a person saves after review'}</td></tr>
+</table></div>` : ''}
 
 <h2>Summary</h2>
 <div class="box"><h3>Real changes</h3>${list(r.summary?.realChanges).length ? `<ul>${list(r.summary.realChanges).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None.</p>'}</div>
@@ -162,6 +174,8 @@ const md = `## ${r.verdict === 'bugs-found' ? '❌' : '✅'} ${isReview ? 'AI re
 
 ${list(r.summary?.realChanges).map((x) => `- ✅ ${x}`).join('\n')}
 ${list(r.summary?.bugs).map((x) => `- ❌ ${x}`).join('\n')}
+
+${testStats ? `**Tests:** ${testStats.total} run, ${testStats.passed} passed, ${testStats.failed} failed. ` : ''}${batchStats ? `**Visual checkpoints:** ${batchStats.checkpoints} checked, ${batchStats.differences} with differences (${batchStats.accepted} accepted, ${batchStats.rejected} rejected, ${batchStats.unresolved} left for a person).` : ''}
 
 **Next steps:** ${list(r.summary?.nextSteps).join(' · ') || '—'}
 
