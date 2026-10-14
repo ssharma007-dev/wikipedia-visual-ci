@@ -177,6 +177,17 @@ Files:
 
 ---
 
+## Jira status along the way
+
+| Status | Set by | When |
+|---|---|---|
+| To Do | Product manager | The ticket is created |
+| In Progress | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts |
+| In Review | The pipeline | A person needs to decide ( label `needs-human`, assigned to the person who created the ticket ) |
+| Done | The pipeline | The pull request is merged |
+
+---
+
 ## Who decides what
 
 | | AI agent | Pipeline | Person |
