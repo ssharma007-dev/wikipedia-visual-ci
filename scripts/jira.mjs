@@ -101,17 +101,20 @@ ${adfToText(f.description) || '_(no description)_'}`);
   const fromLabel = order.find((t) => labels.includes(t));
   console.log(fromLabel === 'hotfix' ? 'hotfix' : it === 'bug' ? 'bug' : fromLabel ?? 'feature');
 } else if (command === 'subtask') {
-  // Create a sub-task under <KEY>: subtask <KEY> <summary> <description-file>
-  const [summary, file] = rest;
+  // Create a sub-task under <KEY>: subtask <KEY> <summary> <description-file> [labels,comma,separated]
+  const [summary, file, labelArg] = rest;
+  const labels = labelArg ? labelArg.split(',').filter(Boolean) : ['visual', 'bug', 'found-by-agent'];
+  const fixedByAi = labels.includes('fixed-by-ai');
   // Re-runs must not create the same bug twice: reuse an open sub-task with the same summary.
   const existing = ((await jira(`/rest/api/3/issue/${key}?fields=subtasks`)).fields.subtasks ?? [])
-    .find((t) => t.fields?.summary === summary.slice(0, 250) && t.fields?.status?.statusCategory?.key !== 'done');
-  if (existing) { console.log(`${existing.key} (already open — not created again)`); process.exit(0); }
+    // A bug the AI already fixed is a record, so it is not repeated even when Done.
+    .find((t) => t.fields?.summary === summary.slice(0, 250) && (fixedByAi || t.fields?.status?.statusCategory?.key !== 'done'));
+  if (existing) { console.log(`${existing.key} (already exists — not created again)`); process.exit(0); }
   const lines = fs.readFileSync(file, 'utf-8').split('\n').filter((l) => l.trim());
   const project = key.split('-')[0];
   const types = (await jira(`/rest/api/3/project/${project}`)).issueTypes;
   const sub = types.find((t) => t.subtask);
-  const body = { fields: { project: { key: project }, parent: { key }, issuetype: { id: sub.id }, summary: summary.slice(0, 250), labels: ['visual', 'bug', 'found-by-agent'],
+  const body = { fields: { project: { key: project }, parent: { key }, issuetype: { id: sub.id }, summary: summary.slice(0, 250), labels,
     description: { type: 'doc', version: 1, content: lines.map((l) => ({ type: 'paragraph', content: [{ type: 'text', text: l }] })) } } };
   const created = await jira('/rest/api/3/issue', { method: 'POST', body: JSON.stringify(body) });
   console.log(created.key);
