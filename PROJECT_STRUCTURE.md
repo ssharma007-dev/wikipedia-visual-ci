@@ -7,7 +7,7 @@ The project has two parts:
 - The sample app: a copy of the Wikipedia site with a few Playwright tests. You replace this with your own app.
 - The pipeline: the GitHub workflows, scripts and guidelines that connect Jira, Playwright, Applitools Eyes and the AI agent. You reuse this almost as it is.
 
-For the setup steps, see [INSTALLATION.md](INSTALLATION.md).
+For how the pieces work together step by step, see [FLOW.md](FLOW.md). For the setup steps, see [INSTALLATION.md](INSTALLATION.md).
 
 ---
 
@@ -29,7 +29,8 @@ wikipedia-visual-ci/
 ├── playwright.config.ts    Playwright + Applitools Eyes settings
 ├── .mcp.json               Connects the AI to the Applitools Eyes MCP Server
 ├── package.json            Test tools (Playwright, Applitools Eyes)
-├── README.md               The flow in short
+├── README.md               What it is, who it is for, the flow in short
+├── FLOW.md                 How it works, step by step, with the files involved
 ├── INSTALLATION.md         Step-by-step setup for your own project
 └── PROJECT_STRUCTURE.md    This document
 ```

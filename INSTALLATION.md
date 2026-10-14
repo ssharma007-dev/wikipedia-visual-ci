@@ -1,6 +1,6 @@
 # Installation guide: AI visual review for your project
 
-This guide explains how to set up the sample project's flow in your own project. Please follow the steps in order.
+This guide explains how to set up the sample project's flow in your own project. Please follow the steps in order. To understand how the pieces work together first, see [FLOW.md](FLOW.md).
 
 *Flow*
 
