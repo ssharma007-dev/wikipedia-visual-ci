@@ -104,7 +104,7 @@ jobs:
           mkdir -p ci-context
           npx playwright test 2>&1 | tee ci-context/eyes-run.log
           CODE=${PIPESTATUS[0]}
-          node scripts/failed-tests.mjs test-results/results.json ci-context/failed-tests.json ci-context/failed-tests.md
+          node scripts/failed-tests.mjs test-results/results.json ci-context/failed-tests.json ci-context/failed-tests.md ci-context/test-stats.json
           if [ "$CODE" != 0 ]; then
             echo "TESTS_FAILED=yes" >> "$GITHUB_ENV"
             echo "::error::Functional checks failed — the review continues, but this PR can't merge until they pass."
@@ -297,6 +297,7 @@ jobs:
             node -e 'const f="./review/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merged the PR. Add the label human-review to the Jira ticket or the PR to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           fi
           node -e 'const f="./review/report.json",r=require(f);try{r.failedTests=JSON.parse(require("fs").readFileSync("ci-context/failed-tests.json"))}catch{};r.source="pr-review";r.task=r.task||{};r.task.key=r.task.key||process.env.TICKET||"PR-"+process.env.PR;require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+          cp ci-context/test-stats.json review/test-stats.json 2>/dev/null || true
           node scripts/render-report.mjs review/report.json review/report.html review/report-summary.md "$RUN_URL"
           NAME="${TICKET:-PR-$PR}-visual-report.pdf"
           node scripts/report-pdf.mjs review/report.html "review/$NAME" || echo "::warning::PDF could not be created"
