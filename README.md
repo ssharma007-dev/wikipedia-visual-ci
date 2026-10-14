@@ -122,7 +122,7 @@ Note: "Test on below devices" decides where Applitools Eyes tests this ticket. T
 
 The device names must be supported by the Applitools Ultrafast Grid ( see the Reference in [docs/INSTALLATION.md](docs/INSTALLATION.md) ).
 
-*Sample 1: a feature ( based on the real WIKI-18 )*
+*Sample 1: a text change*
 
 ```
 Summary: Change the portal tagline to "The Free Encyclopedia for everyone"
@@ -198,7 +198,7 @@ All the documents are in the [`docs/`](docs/) folder. Please read them in this o
 
 *Example*
 
-The PM creates WIKI-18: "Change the portal tagline to The Free Encyclopedia for everyone". Someone clicks Run Agent 1 in Jira. About 10 minutes later the change is implemented, tested on desktop and mobile, reviewed by the AI ( 2 real changes, 0 bugs ), merged, and the ticket is Done with the PDF attached. No one had to compare a screenshot.
+The PM creates WIKI-21: "Rename Free learning resources to Free learning materials on the portal", label `text`, with "Test on below devices: Firefox desktop 1280×800, Galaxy S25 Ultra". Someone clicks Run Agent 1 in Jira. About 9 minutes later the change is implemented, tested on exactly those two devices ( 8 test cases passed, 12 visual differences accepted, 0 bugs ), merged, and the ticket is Done with the PDF attached. No one had to compare a screenshot.
 
 *Coming next*
 
