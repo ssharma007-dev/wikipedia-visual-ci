@@ -8,12 +8,12 @@ on:
       action:
         description: 'create or inspect'
         type: choice
-        options: [inspect, create, site-labels, add-label, remove-label, query, board]
+        options: [inspect, create, transition, site-labels, add-label, remove-label, query, board]
       key:
         description: 'inspect: the ticket key (e.g. WIKI-8) · create, site-labels, remove-label: the project key (e.g. WIKI)'
         required: true
       summary:
-        description: 'create: ticket summary · query: the JQL · board: the board id'
+        description: 'create: ticket summary · transition: the status ( e.g. Ready ) · query: the JQL · board: the board id'
         required: false
       description:
         description: 'create: description (markdown; use \n for new lines)'
@@ -53,6 +53,8 @@ jobs:
             echo "Created $NEW: ${JIRA_BASE_URL%/}/browse/$NEW" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = site-labels ]; then
             node scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = transition ]; then
+            node scripts/jira.mjs transition "$KEY" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = query ]; then
             node scripts/jira.mjs query "${KEY%%-*}-0" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = board ]; then
