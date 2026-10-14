@@ -22,39 +22,63 @@ For what each folder contains, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 ## The flow at a glance
 
 ```mermaid
-%%{init: {"flowchart": {"wrappingWidth": 300, "nodeSpacing": 40, "rankSpacing": 50}}}%%
+%%{init: {"flowchart": {"wrappingWidth": 260, "nodeSpacing": 30, "rankSpacing": 45, "curve": "basis"}}}%%
 flowchart TD
-    A["👩‍💼 <b>Product manager</b><br/>creates the Jira ticket:<br/><i>what should change, what must not</i><br/>the team lead reviews it and adds more"] --> B{"Who builds it?"}
+    subgraph S1["Jira status: New"]
+        A["👩‍💼 <b>Product manager</b><br/>creates the ticket: what should change, what must not"]
+    end
+    subgraph S2["Jira status: To Do"]
+        B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket and adds details"]
+    end
+    subgraph S3["Jira status: In Progress"]
+        C{"Who builds it?"}
+        D["👩‍💻 <b>Developer</b><br/>builds the change, writes the test cases, opens a pull request"]
+        E["🤖 <b>AI agent</b><br/>builds the change, writes the test cases, opens a pull request"]
+        F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, desktop and mobile"]
+        G["🔍 <b>AI review with the Eyes MCP Server</b><br/>every difference vs the ticket and the design system · PDF report to Jira and the PR"]
+        H{"Result?"}
+        I["🔧 <b>AI fixes its own bug</b><br/>and tests again ( max 2 rounds )"]
+    end
+    subgraph S4["Jira status: In Review"]
+        J["👤 <b>A person decides</b><br/>reads the PDF, then fixes or approves · label needs-human · Jira sub-task per bug"]
+    end
+    subgraph S5["Jira status: Done"]
+        K["✅ <b>Merged</b><br/>baselines saved in Eyes, PDF stays on the ticket"]
+    end
 
-    B -->|"a developer"| C["👩‍💻 <b>Developer</b><br/>creates the branch from Jira, codes it, writes the test cases and opens a pull request"]
-    B -->|"⚡ Run Agent 1 in Jira"| D["🤖 <b>AI agent</b><br/>creates the branch, codes it, writes the test cases and opens a pull request"]
-
-    C --> E["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on desktop and mobile"]
-    D --> E
-
-    E --> F["🔍 <b>AI review with the Eyes MCP Server</b><br/>every difference is checked against the ticket and the design system"]
-
-    F --> G{"Any bugs?"}
-    G -->|"a bug the AI caused"| H["🔧 <b>AI fixes it</b><br/>and tests again <i>( up to 2 rounds )</i>"]
-    H --> E
-
-    G -->|"no bugs"| I["✅ <b>Merged automatically</b><br/>baselines saved, ticket Done, PDF report in Jira and on the PR"]
-    G -->|"bugs it can't fix, unsure,<br/>or label human-review"| J["👤 <b>A person decides</b><br/>ticket In Review, label needs-human, a Jira sub-task for each bug, PDF report in Jira and on the PR"]
-    J --> K["👤 Person fixes or approves, saves the baselines and merges"]
+    A -->|"ticket ready for review"| B
+    B -->|"ready to be picked up"| C
+    C -->|"a developer picks it up"| D
+    C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
+    D --> F
+    E --> F
+    F --> G
+    G --> H
+    H -->|"no bugs: merged automatically"| K
+    H -->|"a bug the AI caused"| I
+    I --> F
+    H -->|"bugs it can't fix · unsure · human-review"| J
+    J -->|"developer pushes a fix"| F
+    J -->|"approved and merged"| K
 
     classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
     classDef ai fill:#E8F1FF,stroke:#4A7BD0,color:#14284B
     classDef auto fill:#EEF7F0,stroke:#4E9A64,color:#173B22
     classDef good fill:#DFF3E4,stroke:#2E8B57,color:#123D24,stroke-width:2px
     classDef decide fill:#FBE9E7,stroke:#C8553D,color:#4A1C12,stroke-width:2px
-    class A,C,K person
-    class D,F,H ai
-    class E auto
-    class I good
+    class A,B,D person
+    class E,G,I ai
+    class F auto
+    class K good
     class J decide
+    style S1 fill:#FAFAFA,stroke:#B0B7C3
+    style S2 fill:#FAFAFA,stroke:#B0B7C3
+    style S3 fill:#F4F8FF,stroke:#8FA8D6
+    style S4 fill:#FFF6F4,stroke:#D9A093
+    style S5 fill:#F3FBF5,stroke:#8CC29E
 ```
 
-Colours: orange = a person, blue = the AI agent, green = automatic. The same diagram as an image, for slides or a blog: [docs/images/user-flow.png](images/user-flow.png).
+How to read it: each grey or coloured band is a Jira status ( New → To Do → In Progress → In Review → Done ), so you can see where the ticket is and who has it. Orange = a person, blue = the AI agent, green = automatic. The same diagram as an image, for slides or a blog: [user-flow.png](images/user-flow.png).
 
 ---
 
