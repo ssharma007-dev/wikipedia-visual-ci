@@ -9,6 +9,10 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 ## How it works
 
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
+
+   Create it from the board: Board → **New** column → **+ Create** → type the summary → Enter, then open the ticket to add the description and labels. ( The **+ Create** button at the top of Jira puts the ticket in the Backlog instead of on the board. )
+
+   <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column on the Jira board, then adding the text label">
 2. Review the ticket ( Jira status: New ): while the ticket is still New, the team lead or dev manager reviews it and adds more details. It moves to In Progress when the work starts. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
@@ -334,7 +338,7 @@ For the full step-by-step setup in your own project ( with screenshots ), see [d
 
 1. Install **GitHub for Atlassian** in Jira and connect this repository.
 2. Jira workflow ( must do ): four statuses New → In Progress → In Review → Done, and the START arrow pointing to **New**, so every new ticket starts in New. See step 6.2 in [docs/INSTALLATION.md](docs/INSTALLATION.md).
-3. Jira board ( must do ): every ticket must be visible on the board. For this demo, sprints and the backlog are turned off ( Space settings → Features → Sprints off, and More items → Backlog off ), so the board shows every ticket by status. If your team uses sprints, add a Jira Automation rule "Work item created → Sprint = Active sprint" instead. See step 6.2b in [docs/INSTALLATION.md](docs/INSTALLATION.md).
+3. Jira board ( must do ): every ticket must be visible on the board. For this demo, sprints are turned off ( Space settings → Features → Sprints off ), and tickets are created from the board's New column ( + Create in the column ), because the + Create button at the top of Jira puts them in the Backlog. If your team uses sprints, add a Jira Automation rule "Work item created → Sprint = Active sprint" instead. See step 6.2b in [docs/INSTALLATION.md](docs/INSTALLATION.md).
 4. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
 5. Optional: a Jira Automation rule for the **Run Agent 1** button, calling this repo's `implement-task.yml` workflow with the ticket key.
 
