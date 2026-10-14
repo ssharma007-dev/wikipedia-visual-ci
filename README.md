@@ -25,8 +25,12 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 
    Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
 3. Build the change ( Jira status: In Progress ): the Ready ticket is picked up in one of two ways.
-   - (1) Developer: the developer assigns the ticket to themselves [ or ] the team lead or dev manager assigns it to a developer. The developer moves it to In Progress and builds the change. Tip: a Jira Automation rule "Assignee changed → transition to In Progress" can move it automatically.
-   - (2) AI agent: the team lead, dev manager or developer clicks the ⚡ ( Automation ) button on the ticket → **Agent 1** ( not the "Agents" button, which is Atlassian's own AI ). The ticket moves to In Progress automatically. The AI agent then:
+   - (1) Developer: the developer assigns the ticket to themselves [ or ] the team lead or dev manager assigns it to a developer. The developer moves it to In Progress and builds the change.
+   - (2) AI agent: the team lead, dev manager or developer clicks the ⚡ ( Automation ) button on the ticket → **Agent 1** ( not the "Agents" button, which is Atlassian's own AI ). The ticket moves to In Progress automatically.
+
+     <img src="docs/images/jira-run-agent-1.png" width="560" alt="Running the custom agent: the ⚡ ( Automation ) button → Agent 1">
+
+     The AI agent then:
      - creates a new branch by itself, following the naming convention ( e.g. `feature/WIKI-21-…`, `bugfix/…` or `hotfix/…` from the ticket's type );
      - follows the steps written in the Jira ticket ( Should change, Must not change, Test on below devices );
      - writes the test cases and runs them with Applitools Eyes;
