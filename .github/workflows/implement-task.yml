@@ -171,7 +171,7 @@ jobs:
 
       - name: "Jira: In Progress"
         if: steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
-        run: node scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "In Progress" || true
+        run: node scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "${{ vars.JIRA_STATUS_IN_PROGRESS || 'In Progress|Doing' }}" || true
 
       - name: Install dependencies
         if: steps.task.outputs.key != ''
@@ -471,11 +471,11 @@ jobs:
           } > ci-context/jira-note.txt
           node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
           if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then
-            node scripts/jira.mjs transition "$KEY" "Done" || true
+            node scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
             node scripts/jira.mjs needs-human "$KEY" off || true
             [ -n "${{ steps.pr.outputs.number }}" ] && gh pr edit "${{ steps.pr.outputs.number }}" --remove-label needs-human >/dev/null 2>&1 || true
           else
-            node scripts/jira.mjs transition "$KEY" "In Review" || true
+            node scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
             # A decision is waiting: label the ticket and assign it to the person who wrote it, and label the PR.
             node scripts/jira.mjs needs-human "$KEY" on || true
             if [ -n "${{ steps.pr.outputs.number }}" ]; then

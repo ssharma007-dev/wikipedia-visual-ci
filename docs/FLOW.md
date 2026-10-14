@@ -181,6 +181,15 @@ Files:
 
 | Status | Set by | When |
 |---|---|---|
+| New | Product manager | The ticket is created |
+| To Do | Team lead or dev manager | The ticket is reviewed and details are added |
+| In Progress / Doing | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts. Anyone can click Run Agent 1 at any time to involve the AI |
+| In Review | The pipeline | A person needs to decide ( label `needs-human`, assigned to the person who created the ticket ) |
+| Done | The pipeline | The pull request is merged |
+
+Status names can be changed with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
+
+---|---|---|
 | To Do | Product manager | The ticket is created |
 | In Progress | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts |
 | In Review | The pipeline | A person needs to decide ( label `needs-human`, assigned to the person who created the ticket ) |

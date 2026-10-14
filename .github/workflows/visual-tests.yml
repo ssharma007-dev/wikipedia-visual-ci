@@ -281,7 +281,7 @@ jobs:
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."
-            [ -n "$TICKET" ] && node scripts/jira.mjs transition "$TICKET" "Done" || true
+            [ -n "$TICKET" ] && node scripts/jira.mjs transition "$TICKET" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
           else
             echo "::warning::Merge failed (e.g. a conflict) — a person merges."
           fi
@@ -367,7 +367,7 @@ jobs:
           gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
           gh pr edit "$PR" --add-label needs-human || true
           if [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ]; then
-            node scripts/jira.mjs transition "$TICKET" "In Review" || true
+            node scripts/jira.mjs transition "$TICKET" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
             node scripts/jira.mjs needs-human "$TICKET" on || true
           fi
 
@@ -408,7 +408,7 @@ jobs:
           if [ -n "$B" ]; then node scripts/eyes-save.mjs "$B" --accept-all || echo "::warning::Could not save main's baseline"; fi
           KEY=$(echo "$HEADREF" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
           if [ -n "$KEY" ]; then
-            node scripts/jira.mjs transition "$KEY" "Done" || true
+            node scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
             node scripts/jira.mjs needs-human "$KEY" off || true
           fi
 
