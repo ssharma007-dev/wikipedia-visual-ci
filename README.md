@@ -1,6 +1,6 @@
 # From Jira ticket to merged pull request, reviewed by AI
 
-A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. A developer picks it up, or anyone clicks ⚡ Run Agent 1 in Jira ( at any time before the ticket is Done ) and the AI agent builds it. Playwright and Applitools Eyes test the change on the defined devices ( set in `playwright.config.ts`, e.g. Chrome desktop and Galaxy S25 Ultra ), and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
+A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. A developer picks it up, or anyone clicks ⚡ Run Agent 1 in Jira ( at any time before the ticket is Done ) and the AI agent builds it. Playwright and Applitools Eyes test the change on the devices listed in the ticket ( or the defaults in `playwright.config.ts` ), and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
 
 If no bugs are found, the change is merged automatically and the ticket moves to Done, with a PDF report attached. If the AI caused a bug, it fixes it and tests again. If there are bugs it cannot fix, or the ticket has the `human-review` label, the ticket moves to In Review and a person decides.
 
@@ -22,7 +22,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 4. Test cases ( Jira status: In Progress ):
    - AI agent: creates the test cases ( functional and visual ), using the Applitools Eyes MCP Server to add the visual checkpoints, and runs them.
    - Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them. The AI continues on the developer's branch, so it also completes anything still missing from the ticket.
-   - Applitools Eyes visually tests every screen, component or important area that the Jira ticket names: the full page, or only a component ( e.g. the header links ) when the change is local. It runs on the devices defined in `playwright.config.ts` ( here Chrome desktop and Galaxy S25 Ultra ). The ticket's "Devices" line tells the AI on which of these devices the change is expected.
+   - Applitools Eyes visually tests every screen, component or important area that the Jira ticket names: the full page, or only a component ( e.g. the header links ) when the change is local. It runs on the devices listed in the ticket under "Test on below devices", or, if the ticket lists none, on the defaults in `playwright.config.ts` ( here Chrome desktop and Galaxy S25 Ultra ).
 5. AI review ( Jira status: In Progress ): once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
 6. Acceptance ( Jira status: In Progress ):
    - Without the `human-review` label: the AI automatically accepts or rejects each change based on the available information ( the ticket, the design system, the image and DOM differences ).
@@ -86,7 +86,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Must not change | Required | What must stay exactly as it is ( other pages, other devices, nearby elements ) | Anything on this list that changes is reported as a bug |
 | Why | Optional | The reason for the change | Helps the reviewer and the AI understand the intent |
 | Pages / screens | Optional | Where the change is visible | Helps the AI find the relevant test cases |
-| Test on below devices | Optional | e.g. "Galaxy S25 Ultra", "Chrome desktop 1200×800" | Tells the AI on which devices the change is expected. Without it, the AI expects the change on all devices. The devices that are tested are set in `playwright.config.ts` |
+| Test on below devices | Optional | e.g. "Galaxy S25 Ultra", "Chrome desktop 1200×800" | The devices Applitools Eyes tests this ticket on. Without it, the defaults in `playwright.config.ts` are used |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
 | Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review` ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
@@ -115,7 +115,12 @@ Test on below devices ( optional ):
 Design reference: <optional: design system rule or Figma link>
 ```
 
-Note: "Test on below devices" tells the AI on which devices the change is expected. The devices the tests actually run on are set in `playwright.config.ts` ( here Chrome desktop 1200×800 and Galaxy S25 Ultra ), so list devices from there.
+Note: "Test on below devices" decides where Applitools Eyes tests this ticket. The pipeline reads the list and runs the tests on exactly these devices. Without the list, the defaults in `playwright.config.ts` are used ( here Chrome desktop 1200×800 and Galaxy S25 Ultra ). How to write a device:
+- Desktop browser: `Chrome`, `Firefox`, `Safari` or `Edge`, with the size, e.g. `Chrome desktop 1200×800` ( default size 1200×800 ).
+- iPhone or iPad: the device name, e.g. `iPhone 15`.
+- Other phones and tablets: the device name, e.g. `Galaxy S25 Ultra`, `Pixel 7`.
+
+The device names must be supported by the Applitools Ultrafast Grid ( see the Reference in [docs/INSTALLATION.md](docs/INSTALLATION.md) ).
 
 *Sample 1: a feature ( based on the real WIKI-18 )*
 

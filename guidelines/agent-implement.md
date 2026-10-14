@@ -63,8 +63,9 @@ explain in the baseline recommendation that the old baseline contained the bug.
    - Choose what each checkpoint covers from the ticket: the full page when the ticket changes the layout or
      several areas, or only the component / area it names ( `region` ) when the change is local, like a
      header link. Cover every page and area the ticket's "Should change" and "Must not change" lists name.
-   - The devices are set in `playwright.config.ts` ( `browsersInfo` ). If the ticket names devices, use them
-     to decide where the change is expected; do not edit `playwright.config.ts`.
+   - The devices are chosen by the pipeline: the ticket's "Test on below devices:" list when it has one
+     ( also in `ci-context/devices.json` ), otherwise the defaults in `playwright.config.ts`. Do not edit
+     `playwright.config.ts` and do not set devices in the tests.
 
 4. **Run the tests.** The app is already running at the URL in `ci-context/app-url.txt`. Run
    `npx playwright test` (all tests — the suite is small and side effects matter). The output
