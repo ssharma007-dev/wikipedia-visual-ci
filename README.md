@@ -2,6 +2,19 @@
 
 A product manager writes a Jira ticket. A developer, or the AI, builds it. Playwright and Applitools Eyes test it, and an AI reviews every visual change with the Applitools Eyes MCP. If no bugs are found, it is merged automatically. Otherwise, a person decides.
 
+## How it works
+
+1. Jira ticket: the product manager creates the task in Jira with what should change and what must not change. The team lead can review the task and add more details.
+2. Implementation: a developer [ or ] the AI agent builds the change.
+3. Test cases: the AI agent creates the test cases ( functional and visual ) and runs them. When a developer builds it, the developer adds the test cases. Applitools Eyes visually tests every screen on desktop and mobile.
+4. AI review: once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
+5. Acceptance:
+   - With the `human-review` label: the AI gives its review, and a person approves before anything is saved or merged.
+   - Without the `human-review` label: the AI automatically accepts or rejects each change based on the available information ( the ticket, the design system, the image and DOM differences ).
+6. Auto fix: if the change causes an issue, the AI fixes it and tests again ( up to 2 rounds ). If it cannot fix a bug, it creates a sub-task for it in Jira.
+7. Report: a PDF summary report of the actions it took is attached to the Jira ticket and linked on the pull request.
+8. Merge: if no bugs are found, it is merged automatically. Otherwise, a person decides.
+
 ## Documents
 
 All the documents are in the [`docs/`](docs/) folder. Please read them in this order:
@@ -39,7 +52,7 @@ Comparing the implementation directly with the Figma design ( Eyes MCP Server + 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 300, "nodeSpacing": 40, "rankSpacing": 50}}}%%
 flowchart TD
-    A["👩‍💼 <b>PM or team lead</b><br/>creates the Jira ticket:<br/><i>what should change, what must not</i>"] --> B{"Who builds it?"}
+    A["👩‍💼 <b>Product manager</b><br/>creates the Jira ticket:<br/><i>what should change, what must not</i><br/>the team lead reviews it and adds more"] --> B{"Who builds it?"}
 
     B -->|"a developer"| C["👩‍💻 <b>Developer</b><br/>creates the branch from Jira, codes it, writes the test cases and opens a pull request"]
     B -->|"⚡ Run Agent 1 in Jira"| D["🤖 <b>AI agent</b><br/>creates the branch, codes it, writes the test cases and opens a pull request"]
@@ -54,7 +67,7 @@ flowchart TD
     H --> E
 
     G -->|"no bugs"| I["✅ <b>Merged automatically</b><br/>baselines saved, ticket Done, PDF report in Jira and on the PR"]
-    G -->|"bugs it can't fix, unsure,<br/>or label human-review"| J["👤 <b>A person decides</b><br/>ticket In Review, label needs-human, PDF report in Jira and on the PR"]
+    G -->|"bugs it can't fix, unsure,<br/>or label human-review"| J["👤 <b>A person decides</b><br/>ticket In Review, label needs-human, a Jira sub-task for each bug, PDF report in Jira and on the PR"]
     J --> K["👤 Person fixes or approves, saves the baselines and merges"]
 
     classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
