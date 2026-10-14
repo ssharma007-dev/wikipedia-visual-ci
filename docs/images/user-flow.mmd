@@ -2,8 +2,6 @@
 flowchart TD
     subgraph S1["Jira status: New"]
         A["👩‍💼 <b>Product manager</b><br/>creates the ticket: what should change, what must not"]
-    end
-    subgraph S2["Jira status: To Do"]
         B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket and adds details"]
     end
     subgraph S3["Jira status: In Progress"]
@@ -22,8 +20,8 @@ flowchart TD
         K["✅ <b>Merged</b><br/>baselines saved in Eyes, PDF stays on the ticket"]
     end
 
-    A -->|"ticket ready for review"| B
-    B -->|"ready to be picked up"| C
+    A --> B
+    B -->|"work starts"| C
     C -->|"a developer picks it up"| D
     C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
     D --> F
@@ -48,7 +46,6 @@ flowchart TD
     class K good
     class J decide
     style S1 fill:#FAFAFA,stroke:#B0B7C3
-    style S2 fill:#FAFAFA,stroke:#B0B7C3
     style S3 fill:#F4F8FF,stroke:#8FA8D6
     style S4 fill:#FFF6F4,stroke:#D9A093
     style S5 fill:#F3FBF5,stroke:#8CC29E

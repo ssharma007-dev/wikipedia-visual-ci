@@ -9,7 +9,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 ## How it works
 
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
-2. Review the ticket ( Jira status: To Do ): the team lead or dev manager reviews the ticket, adds more details and moves it to To Do ( ready to be picked up ). If the work starts right away, they can move it straight to Doing instead. Optional labels: `bug`, `hotfix`, `feature`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
+2. Review the ticket ( Jira status: New ): while the ticket is still New, the team lead or dev manager reviews it and adds more details. It moves to In Progress when the work starts. Optional labels: `bug`, `hotfix`, `feature`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
 
@@ -33,36 +33,35 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
    - No bugs found ( Jira status: Done ): the change is merged automatically and the baselines in Eyes are saved.
    - Bugs it cannot fix, unclear changes, or the `human-review` label ( Jira status: In Review ): the ticket gets the label `needs-human` and is assigned to the person who created it. A person reads the PDF and fixes or approves. When the developer pushes a fix, the AI reviews it again.
 
-   Note: In Review means the work is waiting for a person's decision. It is not used for reviewing the ticket itself ( that happens in New → To Do ).
+   Note: In Review means the work is waiting for a person's decision. It is not used for reviewing the ticket itself ( that happens while the ticket is New ).
 
 ## Jira status: who is involved when
 
-The Jira ticket moves through five statuses. Anyone ( dev manager, team lead, developer ) can involve the AI agent at any time before Done by clicking ⚡ Automation → Run Agent 1 on the ticket. If a developer has already started, the AI continues on the same branch.
+The Jira ticket moves through four statuses: New → In Progress → In Review → Done. Anyone ( dev manager, team lead, developer ) can involve the AI agent at any time before Done by clicking ⚡ Automation → Run Agent 1 on the ticket. If a developer has already started, the AI continues on the same branch.
 
 | Jira status | Who | What happens | Screenshot |
 |---|---|---|---|
-| New | Product manager | Creates the ticket with what should change and what must not change. | <img src="docs/images/status-1-new.png" width="260" alt="Jira ticket in New"> |
-| To Do | Team lead or dev manager | Reviews the ticket and adds more details. The ticket is ready to be picked up. If the work starts right away, the ticket can go straight from New to Doing. | <img src="docs/images/status-2-todo.png" width="260" alt="Jira ticket in To Do"> |
-| In Progress / Doing | Developer [ or ] AI agent | (1) Developer: moves the ticket to In Progress, builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. (2) AI agent: someone clicks Run Agent 1, the ticket moves to In Progress automatically, and the AI builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server and fixes its own bugs. | <img src="docs/images/status-3-in-progress.png" width="260" alt="Jira ticket in In Progress"> |
+| New | Product manager, then team lead or dev manager | The product manager creates the ticket with what should change and what must not change. The team lead or dev manager reviews it and adds more details. | <img src="docs/images/status-1-new.png" width="260" alt="Jira ticket in New"> |
+| In Progress | Developer [ or ] AI agent | (1) Developer: moves the ticket to In Progress, builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. (2) AI agent: someone clicks Run Agent 1, the ticket moves to In Progress automatically, and the AI builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server and fixes its own bugs. | <img src="docs/images/status-3-in-progress.png" width="260" alt="Jira ticket in In Progress"> |
 | In Review | A person ( developer, team lead or dev manager ) | Only when a person needs to decide: bugs the AI could not fix, unclear changes, failed functional checks, or the `human-review` label. The ticket gets the label `needs-human`, is assigned to the person who created it, and has the PDF report attached. The developer fixes and pushes, and the AI reviews again. | <img src="docs/images/status-4-in-review.png" width="260" alt="Jira ticket in In Review"> |
 | Done | Pipeline ( automatic ) | The pull request is merged and the baselines in Eyes are updated. The PDF report stays attached to the ticket. | <img src="docs/images/status-5-done.png" width="260" alt="Jira ticket in Done"> |
 
 *Who is involved, in order*
 
-- AI agent path: product manager ( New ) → team lead or dev manager ( To Do ) → anyone clicks Run Agent 1 → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
-- Developer path: product manager ( New ) → team lead or dev manager ( To Do ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
+- AI agent path: product manager and team lead or dev manager ( New ) → anyone clicks Run Agent 1 → AI agent ( In Progress ) → a person only if needed ( In Review ) → Done.
+- Developer path: product manager and team lead or dev manager ( New ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
 
 Note:
-- The pipeline moves the ticket to In Progress ( AI path ), In Review and Done. New and To Do are set by people.
-- If your Jira uses other names ( e.g. "Doing" ), the pipeline accepts "In Progress" or "Doing" by default. You can set your own names with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
+- The pipeline moves the ticket to In Progress ( AI path ), In Review and Done. New is the status of every new ticket.
+- If your Jira uses other names ( e.g. "Doing" instead of "In Progress" ), the pipeline accepts "In Progress" or "Doing" by default. You can set your own names with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 - To move the ticket to In Progress automatically when a developer creates a branch, add a Jira Automation rule: trigger "Branch created", action "Transition work item to In Progress".
 
 *Run Agent 1 at each status ( current behaviour )*
 
 | Jira status when clicked | What the AI agent does |
 |---|---|
-| New / To Do | Creates a new branch from `main`, builds the change, writes and runs the test cases, reviews them and opens the pull request. The ticket moves to In Progress. |
-| In Progress / Doing ( a developer already started ) | Continues on the developer's branch: builds what is still missing according to the ticket, writes and runs the test cases, reviews everything and pushes to the same pull request. It works from the ticket and the current code. It does not know what the developer planned to do next. |
+| New | Creates a new branch from `main`, builds the change, writes and runs the test cases, reviews them and opens the pull request. The ticket moves to In Progress. |
+| In Progress ( a developer already started ) | Continues on the developer's branch: builds what is still missing according to the ticket, writes and runs the test cases, reviews everything and pushes to the same pull request. It works from the ticket and the current code. It does not know what the developer planned to do next. |
 | In Review ( the review found bugs ) | Moves the ticket back to In Progress, continues on the same branch and reviews everything again. It may fix the bugs, because it checks the ticket and the design system again, but it does not read the previous review. |
 | Done | Not useful: the branch was deleted when it was merged, so the AI starts again from `main` and finds nothing left to do. Tip: in the Jira rule, add the condition "Status is not Done". |
 
@@ -194,8 +193,6 @@ Comparing the implementation directly with the Figma design ( Eyes MCP Server + 
 flowchart TD
     subgraph S1["Jira status: New"]
         A["👩‍💼 <b>Product manager</b><br/>creates the ticket: what should change, what must not"]
-    end
-    subgraph S2["Jira status: To Do"]
         B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket and adds details"]
     end
     subgraph S3["Jira status: In Progress"]
@@ -214,8 +211,8 @@ flowchart TD
         K["✅ <b>Merged</b><br/>baselines saved in Eyes, PDF stays on the ticket"]
     end
 
-    A -->|"ticket ready for review"| B
-    B -->|"ready to be picked up"| C
+    A --> B
+    B -->|"work starts"| C
     C -->|"a developer picks it up"| D
     C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
     D --> F
@@ -240,13 +237,12 @@ flowchart TD
     class K good
     class J decide
     style S1 fill:#FAFAFA,stroke:#B0B7C3
-    style S2 fill:#FAFAFA,stroke:#B0B7C3
     style S3 fill:#F4F8FF,stroke:#8FA8D6
     style S4 fill:#FFF6F4,stroke:#D9A093
     style S5 fill:#F3FBF5,stroke:#8CC29E
 ```
 
-How to read it: each grey or coloured band is a Jira status ( New → To Do → In Progress → In Review → Done ), so you can see where the ticket is and who has it. Orange = a person, blue = the AI agent, green = automatic. The same diagram as an image, for slides or a blog: [user-flow.png](docs/images/user-flow.png).
+How to read it: each grey or coloured band is a Jira status ( New → In Progress → In Review → Done ), so you can see where the ticket is and who has it. Orange = a person, blue = the AI agent, green = automatic. The same diagram as an image, for slides or a blog: [user-flow.png](docs/images/user-flow.png).
 
 ### Step 1: Connect Jira and GitHub (once)
 
