@@ -57,6 +57,14 @@ explain in the baseline recommendation that the old baseline contained the bug.
    - If no existing test checks what the task changes, **write one** in `tests/` (Playwright +
      `@applitools/eyes-playwright/fixture`, same style as `tests/wikipedia.spec.ts`; use
      `process.env.SITE_URL` as the app's address, like the existing tests). Name it after the task.
+   - Use the Applitools Eyes MCP Server to add the visual checkpoints ( `eyes_add_checkpoints_to_test` ),
+     and add Playwright `expect(...)` checks for each acceptance criterion that can be checked as a value
+     ( text, state, size ).
+   - Choose what each checkpoint covers from the ticket: the full page when the ticket changes the layout or
+     several areas, or only the component / area it names ( `region` ) when the change is local, like a
+     header link. Cover every page and area the ticket's "Should change" and "Must not change" lists name.
+   - The devices are set in `playwright.config.ts` ( `browsersInfo` ). If the ticket names devices, use them
+     to decide where the change is expected; do not edit `playwright.config.ts`.
 
 4. **Run the tests.** The app is already running at the URL in `ci-context/app-url.txt`. Run
    `npx playwright test` (all tests — the suite is small and side effects matter). The output
