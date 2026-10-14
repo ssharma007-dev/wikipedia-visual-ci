@@ -126,6 +126,10 @@ Note: "Test on below devices" decides where Applitools Eyes tests this ticket. T
 
 The device names must be supported by the Applitools Ultrafast Grid ( see the Reference in [docs/INSTALLATION.md](docs/INSTALLATION.md) ).
 
+*How it looks in Jira*: create the ticket from the board's New column, paste the description, add the label, Save.
+
+<img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column, adding the description and the text label">
+
 *Sample 1: a text change*
 
 ```
