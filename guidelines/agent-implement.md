@@ -13,6 +13,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 | `ci-context/task.md` | **The task** — the `tasks/<KEY>-*.md` file on this branch, picked by the key in the commit message. Implement this and nothing else. |
 | `ci-context/commit.txt` | The commit message that triggered you (use its words to find relevant tests). |
 | `ci-context/worktype.txt` | The kind of work: `feature`, `bug`, `hotfix`, `refactor`, `chore`, `content`, `experiment`, `a11y` or `revert`. It changes what you should expect to see — see **Work types** below. |
+| `ci-context/app-url.txt` | The address where the app is running in CI. |
 | `ci-context/mode.txt` | `auto` (default) or `manual` (someone added the label `human-review`). In **auto** mode, if your report has no bugs and nothing is left unresolved, the pipeline saves the baselines and merges — so be strict: anything you are unsure about must be left unresolved, never accepted. |
 | `ci-context/design-system.md` | The design system (from `main`). Your change must follow it. |
 | `ci-context/review-rules.md` | How to classify differences and what you may do in Eyes (from `main`). Follow its classes, thresholds and "Eyes MCP behaviour" switches. |
@@ -55,9 +56,9 @@ explain in the baseline recommendation that the old baseline contained the bug.
    "search"). List them and why they are relevant.
    - If no existing test checks what the task changes, **write one** in `tests/` (Playwright +
      `@applitools/eyes-playwright/fixture`, same style as `tests/wikipedia.spec.ts`; use
-     `process.env.SITE_URL ?? 'http://localhost:3001/wikipedia'`). Name it after the task.
+     `process.env.SITE_URL` as the app's address, like the existing tests). Name it after the task.
 
-4. **Run the tests.** The site is already running on port 3001. Run
+4. **Run the tests.** The app is already running at the URL in `ci-context/app-url.txt`. Run
    `npx playwright test` (all tests — the suite is small and side effects matter). The output
    contains the Eyes batch URL on the `Eyes results` lines; copy it verbatim.
 

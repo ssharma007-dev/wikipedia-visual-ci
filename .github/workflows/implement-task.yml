@@ -32,6 +32,7 @@ concurrency:
 
 env:
   CI: true
+  SITE_URL: ${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}
   TASKS_DIR: tasks
   APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
   APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
@@ -149,6 +150,7 @@ jobs:
           if LABELS=$(node scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
           if echo ",$LABELS," | grep -q ',human-review,' || grep -qi 'human-review' "$FILE"; then MODE=manual; else MODE=auto; fi
           echo "$MODE" > ci-context/mode.txt
+          echo "$SITE_URL" > ci-context/app-url.txt   # where the app runs in CI (vars.APP_URL)
           # Auto mode lets Eyes save the first screenshot of tests the agent writes (on this PR's Eyes branch only);
           # manual mode leaves them for a person.
           [ "$MODE" = manual ] && echo "EYES_SAVE_NEW_TESTS=false" >> "$GITHUB_ENV"
@@ -178,11 +180,11 @@ jobs:
           npx playwright install --with-deps chromium
           npm install -g @anthropic-ai/claude-code
 
-      - name: Start the Wikipedia site
+      - name: Start the app (vars.APP_START_COMMAND, waits for vars.APP_URL)
         if: steps.task.outputs.key != ''
         run: |
-          node server.mjs > ci-context/server.log 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://localhost:3001/wikipedia > /dev/null && exit 0; sleep 1; done
+          ${{ vars.APP_START_COMMAND || 'node server.mjs' }} > ci-context/server.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && exit 0; sleep 1; done
           echo "Site did not start"; cat ci-context/server.log; exit 1
 
       - name: Agent 1 (Claude + Applitools Eyes MCP)
@@ -252,21 +254,22 @@ jobs:
           done
           echo "Final verdict: $(node -p 'require("./'$R'").verdict' 2>/dev/null || echo missing) · bugs left: $(node -p '(require("./'$R'").bugs||[]).length' 2>/dev/null || echo ?)"
 
-      - name: Keep only allowed changes (site/ and tests/)
+      - name: Keep only allowed changes (vars.AGENT_ALLOWED_PATHS, default site/ tests/)
         if: steps.task.outputs.key != ''
+        env:
+          ALLOWED: ${{ vars.AGENT_ALLOWED_PATHS || 'site/ tests/' }}
         run: |
+          allowed() { for p in $ALLOWED; do case "$1" in "$p"*) return 0 ;; esac; done; return 1; }
           git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > ci-context/changed.txt || true
           # New files are kept only if the agent's report mentions them (implementation files, tests it added).
           # Scratch files it made while investigating (probes, temp specs, empty files) are dropped.
           git ls-files --others --exclude-standard > ci-context/new-files.txt
           while read -r f; do
-            case "$f" in
-              site/*|tests/*)
+            if allowed "$f"; then
                 if grep -qxF "$f" ci-context/new-files.txt && { [ ! -s "$f" ] || ! grep -qF "$f" agent-report/report.json 2>/dev/null; }; then
                   echo "::warning::Agent left a scratch file $f (empty or not in its report) — discarded"; rm -f "$f"
-                else echo "kept:      $f"; fi ;;
-              *) echo "::warning::Agent changed $f — discarded (only site/ and tests/ are allowed)"; git checkout -- "$f" 2>/dev/null || rm -f "$f" ;;
-            esac
+                else echo "kept:      $f"; fi
+            else echo "::warning::Agent changed $f — discarded (allowed: $ALLOWED)"; git checkout -- "$f" 2>/dev/null || rm -f "$f"; fi
           done < ci-context/changed.txt
 
       # Before / after / differences images for the report — must run before any save.
@@ -521,8 +524,8 @@ jobs:
       - name: Install and start the site
         run: |
           npm ci && npx playwright install --with-deps chromium
-          node server.mjs > server.log 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://localhost:3001/wikipedia > /dev/null && break; sleep 1; done
+          ${{ vars.APP_START_COMMAND || 'node server.mjs' }} > server.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && break; sleep 1; done
       - name: Run the visual tests on merged main
         run: npx playwright test 2>&1 | tee main-run.log
       - name: Accept and save (the merged change was already approved)
