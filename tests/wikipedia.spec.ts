@@ -72,6 +72,23 @@ test('Article header shows Donate, Join Wikipedia and Log in links (WIKI-15)', a
   await eyes.check('Article header links', { region: '#p-vector-user-menu-overflow', fully: false });
 });
 
+// WIKI-19: the Commons sister-project description reads "Free media library" instead of
+// "Free media collection", on both desktop and phone. The other sister project descriptions,
+// tagline, search bar and language links must not change.
+test('Commons sister-project description reads "Free media library" (WIKI-19)', async ({ page, eyes }) => {
+  await page.goto(BASE);
+
+  await expect(page.locator('[data-jsl10n="commons.slogan"]')).toHaveText('Free media library');
+  await expect(page.locator('[data-jsl10n="wikivoyage.slogan"]')).toHaveText('Free travel guide');
+  await expect(page.locator('[data-jsl10n="wiktionary.slogan"]')).toHaveText('Free dictionary');
+
+  await eyes.check('Sister projects list', { region: '.other-projects', fully: false });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('[data-jsl10n="commons.slogan"]')).toHaveText('Free media library');
+  await eyes.check('Sister projects list phone', { region: '.other-projects', fully: false });
+});
+
 // WIKI-16: the "Donate" header link is bold (font-weight 700) on article pages, on both
 // desktop and phone, while its color and every other header link stay unchanged.
 test('Donate header link is bold, other header links are not (WIKI-16)', async ({ page }) => {
