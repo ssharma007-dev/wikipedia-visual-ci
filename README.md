@@ -2,6 +2,14 @@
 
 A product manager writes a Jira ticket. A developer, or the AI, builds it. Playwright and Applitools Eyes test it, and an AI reviews every visual change with the Applitools Eyes MCP. If no bugs are found, it is merged automatically. Otherwise, a person decides.
 
+## Documents
+
+All the documents are in the [`docs/`](docs/) folder. Please read them in this order:
+
+1. [FLOW.md](docs/FLOW.md): how it works, step by step, and which files are involved in each step.
+2. [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md): what each folder does, why it is important, and what to keep, adapt or replace for your own project.
+3. [INSTALLATION.md](docs/INSTALLATION.md): how to set it up in your own project, with screenshots.
+
 ## Who is it for (user journey)
 
 *The problem today*
@@ -89,13 +97,14 @@ A PDF is attached to the Jira ticket. It shows a summary, before and after image
 | --- | --- |
 | `site/` | The demo Wikipedia site |
 | `tests/` | Playwright + Eyes tests |
+| `docs/` | The documents: how it works, project structure, installation guide |
 | `guidelines/` | The rules the AI follows: plain text, edit to change its behaviour |
 | `.github/workflows/` | The pipeline |
 | `scripts/` | Helpers: Jira, Eyes, the PDF report |
 
 ## Setup
 
-How the pieces work together, step by step: [FLOW.md](FLOW.md). For the full step-by-step guide ( with screenshots ) to set this up in your own project, see [INSTALLATION.md](INSTALLATION.md). What each folder does, and what to reuse: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
+For the full step-by-step setup in your own project ( with screenshots ), see [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 1. Install **GitHub for Atlassian** in Jira and connect this repository.
 2. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
