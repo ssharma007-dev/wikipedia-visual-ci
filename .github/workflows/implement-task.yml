@@ -410,14 +410,14 @@ jobs:
           # Merge policy (repo variable MERGE_POLICY): code-approval → wait for one person to approve the code;
           # GitHub then merges by itself (auto-merge), and the after-merge run on main finishes the job.
           if [ "${{ vars.MERGE_POLICY }}" = "code-approval" ]; then
-            gh pr merge "$N" --auto --squash --delete-branch || true
+            gh pr merge "$N" --auto --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed." || true
             gh pr comment "$N" --body "🤖 **Visual review passed** and the baselines were saved on this branch. Waiting for **one code approval** — once a reviewer approves, GitHub merges this PR automatically."
             echo "merged=waiting" >> "$GITHUB_OUTPUT"; exit 0
           fi
           # The PR's own checks (Ticket check, ...) run on the agent's PR too: wait for the required ones first.
           sleep 20
           gh pr checks "$N" --required --watch --interval 15 --fail-fast 2>&1 | tail -5 || true
-          if gh pr merge "$N" --squash --delete-branch; then
+          if gh pr merge "$N" --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
           else
