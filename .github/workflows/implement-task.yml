@@ -473,6 +473,7 @@ jobs:
           if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then
             node scripts/jira.mjs transition "$KEY" "Done" || true
             node scripts/jira.mjs needs-human "$KEY" off || true
+            [ -n "${{ steps.pr.outputs.number }}" ] && gh pr edit "${{ steps.pr.outputs.number }}" --remove-label needs-human >/dev/null 2>&1 || true
           else
             node scripts/jira.mjs transition "$KEY" "In Review" || true
             # A decision is waiting: label the ticket and assign it to the person who wrote it, and label the PR.

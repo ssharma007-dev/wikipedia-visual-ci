@@ -65,11 +65,13 @@ A PDF is attached to the Jira ticket. It shows a summary, before and after image
 | --- | --- |
 | `site/` | The demo Wikipedia site |
 | `tests/` | Playwright + Eyes tests |
-| `guidelines/` | The rules the AI follows — plain text, edit to change its behaviour |
+| `guidelines/` | The rules the AI follows: plain text, edit to change its behaviour |
 | `.github/workflows/` | The pipeline |
 | `scripts/` | Helpers: Jira, Eyes, the PDF report |
 
 ## Setup
+
+For the full step-by-step guide ( with screenshots ) to set this up in your own project, see [INSTALLATION.md](INSTALLATION.md).
 
 1. Install **GitHub for Atlassian** in Jira and connect this repository.
 2. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
@@ -87,13 +89,13 @@ npx playwright test    # in a second terminal
 
 An AI model is probabilistic: left alone, it might skim or stop early. The Applitools Eyes MCP adds **deterministic guardrails for probabilistic code**:
 
-- **No shortcuts** — the MCP walks the AI through every changed area, and the review isn't finished until every difference has been looked at.
-- **Each decision from its own evidence** — every step is accepted, rejected or left unresolved based on its own image diff, DOM change and the ticket.
-- **Nothing is final until saved** — accepts and rejects can be undone; saving is a separate step the AI never takes.
+- **No shortcuts**: the MCP walks the AI through every changed area, and the review isn't finished until every difference has been looked at.
+- **Each decision from its own evidence**: every step is accepted, rejected or left unresolved based on its own image diff, DOM change and the ticket.
+- **Nothing is final until saved**: accepts and rejects can be undone; saving is a separate step the AI never takes.
 
 ## Safety
 
-The AI can accept or reject changes in Eyes, but it can never save baselines, push or merge — the pipeline does that, and only when there are no bugs. It can change only `site/` and `tests/`.
+The AI can accept or reject changes in Eyes, but it can never save baselines, push or merge: the pipeline does that, and only when there are no bugs. It can change only `site/` and `tests/`.
 
 `main` is protected: every change goes through a pull request, and two checks must pass before anyone can merge: **Branch links to a Jira ticket** and **Visual review** (the AI review, functional checks included). The AI works as its own GitHub account, `eyes-mcp-visual-agent[bot]`, so everything it does is visible and checked like a developer's.
 
