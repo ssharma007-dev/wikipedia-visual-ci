@@ -86,7 +86,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Must not change | Required | What must stay exactly as it is ( other pages, other devices, nearby elements ) | Anything on this list that changes is reported as a bug |
 | Why | Optional | The reason for the change | Helps the reviewer and the AI understand the intent |
 | Pages / screens | Optional | Where the change is visible | Helps the AI find the relevant test cases |
-| Devices | Optional | e.g. "phone only", "desktop and phone" | Tells the AI on which devices the change is expected. Without it, the AI expects the change on all devices. The devices that are tested are set in `playwright.config.ts` |
+| Test on below devices | Optional | e.g. "Galaxy S25 Ultra", "Chrome desktop 1200×800" | Tells the AI on which devices the change is expected. Without it, the AI expects the change on all devices. The devices that are tested are set in `playwright.config.ts` |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
 | Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review` ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
@@ -107,9 +107,15 @@ Must not change:
 - <other pages, other devices, nearby elements>
 
 Pages / screens: <optional>
-Devices: <optional, e.g. desktop and phone>
+
+Test on below devices ( optional ):
+- <e.g. Chrome desktop 1200×800>
+- <e.g. Galaxy S25 Ultra>
+
 Design reference: <optional: design system rule or Figma link>
 ```
+
+Note: "Test on below devices" tells the AI on which devices the change is expected. The devices the tests actually run on are set in `playwright.config.ts` ( here Chrome desktop 1200×800 and Galaxy S25 Ultra ), so list devices from there.
 
 *Sample 1: a feature ( based on the real WIKI-18 )*
 
@@ -123,12 +129,15 @@ Marketing wants the portal to feel more welcoming for first-time visitors.
 Should change:
 - On the Wikipedia portal page, the tagline under the Wikipedia wordmark reads
   "The Free Encyclopedia for everyone" instead of "The Free Encyclopedia".
-- Desktop and phone.
 
 Must not change:
 - The wordmark, the language links around it and the search bar.
 - Anything else on the portal page.
 - The article pages.
+
+Test on below devices ( optional ):
+- Chrome desktop 1200×800
+- Galaxy S25 Ultra
 ```
 
 *Sample 2: a bug*
@@ -150,6 +159,10 @@ The whole Search button is visible, next to the search field.
 Must not change:
 - The search bar on desktop.
 - The rest of the portal page.
+
+Test on below devices ( optional ):
+- Galaxy S25 Ultra ( the bug )
+- Chrome desktop 1200×800 ( must stay unchanged )
 ```
 
 Tip: add the label `human-review` when the change is sensitive ( e.g. checkout, legal text ) and a person must approve before the merge.
