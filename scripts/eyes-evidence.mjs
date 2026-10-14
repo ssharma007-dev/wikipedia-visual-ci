@@ -52,6 +52,8 @@ const decision = { accepted: 'accepted', rejected: 'rejected', none: 'unresolved
 
 const items = [];
 // Counts for the report's "Results at a glance": every checkpoint in the batch, not only the ones with images.
+// One entry per environment the batch ran on ( browser + version, device, OS, viewport ), from the Eyes MCP.
+const environments = new Map();
 const stats = { tests: 0, checkpoints: 0, noDifference: 0, differences: 0, accepted: 0, rejected: 0, unresolved: 0, newCheckpoints: 0 };
 try {
   await send('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'eyes-evidence', version: '1' } });
@@ -64,13 +66,19 @@ try {
 
   for (const s of info.sessions) {
     stats.tests++;
+    const e = s.environment ?? {};
+    const envKey = `${e.device}|${e.browser}|${e.os}|${e.width}x${e.height}`;
+    if (!environments.has(envKey)) environments.set(envKey, {
+      device: e.device === 'Desktop' ? 'Desktop' : e.device, browser: e.browser, os: e.os,
+      viewport: `${e.width}×${e.height}`, emulated: e.device && e.device !== 'Desktop', checkpoints: 0, differences: 0 });
+    const envStats = environments.get(envKey);
     const sUrl = sessionUrl(s.sessionId);
     const steps = (await tool('eyes_inspect_steps', { sessionUrl: sUrl })).steps ?? [];
     for (const [stepIndex, step] of steps.entries()) {
-      stats.checkpoints++;
+      stats.checkpoints++; envStats.checkpoints++;
       if (!step.baseline?.id) stats.newCheckpoints++;
       if (step.isMatching !== false) { stats.noDifference++; continue; }
-      stats.differences++;
+      stats.differences++; envStats.differences++;
       const d = decision[step.resolution] ?? 'unresolved';
       stats[d in stats ? d : 'unresolved']++;
       if (items.length >= MAX_ITEMS) continue;
@@ -78,7 +86,7 @@ try {
       const env = s.environment ?? {};
       const base = {
         test: s.sessionName, step: step.tag, decision: decision[step.resolution] ?? step.resolution ?? 'unresolved',
-        environment: `${env.device === 'Desktop' ? env.browser : env.device} · ${env.width}×${env.height}`,
+        environment: env.device === 'Desktop' ? `${env.browser} · ${env.os} · viewport ${env.width}×${env.height}` : `${env.device} ( emulated in ${env.browser} ) · ${env.os} · viewport ${env.width}×${env.height}`,
         eyesUrl: `${url.origin}/app/test-results/${batchId}/${s.sessionId}/steps/${stepIndex + 1}${url.search}`,
       };
       const list = areas.length ? areas.slice(0, MAX_AREAS_PER_STEP) : [null];
@@ -108,7 +116,7 @@ try {
 } catch (err) {
   console.error(`Evidence collection stopped: ${err.message}`);
 }
-fs.writeFileSync(path.join(outDir, 'evidence.json'), JSON.stringify({ batchUrl, stats, items }, null, 2));
+fs.writeFileSync(path.join(outDir, 'evidence.json'), JSON.stringify({ batchUrl, stats: { ...stats, environments: [...environments.values()] }, items }, null, 2));
 console.log(`Batch: ${JSON.stringify(stats)}`);
 console.log(`${items.length} changed area(s) captured → ${path.join(outDir, 'evidence.json')}`);
 server.kill();
