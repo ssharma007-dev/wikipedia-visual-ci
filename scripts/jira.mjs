@@ -164,6 +164,26 @@ ${adfToText(f.description) || '_(no description)_'}`);
   console.log(`Attachments: ${(f.attachment ?? []).map((a) => `${a.filename} (${Math.round(a.size / 1024)} KB)`).join(', ') || 'none'}`);
   console.log(`Sub-tasks: ${(f.subtasks ?? []).map((t) => `${t.key} ${t.fields.summary}`).join('; ') || 'none'}`);
   for (const c of (f.comment?.comments ?? []).slice(-3)) console.log(`--- comment ${c.created}\n${(c.body?.content ?? []).map((p) => (p.content ?? []).map((t) => t.text ?? '').join('')).join('\n')}`);
+} else if (command === 'site-labels') {
+  // site-labels <ANY-KEY> → every label used on the Jira site, with the tickets that use it
+  const all = [];
+  for (let at = 0; ; at += 1000) {
+    const page = await jira(`/rest/api/3/label?startAt=${at}&maxResults=1000`);
+    all.push(...(page.values ?? [])); if (page.isLast !== false) break;
+  }
+  for (const label of all) {
+    const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(`labels = "${label}"`)}&fields=summary&maxResults=50`);
+    console.log(`${label}: ${(r.issues ?? []).map((i) => i.key).join(', ') || '(no tickets)'}`);
+  }
+} else if (command === 'remove-label') {
+  // remove-label <ANY-KEY> <label> → removes the label from every ticket that has it
+  const label = rest[0];
+  const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(`labels = "${label}"`)}&fields=summary&maxResults=100`);
+  for (const i of r.issues ?? []) {
+    await jira(`/rest/api/3/issue/${i.key}`, { method: 'PUT', body: JSON.stringify({ update: { labels: [{ remove: label }] } }) });
+    console.log(`${i.key}: removed "${label}"`);
+  }
+  if (!(r.issues ?? []).length) console.log(`No ticket has "${label}"`);
 } else if (command === 'labels') {
   const issue = await jira(`/rest/api/3/issue/${key}?fields=labels`);
   console.log((issue.fields.labels ?? []).join(','));

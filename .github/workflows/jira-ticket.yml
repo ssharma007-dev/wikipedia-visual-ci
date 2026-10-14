@@ -8,9 +8,9 @@ on:
       action:
         description: 'create or inspect'
         type: choice
-        options: [inspect, create]
+        options: [inspect, create, site-labels, remove-label]
       key:
-        description: 'inspect: the ticket key (e.g. WIKI-8) · create: the project key (e.g. WIKI)'
+        description: 'inspect: the ticket key (e.g. WIKI-8) · create, site-labels, remove-label: the project key (e.g. WIKI)'
         required: true
       summary:
         description: 'create: ticket summary'
@@ -19,7 +19,7 @@ on:
         description: 'create: description (markdown; use \n for new lines)'
         required: false
       labels:
-        description: 'create: labels, comma separated'
+        description: 'create: labels, comma separated · remove-label: the label to remove from every ticket'
         required: false
 
 permissions:
@@ -51,6 +51,10 @@ jobs:
             printf '%b\n' "$DESCRIPTION" > desc.md
             NEW=$(node scripts/jira.mjs create "${KEY%%-*}-0" "$SUMMARY" desc.md "$LABELS")
             echo "Created $NEW: ${JIRA_BASE_URL%/}/browse/$NEW" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = site-labels ]; then
+            node scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = remove-label ]; then
+            node scripts/jira.mjs remove-label "${KEY%%-*}-0" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
           else
             node scripts/jira.mjs inspect "$KEY" | tee -a "$GITHUB_STEP_SUMMARY"
           fi
