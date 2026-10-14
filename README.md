@@ -1,6 +1,30 @@
 # From Jira ticket to merged pull request, reviewed by AI
 
-A product manager writes a Jira ticket. A developer, or the AI, builds it. Playwright and Applitools Eyes test it, and an AI reviews every visual change with the Applitools Eyes MCP. No bugs → it merges by itself. Otherwise, a person decides.
+A product manager writes a Jira ticket. A developer, or the AI, builds it. Playwright and Applitools Eyes test it, and an AI reviews every visual change with the Applitools Eyes MCP. If no bugs are found, it is merged automatically. Otherwise, a person decides.
+
+## Who is it for (user journey)
+
+*The problem today*
+
+- Developers change a component and nobody tells the design team. Often the only trace is a Slack message between a designer and a developer.
+- The QA team finds these differences late, by comparing the product with the design by hand, and then starts a discussion with the developer or the product team.
+- Every UI change needs someone to open the visual test results and decide, one by one, if each difference was intended.
+
+*How each person uses this flow*
+
+- Product manager / team lead: creates the Jira ticket with what should change and what must not change. Gets a PDF report in the ticket, without chasing anyone for the status.
+- Developer: creates the branch from the ticket, or lets the AI agent build it. Gets the review in the pull request within minutes, before the change reaches QA.
+- QA team: no longer compares every screen by hand. The AI does the first review, and QA looks only at what was flagged: bugs, design rule breaks and unclear changes. The PDF ( differences classified by severity, with evidence ) becomes the starting point for the discussion with design and development.
+- Design team: the design system is written once in `guidelines/design-system.md`, and every pull request is checked against it. An undocumented change to a component is caught in the build, not in production.
+- Engineering manager: sees in the trust report how often people agree with the AI, before deciding how much to automate.
+
+*Example*
+
+The PM creates WIKI-18: "Change the portal tagline to The Free Encyclopedia for everyone". Someone clicks Run Agent 1 in Jira. About 10 minutes later the change is implemented, tested on desktop and mobile, reviewed by the AI ( 2 real changes, 0 bugs ), merged, and the ticket is Done with the PDF attached. No one had to compare a screenshot.
+
+*Coming next*
+
+Comparing the implementation directly with the Figma design ( Eyes MCP Server + Figma MCP ), so that a build which doesn't match the design fails before it reaches QA.
 
 ## The flow
 
@@ -71,7 +95,7 @@ A PDF is attached to the Jira ticket. It shows a summary, before and after image
 
 ## Setup
 
-For the full step-by-step guide ( with screenshots ) to set this up in your own project, see [INSTALLATION.md](INSTALLATION.md). What each folder does, and what to reuse: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
+How the pieces work together, step by step: [FLOW.md](FLOW.md). For the full step-by-step guide ( with screenshots ) to set this up in your own project, see [INSTALLATION.md](INSTALLATION.md). What each folder does, and what to reuse: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 
 1. Install **GitHub for Atlassian** in Jira and connect this repository.
 2. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
