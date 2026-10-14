@@ -73,7 +73,7 @@ const evidenceBlock = (e = {}) => `
   ${image(e.imageDiff)}
   <p class="meta">${link(e.eyesUrl, 'Open this step in Eyes')}${e.dom ? ` · DOM: <code>${esc(e.dom)}</code>` : ''}</p>`;
 
-// ---------- Summary for QA and leaders ----------
+// ---------- Summary ( page 1 ) ----------
 // Time: the run's start ( RUN_STARTED_AT, set by CI ) to now; AI time: the agent transcripts' own durations.
 const started = process.env.RUN_STARTED_AT ? new Date(process.env.RUN_STARTED_AT) : null;
 const finished = new Date();
@@ -109,7 +109,7 @@ const leaderRows = [
   reviewedByAi ? ['Manual review saved ( estimate )', `${reviewedByAi} checkpoints reviewed by the AI ≈ <b>${mins(reviewedByAi * minutesPerCheckpoint * 60000)}</b> of manual comparison <span class="meta">( ${minutesPerCheckpoint} min per checkpoint )</span>`] : null,
   ['Traceability', [jiraUrl ? link(jiraUrl, `Jira ${r.task.key}`) : esc(r.task?.key ?? ''), process.env.PR_URL ? link(process.env.PR_URL, 'Pull request') : '', repoUrl && sha ? link(`${repoUrl}/commit/${sha}`, `Commit ${sha.slice(0, 7)}`) : '', r.tests?.batchUrl ? link(r.tests.batchUrl, 'Eyes batch') : '', runUrl ? link(runUrl, 'CI run') : ''].filter(Boolean).join(' · ')],
 ].filter(Boolean);
-const leaderSummary = `<h2>Summary for QA and leaders</h2>
+const leaderSummary = `<h2>Summary</h2>
 <div class="wrap"><table>${leaderRows.map(([k, v]) => `<tr><th style="width:28%">${k}</th><td>${v}</td></tr>`).join('')}</table></div>`;
 
 const html = `<!doctype html>
@@ -157,7 +157,7 @@ ${batchStats?.environments?.length ? `<tr><td>Tested on ( Applitools Ultrafast G
 <tr><td>Baselines</td><td>${r.baseline?.saved ? 'saved in Eyes' : 'not saved yet, a person saves after review'}</td></tr>
 </table></div>` : ''}
 
-<h2>Summary</h2>
+<h2>Changes and bugs</h2>
 <div class="box"><h3>Real changes</h3>${list(r.summary?.realChanges).length ? `<ul>${list(r.summary.realChanges).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None.</p>'}</div>
 <div class="box"><h3>Bugs</h3>${list(r.summary?.bugs).length ? `<ul>${list(r.summary.bugs).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">None found.</p>'}</div>
 <div class="box"><h3>${r.baseline?.saved ? 'Agent notes — baselines were saved automatically, no action needed' : 'Next steps for the reviewer'}</h3>${list(r.summary?.nextSteps).length ? `<ul>${list(r.summary.nextSteps).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted">—</p>'}</div>
