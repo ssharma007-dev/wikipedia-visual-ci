@@ -1,6 +1,10 @@
 # From Jira ticket to merged pull request, reviewed by AI
 
-A product manager writes a Jira ticket. A developer, or the AI, builds it. Playwright and Applitools Eyes test it, and an AI reviews every visual change with the Applitools Eyes MCP. If no bugs are found, it is merged automatically. Otherwise, a person decides.
+A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. A developer picks it up, or anyone clicks ⚡ Run Agent 1 in Jira at any time and the AI agent builds it. Playwright and Applitools Eyes test the change on desktop and mobile, and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
+
+If no bugs are found, the change is merged automatically and the ticket moves to Done, with a PDF report attached. If the AI caused a bug, it fixes it and tests again. If there are bugs it cannot fix, or the ticket has the `human-review` label, the ticket moves to In Review and a person decides.
+
+The goal: QA and developers no longer compare screenshots by hand. People only step in when a decision is really needed.
 
 ## How it works
 
