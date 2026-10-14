@@ -58,6 +58,9 @@ jobs:
       EYES_PARENT_BRANCH_NAME: ${{ github.repository }}/main
 
     steps:
+      - name: Note the start time ( for the report )
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - name: Find the task (commit message, or the key sent from Jira)
         id: task
         env:
@@ -331,6 +334,8 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
           export REPORT_SHA="${{ steps.commit.outputs.sha }}"
+          export MERGE_POLICY="${{ vars.MERGE_POLICY || 'auto' }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
+          export REVIEW_MODE="$(cat ci-context/mode.txt 2>/dev/null)"
           # Test totals from the agent's last test run, and any failed functional checks, for "Results at a glance"
           node scripts/failed-tests.mjs test-results/results.json agent-report/failed-tests.json /dev/null agent-report/test-stats.json || true
           if [ -f agent-report/report.json ] && [ -s agent-report/failed-tests.json ]; then
