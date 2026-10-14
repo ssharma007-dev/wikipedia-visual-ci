@@ -176,7 +176,11 @@ Board: the columns should be the same four ( Board → ⋯ → Configure board �
 
 **6.2b Show every ticket on the board ( must do ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. Choose one:
 
-(1) Turn sprints off ( used in this demo ): Space settings → **Features** → **Sprints** → off. The board then shows every ticket by status ( New · In Progress · In Review · Done ), and new tickets appear in New straight away.
+(1) Turn sprints and the backlog off ( used in this demo ):
+- Space settings → **Features** → **Sprints** → off.
+- On the same page, under **More items** → **Backlog** → off. Otherwise tickets in the first column ( New ) are still shown on the Backlog page instead of the board.
+
+The board then shows every ticket by status ( New · In Progress · In Review · Done ), and new tickets appear in New straight away.
 
 ![Jira Features: Sprints turned off](installation/images/jira-sprints-off.png)
 
