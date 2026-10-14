@@ -71,7 +71,7 @@ A PDF is attached to the Jira ticket. It shows a summary, before and after image
 
 ## Setup
 
-For the full step-by-step guide ( with screenshots ) to set this up in your own project, see [INSTALLATION.md](INSTALLATION.md).
+For the full step-by-step guide ( with screenshots ) to set this up in your own project, see [INSTALLATION.md](INSTALLATION.md). What each folder does, and what to reuse: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 
 1. Install **GitHub for Atlassian** in Jira and connect this repository.
 2. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.

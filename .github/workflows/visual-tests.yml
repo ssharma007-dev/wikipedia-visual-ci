@@ -272,12 +272,12 @@ jobs:
           # Merge policy (repo variable MERGE_POLICY): auto (default) merges now; code-approval waits for one
           # person to approve the code, then GitHub merges by itself (auto-merge).
           if [ "$MERGE_POLICY" = "code-approval" ]; then
-            gh pr merge "$PR" --auto --squash --delete-branch || true
+            gh pr merge "$PR" --auto --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed." || true
             gh pr comment "$PR" --body "🤖 **Visual review passed** and the baselines were saved on this branch. Waiting for **one code approval** — once a reviewer approves, GitHub merges this PR automatically."
             echo "waiting=code-approval" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if gh pr merge "$PR" --squash --delete-branch; then
+          if gh pr merge "$PR" --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."

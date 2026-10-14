@@ -45,6 +45,6 @@ jobs:
           SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
           mkdir -p tasks && cp /tmp/task.md "tasks/$KEY-$SLUG.md"
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tasks && git commit -m "[agent] $KEY: task synced from Jira [skip ci]"
+          git add tasks && git commit -m "[agent] $KEY: task synced from Jira"
           git push origin "HEAD:${{ github.ref_name }}"
           echo "Added tasks/$KEY-$SLUG.md to ${{ github.ref_name }}"
