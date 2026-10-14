@@ -293,21 +293,29 @@ From now on every change goes through a pull request. A PR without a valid Jira 
 - **Repository access:** only your repository.
 - **Permissions:** **Actions: Read and write**. Nothing else.
 
-**10.2 The rule.** Go to your Jira project → **Space settings → Automation → Create rule** (or "Create from scratch"):
+**10.2 The rule.** Click order in Jira:
+
+1. Your Jira space → **Space settings → Automation → Create rule** → **Create from scratch**.
+2. **Add a trigger** → search **Manual trigger** → select it → Save.
+3. **Add component** → **THEN: Add an action** → search **Send web request** → fill in the fields below.
+4. Optional: **Add component** → **IF: Add a condition** → **Status is not Done**.
+5. **Save and enable**, and name the rule **Agent 1**.
+
+The fields:
 
 | Field | Value |
 |---|---|
 | Trigger | **Manual trigger** (from a work item) |
 | Action | **Send web request** |
-| URL | `https://api.github.com/repos/<owner>/<repo>/actions/workflows/implement-task.yml/dispatches` |
+| URL | `https://api.github.com/repos/<owner>/<repo>/actions/workflows/implement-task.yml/dispatches` ( for this sample: `https://api.github.com/repos/ssharma007-dev/wikipedia-visual-ci/actions/workflows/implement-task.yml/dispatches` ) |
 | Method | `POST` |
 | Body | Custom data: `{"ref":"main","inputs":{"key":"{{issue.key}}"}}` |
 | Headers | `Authorization` = `Bearer <token from 10.1>` (tick **Hidden**) · `Accept` = `application/vnd.github+json` · `Content-Type` = `application/json` |
-| Wait for response | Ticked (the audit log then shows `204` when it worked) |
+| Delay execution of subsequent flow actions until we've received a response | Ticked ( the rule's Audit log then shows `204` when it worked ) |
 
-Recommended: add the condition **Status is not Done** to the rule, so the button is not used on finished tickets.
+The name **Agent 1** is what people see in the ticket's ⚡ ( Automation ) menu. The condition **Status is not Done** keeps the button from being used on finished tickets.
 
-Name it **Agent 1** ( this is the name shown in the ticket's ⚡ menu ) and turn it on.
+Check: open a ticket in Ready → ⚡ → **Agent 1**. Within a few seconds a run "Agent 1 — implement task" appears in GitHub → Actions. If not, open the rule's **Audit log**: `401` / `403` = the token or its permission, `404` = a typo in the URL.
 
 ![Jira automation rule](installation/images/p12-jira-automation-rule.png)
 
