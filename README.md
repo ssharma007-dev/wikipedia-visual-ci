@@ -89,7 +89,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Devices | Optional | e.g. "phone only", "desktop and phone" | Tells the AI on which devices the change is expected. Without it, the AI expects the change on all devices. The devices that are tested are set in `playwright.config.ts` |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
-| Labels | Optional | `bug`, `hotfix`, `feature`, `human-review` ( more types: `content`, `refactor`, `a11y` ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
+| Labels | Optional | `bug`, `hotfix`, `feature`, `human-review` ( optional extra types: `content` = text-only change, `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
 | Work type | Optional | Task ( default, treated as a feature ) or Bug | A Bug work type is treated like the `bug` label |
 
 *Template ( copy into the Jira description )*
@@ -111,11 +111,11 @@ Devices: <optional, e.g. desktop and phone>
 Design reference: <optional: design system rule or Figma link>
 ```
 
-*Sample 1: a feature ( the real WIKI-18 )*
+*Sample 1: a feature ( based on the real WIKI-18 )*
 
 ```
 Summary: Change the portal tagline to "The Free Encyclopedia for everyone"
-Labels: content
+Labels: feature ( optional: no label also means feature )
 
 Why:
 Marketing wants the portal to feel more welcoming for first-time visitors.
