@@ -44,6 +44,87 @@ Note:
 - If your Jira uses other names ( e.g. "Doing" ), the pipeline accepts "In Progress" or "Doing" by default. You can set your own names with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 - To move the ticket to In Progress automatically when a developer creates a branch, add a Jira Automation rule: trigger "Branch created", action "Transition work item to In Progress".
 
+## Writing a Jira ticket ( sample )
+
+The AI builds and reviews the change based on what the ticket says, so a clear ticket gives a better result. Most important: the "Must not change" list. This is what the AI uses to tell a real change from a bug.
+
+*Fields*
+
+| Field | Required / Optional | What to write | Why it matters |
+|---|---|---|---|
+| Summary | Required | One line: what changes, where. e.g. "Make the Donate link bold in the article header" | Becomes the branch name and the PR title |
+| Should change | Required | The changes you expect, one per line, with the page and the device if it matters | The AI accepts only these differences as real changes |
+| Must not change | Required | What must stay exactly as it is ( other pages, other devices, nearby elements ) | Anything on this list that changes is reported as a bug |
+| Why | Optional | The reason for the change | Helps the reviewer and the AI understand the intent |
+| Pages / screens | Optional | Where the change is visible | Helps the AI find the relevant test cases |
+| Devices | Optional | e.g. "phone only", "desktop and phone" | Without it, the AI expects the change on all devices |
+| Design reference | Optional | A design system rule or a Figma link | Checked together with `guidelines/design-system.md` |
+| Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
+| Labels | Optional | `bug`, `hotfix`, `content`, `refactor`, `a11y`, `human-review` | Tells the AI the type of work. `human-review` means a person approves before the merge |
+| Work type | Optional | Task ( default, treated as a feature ) or Bug | A Bug work type is treated like the `bug` label |
+
+*Template ( copy into the Jira description )*
+
+```
+Why:
+<optional: the reason for the change>
+
+Should change:
+- <change 1, with the page / device if it matters>
+- <change 2>
+
+Must not change:
+- <what must stay exactly as it is>
+- <other pages, other devices, nearby elements>
+
+Pages / screens: <optional>
+Devices: <optional, e.g. desktop and phone>
+Design reference: <optional: design system rule or Figma link>
+```
+
+*Sample 1: a feature ( the real WIKI-18 )*
+
+```
+Summary: Change the portal tagline to "The Free Encyclopedia for everyone"
+Labels: content
+
+Why:
+Marketing wants the portal to feel more welcoming for first-time visitors.
+
+Should change:
+- On the Wikipedia portal page, the tagline under the Wikipedia wordmark reads
+  "The Free Encyclopedia for everyone" instead of "The Free Encyclopedia".
+- Desktop and phone.
+
+Must not change:
+- The wordmark, the language links around it and the search bar.
+- Anything else on the portal page.
+- The article pages.
+```
+
+*Sample 2: a bug*
+
+```
+Summary: Search button is cut off on phones
+Work type: Bug ( or label: bug )
+
+Steps to reproduce:
+1. Open the Wikipedia portal on a phone ( e.g. Galaxy S25 Ultra ).
+2. Look at the search bar.
+
+Actual:
+The Search button is cut off at the right edge of the screen.
+
+Expected:
+The whole Search button is visible, next to the search field.
+
+Must not change:
+- The search bar on desktop.
+- The rest of the portal page.
+```
+
+Tip: add the label `human-review` when the change is sensitive ( e.g. checkout, legal text ) and a person must approve before the merge.
+
 ## Documents
 
 All the documents are in the [`docs/`](docs/) folder. Please read them in this order:
