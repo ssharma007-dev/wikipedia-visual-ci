@@ -33,6 +33,10 @@ flowchart LR
    <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column, adding the description and the text label">
 2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. In Ready, they choose who handles it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
+   Moving the ticket from New to Ready: open the ticket → click the status ( New ) → Ready.
+
+   <img src="docs/images/jira-new-to-ready.gif" width="560" alt="Changing the Jira ticket status from New to Ready">
+
    <img src="docs/images/jira-labels.gif" width="360" alt="Clicking Labels in the Jira ticket's Details panel shows the available labels">
 
    Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
@@ -64,7 +68,7 @@ The Jira ticket moves through five statuses: New → Ready → In Progress → I
 | Jira status | Who | What happens | Screenshot |
 |---|---|---|---|
 | New | Product manager | Creates the ticket with what should change and what must not change. | <img src="docs/images/status-1-new.png" width="260" alt="Jira ticket in New"> |
-| Ready | Team lead or dev manager | Reviews the ticket, adds more details and moves it to Ready. Then chooses who handles it: assigns a developer [ or ] clicks ⚡ Run Agent 1 for the AI agent. | <img src="docs/images/status-2-ready.png" width="260" alt="Jira ticket in Ready"> |
+| Ready | Team lead or dev manager | Reviews the ticket, adds more details and moves it to Ready. Then chooses who handles it: assigns a developer [ or ] clicks ⚡ Run Agent 1 for the AI agent. | <img src="docs/images/jira-new-to-ready.gif" width="260" alt="Jira ticket moved from New to Ready"> |
 | In Progress | Developer [ or ] AI agent | (1) Developer: the assigned developer moves the ticket to In Progress, builds the change, writes the test cases and opens a pull request. The AI then reviews the pull request. (2) AI agent: after Run Agent 1 is clicked, the ticket moves to In Progress automatically, and the AI builds the change, writes and runs the test cases, reviews the results with the Eyes MCP Server and fixes its own bugs. | <img src="docs/images/status-3-in-progress.png" width="260" alt="Jira ticket in In Progress"> |
 | In Review | A person ( developer, team lead or dev manager ) | Only when a person needs to decide: bugs the AI could not fix, unclear changes, failed functional checks, or the `human-review` label. The ticket gets the label `needs-human`, is assigned to the person who created it, and has the PDF report attached. The developer fixes and pushes, and the AI reviews again. | <img src="docs/images/status-4-in-review.png" width="260" alt="Jira ticket in In Review"> |
 | Done | Pipeline ( automatic ) | The pull request is merged and the baselines in Eyes are updated. The PDF report stays attached to the ticket. | <img src="docs/images/status-5-done.png" width="260" alt="Jira ticket in Done"> |
