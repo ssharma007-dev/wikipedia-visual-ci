@@ -1,6 +1,6 @@
 # From Jira ticket to merged pull request, reviewed by AI
 
-A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. A developer picks it up, or anyone clicks ⚡ Run Agent 1 in Jira ( at any time before the ticket is Done ) and the AI agent builds it. Playwright and Applitools Eyes test the change on desktop and mobile, and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
+A product manager creates a Jira ticket, and the team lead or dev manager reviews it and adds the details. A developer picks it up, or anyone clicks ⚡ Run Agent 1 in Jira ( at any time before the ticket is Done ) and the AI agent builds it. Playwright and Applitools Eyes test the change on the defined devices ( set in `playwright.config.ts`, e.g. Chrome desktop and Galaxy S25 Ultra ), and the AI reviews every visual difference against the ticket and the design system using the Applitools Eyes MCP Server.
 
 If no bugs are found, the change is merged automatically and the ticket moves to Done, with a PDF report attached. If the AI caused a bug, it fixes it and tests again. If there are bugs it cannot fix, or the ticket has the `human-review` label, the ticket moves to In Review and a person decides.
 
@@ -200,7 +200,7 @@ flowchart TD
         C{"Who builds it?"}
         D["👩‍💻 <b>Developer</b><br/>builds the change, writes the test cases, opens a pull request"]
         E["🤖 <b>AI agent</b><br/>builds the change, writes the test cases, opens a pull request"]
-        F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, desktop and mobile"]
+        F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on the defined devices"]
         G["🔍 <b>AI review with the Eyes MCP Server</b><br/>every difference vs the ticket and the design system · PDF report to Jira and the PR"]
         H{"Result?"}
         I["🔧 <b>AI fixes its own bug</b><br/>and tests again ( max 2 rounds )"]

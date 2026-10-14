@@ -6,7 +6,7 @@ This guide explains how to set up the sample project's flow in your own project.
 
 - Jira ticket: the PM or team lead creates a ticket with what should change and what must not change.
 - Implementation: a developer [ or ] the AI agent implements the change and writes the test cases.
-- Tests: Playwright and Applitools Eyes run the test cases on desktop and mobile.
+- Tests: Playwright and Applitools Eyes run the test cases on the defined devices ( set in `playwright.config.ts` ).
 - AI review: the AI checks every visual difference against the ticket and the design system, using the Eyes MCP Server ( deterministic agentic workflow ).
 - Report: a PDF report is attached to the Jira ticket.
 - Merge: if no bugs are found, it is merged automatically. If bugs are found, a person decides.
