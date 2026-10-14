@@ -177,6 +177,10 @@ ${adfToText(f.description) || '_(no description)_'}`);
     const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(`labels = "${label}"`)}&fields=summary&maxResults=50`);
     console.log(`${label}: ${(r.issues ?? []).map((i) => i.key).join(', ') || '(no tickets)'}`);
   }
+} else if (command === 'add-label') {
+  // add-label <KEY> <label> → adds the label to that ticket
+  await jira(`/rest/api/3/issue/${key}`, { method: 'PUT', body: JSON.stringify({ update: { labels: [{ add: rest[0] }] } }) });
+  console.log(`${key}: added "${rest[0]}"`);
 } else if (command === 'remove-label') {
   // remove-label <ANY-KEY> <label> → removes the label from every ticket that has it
   // remove-label <PROJECT>-0 <label> → from every ticket · remove-label <KEY> <label> → from that ticket only
