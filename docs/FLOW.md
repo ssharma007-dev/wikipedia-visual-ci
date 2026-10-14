@@ -113,6 +113,8 @@ What happens:
 
 Who: developer [ or ] AI agent.
 
+If Run Agent 1 is clicked when a branch already exists ( a developer started, or an earlier AI run ), the AI continues on that branch and pushes to the same pull request. It works from the ticket and the current code; it does not read the previous review. See "Run Agent 1 at each status" in the [README](../README.md).
+
 Files:
 - `.github/workflows/implement-task.yml`: the whole Agent 1 run.
 - `guidelines/agent-implement.md`: the AI's instructions.
@@ -206,9 +208,9 @@ Files:
 | Status | Set by | When |
 |---|---|---|
 | New | Product manager | The ticket is created |
-| To Do | Team lead or dev manager | The ticket is reviewed and details are added |
-| In Progress / Doing | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts. Anyone can click Run Agent 1 at any time to involve the AI |
-| In Review | The pipeline | A person needs to decide ( label `needs-human`, assigned to the person who created the ticket ) |
+| To Do | Team lead or dev manager | The ticket is reviewed and details are added. If work starts right away, it can go straight from New to Doing |
+| In Progress / Doing | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts. Anyone can click Run Agent 1 at any time before Done to involve the AI; on an existing branch it continues the work |
+| In Review | The pipeline | The work is waiting for a person's decision ( label `needs-human`, assigned to the person who created the ticket ). Not used for reviewing the ticket itself |
 | Done | The pipeline | The pull request is merged |
 
 Status names can be changed with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.

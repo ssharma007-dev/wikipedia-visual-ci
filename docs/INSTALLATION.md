@@ -160,7 +160,7 @@ tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
 ![Create the Jira project](installation/images/p01-jira-create-project.png)
 
-**6.2 Statuses.** Recommended workflow: New → To Do → In Progress → In Review → Done. The pipeline moves tickets to In Progress, In Review and Done; New and To Do are set by people. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
+**6.2 Statuses.** Recommended workflow: New → To Do → In Progress → In Review → Done. The team lead can also move a ticket straight from New to In Progress. In Review is only for work waiting for a person's decision, not for reviewing the ticket. The pipeline moves tickets to In Progress, In Review and Done; New and To Do are set by people. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 
 ![Jira statuses](installation/images/p02-jira-statuses.png)
 
@@ -275,6 +275,8 @@ From now on every change goes through a pull request. A PR without a valid Jira 
 | Body | Custom data: `{"ref":"main","inputs":{"key":"{{issue.key}}"}}` |
 | Headers | `Authorization` = `Bearer <token from 10.1>` (tick **Hidden**) · `Accept` = `application/vnd.github+json` · `Content-Type` = `application/json` |
 | Wait for response | Ticked (the audit log then shows `204` when it worked) |
+
+Recommended: add the condition **Status is not Done** to the rule, so the button is not used on finished tickets.
 
 Name it **⚡ Run Agent 1** and turn it on.
 
