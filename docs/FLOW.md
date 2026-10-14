@@ -9,7 +9,7 @@ For what each folder contains, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 ## The pieces
 
 - Jira: where the PM or team lead creates the ticket, and where the PDF report and the status updates land.
-- GitHub for Atlassian: links branches, commits and pull requests to the Jira ticket, using the ticket key ( e.g. WIKI-18 ) in their names.
+- GitHub for Atlassian: links branches, commits and pull requests to the Jira ticket, using the ticket key ( e.g. WIKI-21 ) in their names.
 - GitHub Actions: runs the workflows in `.github/workflows/`. This is the pipeline.
 - AI agent: Claude Code, running inside GitHub Actions. It works as its own GitHub account, `eyes-mcp-visual-agent[bot]`.
 - Playwright: runs the test cases in `tests/` ( functional checks ).
