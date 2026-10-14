@@ -25,7 +25,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 
    Jira only lists labels that are already used on a ticket. The first time, type the new label ( e.g. `human-review` ) and press Enter to create it; after that it appears in the list.
 3. Build the change ( Jira status: In Progress ): the Ready ticket is picked up in one of two ways.
-   - (1) Developer: the developer assigns the ticket to themselves [ or ] the team lead or dev manager assigns it to a developer. The developer moves it to In Progress and builds the change.
+   - (1) Developer: the developer assigns the ticket to themselves [ or ] the team lead or dev manager assigns it to a developer. The developer moves it to In Progress, creates a branch from the ticket ( in the ticket's Development panel → Create branch, which names it with the ticket key and links it to the ticket ) [ or ] in git, and builds the change.
    - (2) AI agent: the team lead, dev manager or developer clicks the ⚡ ( Automation ) button on the ticket → **Agent 1** ( not the "Agents" button, which is Atlassian's own AI ). The ticket moves to In Progress automatically.
 
      <img src="docs/images/jira-run-agent-1.png" width="560" alt="Running the custom agent: the ⚡ ( Automation ) button → Agent 1">
@@ -39,7 +39,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 
    Run Agent 1 can be clicked at any time before Done. If a developer has already started, the AI continues on the same branch ( see "Run Agent 1 at each status" below ).
 
-   | (1) A developer: Development → Create branch | (2) The AI agent: ⚡ ( Automation ) → Agent 1 | The AI agent at work in GitHub Actions |
+   | (1) Developer: creates the branch from the ticket ( Development panel → Create branch ) | (2) The AI agent: ⚡ ( Automation ) → Agent 1 | The AI agent at work in GitHub Actions |
    |---|---|---|
    | <img src="docs/images/jira-create-branch.png" width="260" alt="Create branch from the Jira ticket"> | <img src="docs/images/jira-run-agent-1.png" width="260" alt="The Agent 1 custom agent in the Jira Automation menu"> | <img src="docs/installation/images/05-actions-run.png" width="260" alt="The Agent 1 run in GitHub Actions"> |
 4. Test cases ( Jira status: In Progress ):
