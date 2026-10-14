@@ -8,7 +8,7 @@ on:
       action:
         description: 'create or inspect'
         type: choice
-        options: [inspect, create, site-labels, remove-label]
+        options: [inspect, create, site-labels, add-label, remove-label]
       key:
         description: 'inspect: the ticket key (e.g. WIKI-8) · create, site-labels, remove-label: the project key (e.g. WIKI)'
         required: true
@@ -19,7 +19,7 @@ on:
         description: 'create: description (markdown; use \n for new lines)'
         required: false
       labels:
-        description: 'create: labels, comma separated · remove-label: the label to remove from every ticket'
+        description: 'create: labels, comma separated · add-label / remove-label: the label'
         required: false
 
 permissions:
@@ -53,6 +53,8 @@ jobs:
             echo "Created $NEW: ${JIRA_BASE_URL%/}/browse/$NEW" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = site-labels ]; then
             node scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = add-label ]; then
+            node scripts/jira.mjs add-label "$KEY" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = remove-label ]; then
             # A project key (WIKI) removes the label from every ticket; a ticket key (WIKI-18) from that ticket only.
             T="$KEY"; echo "$KEY" | grep -q -- '-' || T="$KEY-0"
