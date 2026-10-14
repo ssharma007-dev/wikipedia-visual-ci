@@ -174,19 +174,20 @@ In the screenshot, START points to New and every status has the Any marker: this
 
 Board: the columns should be the same four ( Board → ⋯ → Configure board → Columns ).
 
-**6.2b New tickets on the board ( must do if your board uses sprints ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. To make every new ticket appear on the board automatically, add a Jira Automation rule:
+**6.2b Show every ticket on the board ( must do ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. Choose one:
 
+(1) Turn sprints off ( used in this demo ): Space settings → **Features** → **Sprints** → off. The board then shows every ticket by status ( New · In Progress · In Review · Done ), and new tickets appear in New straight away.
+
+![Jira Features: Sprints turned off](installation/images/jira-sprints-off.png)
+
+(2) Keep sprints: add a Jira Automation rule that puts every new ticket in the active sprint.
 1. Space settings → **Automation** → **Create rule** ( or "Create from scratch" ).
 2. Trigger: **Work item created**.
 3. Condition ( recommended ): **Work item fields condition** → Work type is one of **Task** ( sub-tasks follow their parent's sprint ).
-4. Action: **Edit work item fields** → **Sprint** → **Active sprint** ( or "Current sprint" ). Prefer this over a sprint name, so the rule keeps working when the next sprint starts.
+4. Action: **Edit work item fields** → **Sprint** → **Active sprint** ( or "Current sprint" ), so the rule keeps working when the next sprint starts.
 5. Name it "New tickets → active sprint" and turn it on.
 
 Check: create a ticket. It should appear on the board in the New column.
-
-If your board does not use sprints ( Space settings → Features → Sprints off ), you don't need this rule: every ticket is shown on the board.
-
-Notes: the pipeline moves tickets to In Progress, In Review and Done. In Review is only for work waiting for a person's decision. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 
 **6.3 Connect GitHub.** A Jira admin installs **GitHub for Atlassian** (Jira → Apps → Explore more apps),
 connects your GitHub organisation and selects your repository. Branches, commits and pull requests then
