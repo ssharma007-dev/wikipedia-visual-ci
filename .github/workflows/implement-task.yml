@@ -153,6 +153,9 @@ jobs:
           if LABELS=$(node scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
           if echo ",$LABELS," | grep -q ',human-review,' || grep -qi 'human-review' "$FILE"; then MODE=manual; else MODE=auto; fi
           echo "$MODE" > ci-context/mode.txt
+          # Merge: by default a person approves the PR ( then GitHub merges ). Label auto-ai-merge → the pipeline merges by itself.
+          if echo ",$LABELS," | grep -q ',auto-ai-merge,' || grep -qi 'auto-ai-merge' "$FILE"; then POLICY=auto; else POLICY="${{ vars.MERGE_POLICY || 'code-approval' }}"; fi
+          echo "$POLICY" > ci-context/merge-policy.txt; echo "policy=$POLICY" >> "$GITHUB_OUTPUT"; echo "Merge policy: $POLICY"
           echo "$SITE_URL" > ci-context/app-url.txt   # where the app runs in CI (vars.APP_URL)
           # Devices: the ticket's "Test on below devices:" list, if it has one; otherwise playwright.config.ts defaults.
           DEV=$(node scripts/devices.mjs ci-context/task.md || true)
@@ -334,7 +337,7 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
           export REPORT_SHA="${{ steps.commit.outputs.sha }}"
-          export MERGE_POLICY="${{ vars.MERGE_POLICY || 'auto' }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
+          export MERGE_POLICY="${{ steps.ctx.outputs.policy }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
           export REVIEW_MODE="$(cat ci-context/mode.txt 2>/dev/null)"
           # Test totals from the agent's last test run, and any failed functional checks, for "Results at a glance"
           node scripts/failed-tests.mjs test-results/results.json agent-report/failed-tests.json /dev/null agent-report/test-stats.json || true
@@ -440,9 +443,9 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
         run: |
           N="${{ steps.pr.outputs.number }}"
-          # Merge policy (repo variable MERGE_POLICY): code-approval → wait for one person to approve the code;
+          # Merge policy: code-approval ( default ) → wait for one person to approve the code; label auto-ai-merge → merge now;
           # GitHub then merges by itself (auto-merge), and the after-merge run on main finishes the job.
-          if [ "${{ vars.MERGE_POLICY }}" = "code-approval" ]; then
+          if [ "${{ steps.ctx.outputs.policy }}" = "code-approval" ]; then
             gh pr merge "$N" --auto --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed." || true
             gh pr comment "$N" --body "🤖 **Visual review passed** and the baselines were saved on this branch. Waiting for **one code approval** — once a reviewer approves, GitHub merges this PR automatically."
             echo "merged=waiting" >> "$GITHUB_OUTPUT"; exit 0

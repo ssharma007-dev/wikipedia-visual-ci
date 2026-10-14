@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Switch how passing PRs are merged:
-#   auto           → the pipeline merges as soon as the AI review passes (default, the demo)
-#   code-approval  → the AI review must pass AND one person must approve the code; GitHub then merges by itself
+# Switch how passing PRs are merged ( for tickets without a label; the Jira label auto-ai-merge always merges automatically ):
+#   code-approval  → the AI review must pass AND one person approves the PR; GitHub then merges by itself ( default )
+#   auto           → the pipeline merges as soon as the AI review passes
 # Usage: scripts/set-merge-policy.sh auto|code-approval      (needs gh, logged in as a repo admin)
 set -euo pipefail
 POLICY="${1:?auto or code-approval}"
