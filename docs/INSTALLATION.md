@@ -160,9 +160,21 @@ tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
 ![Create the Jira project](installation/images/p01-jira-create-project.png)
 
-**6.2 Statuses.** The workflow needs four statuses: New → In Progress → In Review → Done. New must be the starting status of every new ticket ( Space settings → Workflow ), and the board columns should be the same four. A Kanban board works best: a Scrum board only shows tickets in the current sprint. The pipeline moves tickets to In Progress, In Review and Done. In Review is only for work waiting for a person's decision. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
+**6.2 Statuses ( must do ).** The workflow needs four statuses: New → In Progress → In Review → Done, and every new ticket must start in New. By default Jira may start new tickets in another status ( in this sample it started them in Done ), so check it:
 
-![Jira statuses](installation/images/p02-jira-statuses.png)
+1. Space settings → Work types → Task → **Edit workflow**.
+2. Check the four statuses exist: New, In Progress, In Review, Done. Add a missing one with **Add status**. Delete extra ones ( e.g. Doing, To Do ).
+3. Check that each status has the **Any** marker ( work items can move to it from any status ). The pipeline needs this, e.g. to move a ticket from In Review back to In Progress.
+4. **The START arrow must point to New.** Click the arrow from START, and set its target status to **New** ( or drag the arrowhead onto New ).
+5. Click **Update workflow**. One workflow can cover several work types ( Task, Subtask, Epic ), shown next to "Workflow for".
+
+![Jira workflow: the START arrow must point to New](installation/images/jira-workflow.png)
+
+In the screenshot, START still points to Done: that is the setting to change.
+
+Board: the columns should be the same four ( Board → ⋯ → Configure board → Columns ). A board without sprints works best ( Space settings → Features → Sprints off ): a Scrum board only shows tickets in the current sprint, so new tickets would only appear in the Backlog.
+
+Notes: the pipeline moves tickets to In Progress, In Review and Done. In Review is only for work waiting for a person's decision. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 
 **6.3 Connect GitHub.** A Jira admin installs **GitHub for Atlassian** (Jira → Apps → Explore more apps),
 connects your GitHub organisation and selects your repository. Branches, commits and pull requests then
