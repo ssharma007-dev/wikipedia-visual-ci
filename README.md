@@ -161,8 +161,8 @@ Must not change:
 - The rest of the portal page.
 
 Test on below devices:
-- Galaxy S25 Ultra ( the bug )
-- Chrome desktop 1200×800 ( must stay unchanged )
+- Galaxy S25 Ultra
+- Chrome desktop 1200×800
 ```
 
 Tip: add the label `human-review` when the change is sensitive ( e.g. checkout, legal text ) and a person must approve before the merge.
