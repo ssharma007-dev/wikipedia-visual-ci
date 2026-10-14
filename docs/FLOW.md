@@ -26,7 +26,9 @@ For what each folder contains, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 flowchart TD
     subgraph S1["Jira status: New"]
         A["👩‍💼 <b>Product manager</b><br/>creates the ticket: what should change, what must not"]
-        B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket and adds details"]
+    end
+    subgraph S2["Jira status: Ready"]
+        B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket, adds details and moves it to Ready"]
     end
     subgraph S3["Jira status: In Progress"]
         C{"Who builds it?"}
@@ -44,8 +46,8 @@ flowchart TD
         K["✅ <b>Merged</b><br/>baselines saved in Eyes, PDF stays on the ticket"]
     end
 
-    A --> B
-    B -->|"work starts"| C
+    A -->|"ready for review"| B
+    B -->|"picked up"| C
     C -->|"a developer picks it up"| D
     C -->|"⚡ Run Agent 1 ( anyone, at any time )"| E
     D --> F
@@ -70,12 +72,13 @@ flowchart TD
     class K good
     class J decide
     style S1 fill:#FAFAFA,stroke:#B0B7C3
+    style S2 fill:#FAFAFA,stroke:#B0B7C3
     style S3 fill:#F4F8FF,stroke:#8FA8D6
     style S4 fill:#FFF6F4,stroke:#D9A093
     style S5 fill:#F3FBF5,stroke:#8CC29E
 ```
 
-How to read it: each grey or coloured band is a Jira status ( New → In Progress → In Review → Done ), so you can see where the ticket is and who has it. Orange = a person, blue = the AI agent, green = automatic. The same diagram as an image, for slides or a blog: [user-flow.png](images/user-flow.png).
+How to read it: each grey or coloured band is a Jira status ( New → Ready → In Progress → In Review → Done ), so you can see where the ticket is and who has it. Orange = a person, blue = the AI agent, green = automatic. The same diagram as an image, for slides or a blog: [user-flow.png](images/user-flow.png).
 
 ---
 
@@ -205,7 +208,8 @@ Files:
 
 | Status | Set by | When |
 |---|---|---|
-| New | Product manager | The ticket is created; the team lead or dev manager reviews it and adds details |
+| New | Product manager | The ticket is created |
+| Ready | Team lead or dev manager | The ticket is reviewed, details are added, and it is ready to be picked up |
 | In Progress | Agent 1 ( AI path ), or the developer / a Jira Automation rule on "Branch created" ( developer path ) | The work starts. Anyone can click Run Agent 1 at any time before Done to involve the AI; on an existing branch it continues the work |
 | In Review | The pipeline | The work is waiting for a person's decision ( label `needs-human`, assigned to the person who created the ticket ). Not used for reviewing the ticket itself |
 | Done | The pipeline | The pull request is merged |

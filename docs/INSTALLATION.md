@@ -160,24 +160,24 @@ tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
 ![Create the Jira project](installation/images/p01-jira-create-project.png)
 
-**6.2 Statuses ( must do ).** The workflow needs four statuses: New → In Progress → In Review → Done, and every new ticket must start in New. By default Jira may start new tickets in another status ( in this sample it started them in Done ), so check it:
+**6.2 Statuses ( must do ).** The workflow needs five statuses: New → Ready → In Progress → In Review → Done, and every new ticket must start in New. By default Jira may start new tickets in another status ( in this sample it started them in Done ), so check it:
 
 1. Space settings → Work types → Task → **Edit workflow**.
-2. Check the four statuses exist: New, In Progress, In Review, Done. Add a missing one with **Add status**. Delete extra ones ( e.g. Doing, To Do ).
+2. Check the five statuses exist: New, Ready, In Progress, In Review, Done ( Ready: category To do ). Add a missing one with **Add status**. Delete extra ones ( e.g. Doing, To Do ).
 3. Check that each status has the **Any** marker ( work items can move to it from any status ). The pipeline needs this, e.g. to move a ticket from In Review back to In Progress.
 4. **The START arrow must point to New.** Click the arrow from START, and set its target status to **New** ( or drag the arrowhead onto New ).
 5. Click **Update workflow**. One workflow can cover several work types ( Task, Subtask, Epic ), shown next to "Workflow for".
 
 ![Jira workflow: the START arrow must point to New](installation/images/jira-workflow.png)
 
-In the screenshot, START points to New and every status has the Any marker: this is the correct setup.
+In the screenshot, START points to New and every status has the Any marker: this is the correct setup ( add Ready the same way, with Add status ).
 
-Board: the columns should be the same four ( Board → ⋯ → Configure board → Columns ).
+Board: the columns should be the same five ( Board → ⋯ → Configure board → Columns ).
 
 **6.2b Show every ticket on the board ( must do ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. Choose one:
 
 (1) Turn sprints off and create tickets from the board ( used in this demo ):
-- Space settings → **Features** → **Sprints** → off. The board then shows tickets by status ( New · In Progress · In Review · Done ).
+- Space settings → **Features** → **Sprints** → off. The board then shows tickets by status ( New · Ready · In Progress · In Review · Done ).
 - Create tickets from the board: Board → **New** column → **+ Create**. The ticket appears in New straight away. The **+ Create** button at the top of Jira puts new tickets in the Backlog instead; move them with Backlog → right-click → **Move to board**.
 
 ![Jira Features: Sprints turned off](installation/images/jira-sprints-off.png)
