@@ -11,14 +11,14 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
 2. Review the ticket ( Jira status: To Do ): the team lead or dev manager reviews the ticket and adds more details. Optional labels: `bug`, `hotfix`, `human-review`.
 3. Build the change ( Jira status: In Progress ): a developer picks it up [ or ] anyone ( dev manager, team lead, developer ) clicks ⚡ Run Agent 1 in Jira at any time and the AI agent builds it. If a developer has already started, the AI continues on the same branch.
-4. Test cases: the AI agent creates the test cases ( functional and visual ) and runs them. When a developer builds it, the developer adds the test cases. Applitools Eyes visually tests every screen on desktop and mobile.
-5. AI review: once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
-6. Acceptance:
+4. Test cases ( Jira status: In Progress ): the AI agent creates the test cases ( functional and visual ) and runs them. When a developer builds it, the developer adds the test cases. Applitools Eyes visually tests every screen on desktop and mobile.
+5. AI review ( Jira status: In Progress ): once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
+6. Acceptance ( Jira status: In Progress ):
    - Without the `human-review` label: the AI automatically accepts or rejects each change based on the available information ( the ticket, the design system, the image and DOM differences ).
    - With the `human-review` label: the AI gives its review, and a person approves before anything is saved or merged.
-7. Auto fix: if the AI's change causes an issue, the AI fixes it and tests again ( up to 2 rounds ). If it cannot fix a bug, it creates a sub-task for it in Jira.
-8. Report: a PDF summary report of the actions the AI took is attached to the Jira ticket and linked on the pull request.
-9. Decision:
+7. Auto fix ( Jira status: In Progress ): if the AI's change causes an issue, the AI fixes it and tests again ( up to 2 rounds ). If it cannot fix a bug, it creates a sub-task for it in Jira.
+8. Report ( Jira status: In Progress ): a PDF summary report of the actions the AI took is attached to the Jira ticket and linked on the pull request.
+9. Decision ( Jira status: Done or In Review ):
    - No bugs found ( Jira status: Done ): the change is merged automatically and the baselines in Eyes are saved.
    - Bugs it cannot fix, unclear changes, or the `human-review` label ( Jira status: In Review ): the ticket gets the label `needs-human` and is assigned to the person who created it. A person reads the PDF and fixes or approves. When the developer pushes a fix, the AI reviews it again.
 
