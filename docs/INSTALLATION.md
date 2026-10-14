@@ -172,7 +172,19 @@ tickets become WIKI-1, WIKI-2, … and branch names contain that key.
 
 In the screenshot, START points to New and every status has the Any marker: this is the correct setup.
 
-Board: the columns should be the same four ( Board → ⋯ → Configure board → Columns ). A board without sprints works best ( Space settings → Features → Sprints off ): a Scrum board only shows tickets in the current sprint, so new tickets would only appear in the Backlog.
+Board: the columns should be the same four ( Board → ⋯ → Configure board → Columns ).
+
+**6.2b New tickets on the board ( must do if your board uses sprints ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. To make every new ticket appear on the board automatically, add a Jira Automation rule:
+
+1. Space settings → **Automation** → **Create rule** ( or "Create from scratch" ).
+2. Trigger: **Work item created**.
+3. Condition ( recommended ): **Work item fields condition** → Work type is one of **Task** ( sub-tasks follow their parent's sprint ).
+4. Action: **Edit work item fields** → **Sprint** → **Active sprint** ( or "Current sprint" ). Prefer this over a sprint name, so the rule keeps working when the next sprint starts.
+5. Name it "New tickets → active sprint" and turn it on.
+
+Check: create a ticket. It should appear on the board in the New column.
+
+If your board does not use sprints ( Space settings → Features → Sprints off ), you don't need this rule: every ticket is shown on the board.
 
 Notes: the pipeline moves tickets to In Progress, In Review and Done. In Review is only for work waiting for a person's decision. If your names are different ( e.g. "Doing" ), set the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 
