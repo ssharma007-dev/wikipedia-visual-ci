@@ -135,7 +135,7 @@ Must not change:
 - Anything else on the portal page.
 - The article pages.
 
-Test on below devices ( optional ):
+Test on below devices:
 - Chrome desktop 1200×800
 - Galaxy S25 Ultra
 ```
@@ -160,7 +160,7 @@ Must not change:
 - The search bar on desktop.
 - The rest of the portal page.
 
-Test on below devices ( optional ):
+Test on below devices:
 - Galaxy S25 Ultra ( the bug )
 - Chrome desktop 1200×800 ( must stay unchanged )
 ```
