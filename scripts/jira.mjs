@@ -103,7 +103,7 @@ ${adfToText(f.description) || '_(no description)_'}`);
 } else if (command === 'subtask') {
   // Create a sub-task under <KEY>: subtask <KEY> <summary> <description-file> [labels,comma,separated]
   const [summary, file, labelArg] = rest;
-  const labels = labelArg ? labelArg.split(',').filter(Boolean) : ['visual', 'bug', 'found-by-agent'];
+  const labels = labelArg ? labelArg.split(',').filter(Boolean) : ['bug', 'found-by-agent'];
   const fixedByAi = labels.includes('fixed-by-ai');
   // Re-runs must not create the same bug twice: reuse an open sub-task with the same summary.
   const existing = ((await jira(`/rest/api/3/issue/${key}?fields=subtasks`)).fields.subtasks ?? [])
@@ -177,8 +177,10 @@ ${adfToText(f.description) || '_(no description)_'}`);
   }
 } else if (command === 'remove-label') {
   // remove-label <ANY-KEY> <label> → removes the label from every ticket that has it
+  // remove-label <PROJECT>-0 <label> → from every ticket · remove-label <KEY> <label> → from that ticket only
   const label = rest[0];
-  const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(`labels = "${label}"`)}&fields=summary&maxResults=100`);
+  const only = /-0$/.test(key) ? '' : ` AND key = ${key}`;
+  const r = await jira(`/rest/api/3/search/jql?jql=${encodeURIComponent(`labels = "${label}"${only}`)}&fields=summary&maxResults=100`);
   for (const i of r.issues ?? []) {
     await jira(`/rest/api/3/issue/${i.key}`, { method: 'PUT', body: JSON.stringify({ update: { labels: [{ remove: label }] } }) });
     console.log(`${i.key}: removed "${label}"`);
