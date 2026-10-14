@@ -28,7 +28,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 | `bug` | Only the fix: the screen moves from **Actual** to **Expected** | **Reproduce first** (step 0). Find the **root cause**. Fix it. Add a **regression test** that would have caught it. Report before/after evidence |
 | `hotfix` | The **smallest possible** fix and **zero other differences** | Same as `bug`, but change as little as possible; any difference outside the fix is a bug. Keep the report short and decisive |
 | `refactor`, `chore` | **No visual change at all** | Any difference is a regression — unless it is clearly an environment/infra rendering change |
-| `content` | Only text changes (layout may reflow slightly) | Check the new text fits — no truncation or overflow |
+| `content` ( Jira label `text` ) | Only text changes (layout may reflow slightly) | Check the new text fits — no truncation or overflow |
 | `experiment` | The variant differs; the control does not | Note which variant the tests saw |
 | `a11y` | Visible accessibility improvements (contrast, sizes, focus) | Check against design-system contrast and tap-target rules |
 | `revert` | The screen returns to how it looked before the reverted change | Treat any other difference as a regression |
