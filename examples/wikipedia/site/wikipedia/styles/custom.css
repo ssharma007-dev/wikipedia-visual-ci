@@ -35,3 +35,17 @@
 @media (max-width: 480px) {
   #search-form button[type="submit"] { margin-right: -28px; }
 }
+
+/* WIKI-37: make the portal Search button red (#D33) to draw attention, per marketing's
+   request. Scoped to the portal's search form only — #search-form exists only on the
+   portal page, so the article header's secondary search button is untouched. Only the
+   background/border color changes; size and position are untouched. The id selector
+   out-specifies .pure-button-primary-progressive's :hover/:active rules too, so those
+   states inherit this red without a separate override.
+   NOTE: #D33 is not a design-system color token and this overrides the token the design
+   system assigns to the portal's primary action (color-brand-primary, #0E7C7B) — see the
+   bug reported alongside this change. */
+#search-form button[type="submit"] {
+  background-color: #D33;
+  border-color: #D33;
+}
