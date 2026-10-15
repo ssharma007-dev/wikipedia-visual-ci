@@ -125,7 +125,7 @@ Files:
 
 What happens:
 - AI agent: writes the test cases ( and a regression test for a bug ), using the Eyes MCP Server to add the visual checkpoints, and runs them.
-- Developer: writes their own test cases, [ or ] adds the label `tests-only` and clicks ⚡ Run Agent 1 ( or ⚡ → Agent 1 - tests only ). The AI then only writes and runs the test cases on the developer's branch: it can change only the test folder ( `AGENT_TEST_PATHS` ), and bugs in the developer's code are reported, not fixed.
+- Developer: (1) writes the test cases in their IDE with the help of the Eyes MCP Server, following the same `visual-agent/guidelines/` ( see step 13 in [INSTALLATION.md](INSTALLATION.md) ) [ or ] (2) adds the label `tests-only` and clicks ⚡ Run Agent 1. The AI then only writes and runs the test cases on the developer's branch: it can change only the test folder ( `AGENT_TEST_PATHS` ), and bugs in the developer's code are reported, not fixed.
 
 GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on the devices listed in the ticket under "Test on below devices" ( read by `visual-agent/scripts/devices.mjs` ), or on the defaults in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.
 

@@ -11,7 +11,7 @@ name: Agent 1 — implement task
 #   manual (Jira label human-review, or "human-review" in the task file)
 #                                    → the agent accepts/rejects in Eyes; a person saves and merges.
 #
-# Tests only (Jira label tests-only, or the Jira button "Agent 1 - tests only" → input mode=tests-only):
+# Tests only (Jira label tests-only, or the input mode=tests-only):
 #   the developer's code is kept as it is. The agent only writes and runs the test cases and reviews them;
 #   it may change only the test folder (vars.AGENT_TEST_PATHS), and bugs are reported, not fixed.
 on:

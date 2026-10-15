@@ -327,12 +327,6 @@ Check: open a ticket in Ready → ⚡ → **Agent 1**. Within a few seconds a ru
 
 ![Jira automation rule](installation/images/p12-jira-automation-rule.png)
 
-**10.3 Optional: a second button, Agent 1 - tests only.** For a developer who built the change and only wants the tests. Create a second rule the same way ( or duplicate **Agent 1** ), name it **Agent 1 - tests only**, and change only the body:
-
-`{"ref":"main","inputs":{"key":"{{issue.key}}","mode":"tests-only"}}`
-
-Without this button, the label `tests-only` on the ticket does the same with the normal **Agent 1** button.
-
 ---
 
 ## Step 11: Create the first baseline (one-time setup)
@@ -391,9 +385,43 @@ images for every change:
 
 1. Create the branch from the ticket: (1) in Jira, **Development → Create branch** [ or ] (2) in git, with the
    ticket key in its name, e.g. `feature/WIKI-17-make-donate-bold`. Either way it is linked to the ticket.
-2. Make the change, add or update the tests, push, and open a pull request.
-3. The same checks, AI review, PDF and decision happen automatically. The AI reports bugs but never
+2. Make the change and push.
+3. Add the test cases: (1) in your IDE with the Eyes MCP Server ( Step 13 ) [ or ] (2) add the label `tests-only` to the ticket and click ⚡ Run Agent 1. The AI writes and runs the tests on your branch and never changes your code; then `git pull`.
+4. Open a pull request. The same checks, AI review, PDF and decision happen automatically. The AI reports bugs but never
    changes a developer's code.
+
+---
+
+## Step 13: Use the Eyes MCP Server in your IDE (optional, for developers)
+
+**Requirement:** a developer with Applitools keys ( Step 4 ) and an AI assistant in the IDE ( Claude Code, GitHub Copilot in VS Code, or Cursor ).
+
+Developers can write and check the test cases on their laptop, before pushing, with the same Eyes MCP Server and the same rules as the AI agent. This is the fastest way: write the test, run it, and see the Eyes result in minutes.
+
+1. Set your keys in the terminal ( don't commit them ):
+
+```bash
+export APPLITOOLS_API_KEY=<your API key>
+export APPLITOOLS_READ_KEY=<read key>
+export APPLITOOLS_WRITE_KEY=<write key>
+```
+
+2. Connect the Eyes MCP Server to your IDE. It is the same server as in `visual-agent/mcp.json`:
+- (1) Claude Code: copy `visual-agent/mcp.json` to `.mcp.json` in the repository root, then start `claude` in that folder.
+- (2) Cursor: copy `visual-agent/mcp.json` to `.cursor/mcp.json`.
+- (3) VS Code with GitHub Copilot: create `.vscode/mcp.json` with the same content, but rename `mcpServers` to `servers`.
+
+3. Start the app ( `npm start` ) and ask the AI, for example:
+
+```
+Read tasks/WIKI-17-*.md and visual-agent/guidelines/agent-implement.md.
+Write the Playwright + Eyes test cases for this ticket, run them,
+and review the results with the Eyes MCP Server.
+```
+
+4. Push. The pipeline runs the same tests and the AI review on the pull request, so nothing is skipped.
+
+No IDE setup? Use the label `tests-only` and ⚡ Run Agent 1 instead ( Step 12 ).
 
 ---
 
