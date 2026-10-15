@@ -1,6 +1,6 @@
 # WIKI-34 — [DRY RUN] Remove the App Store badge from the portal
 
-**Type:** Task · **Priority:** Medium · **Status:** New · **Reporter:** Shreya Sharma
+**Type:** Task · **Priority:** Medium · **Status:** In Progress · **Reporter:** Shreya Sharma
 **Source:** Jira — https://testing-visual-ci.atlassian.net/browse/WIKI-34
 
 #### Why
