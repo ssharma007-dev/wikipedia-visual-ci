@@ -1,4 +1,4 @@
-import { test } from '@applitools/eyes-playwright/fixture';
+import { test, expect } from '@applitools/eyes-playwright/fixture';
 
 const BASE = process.env.SITE_URL ?? 'http://localhost:3001/wikipedia';
 
@@ -7,6 +7,13 @@ const BASE = process.env.SITE_URL ?? 'http://localhost:3001/wikipedia';
 
 test('Portal page', async ({ page, eyes }) => {
   await page.goto(BASE);
+
+  // WIKI-35: the App Store badge is removed, Google Play stays, the "Download
+  // Wikipedia for Android or iOS" text is untouched.
+  await expect(page.locator('.app-badge-ios')).toBeHidden();
+  await expect(page.locator('.app-badge-android')).toBeVisible();
+  await expect(page.getByText('Download Wikipedia for Android or iOS')).toBeVisible();
+
   await eyes.check('Portal', { fully: true });
 });
 
