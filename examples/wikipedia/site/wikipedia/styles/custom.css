@@ -30,3 +30,8 @@
 		min-height: 48px;
 	}
 }
+
+/* Portal: line the Search button up with the edge of the screen on phones */
+@media (max-width: 480px) {
+  #search-form button[type="submit"] { margin-right: -28px; }
+}

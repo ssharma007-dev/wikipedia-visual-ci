@@ -12,5 +12,5 @@
   "shuffle-languages": false,
   "remove-sanity-section": false,
   "header-typo": false,
-  "random-article-count": false
+  "random-article-count": true
 }
