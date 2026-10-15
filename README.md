@@ -339,7 +339,7 @@ An AI model is probabilistic: left alone, it might skim or stop early. The Appli
 
 The AI can accept or reject changes in Eyes, but it can never save baselines, push or merge: the pipeline does that, and only when there are no bugs. It can change only the folders in `AGENT_ALLOWED_PATHS` ( here `examples/wikipedia/site/` and `examples/wikipedia/tests/` ).
 
-`main` is protected: every change goes through a pull request, and two checks must pass before anyone can merge: **Branch links to a Jira ticket** and **Visual review** (the AI review, functional checks included). The AI works as its own GitHub account, `eyes-mcp-visual-agent[bot]`, so everything it does is visible and checked like a developer's.
+`main` is protected: every change goes through a pull request, and two checks must pass before anyone can merge: **Branch links to a Jira ticket** and **Visual review** (the AI review, functional checks included). A PR that only changes docs or the pipeline needs no Jira ticket and no visual review. The AI works as its own GitHub account, `eyes-mcp-visual-agent[bot]`, so everything it does is visible and checked like a developer's.
 
 By default a person approves every pull request. To let the pipeline merge without approval for the whole repository, run `visual-agent/scripts/set-merge-policy.sh auto` (back with `code-approval`), or use the `auto-ai-merge` label per ticket. How often people agree with the AI: **Actions → Trust report**.
 

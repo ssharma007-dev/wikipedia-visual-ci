@@ -24,7 +24,36 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # A PR that only changes docs or the pipeline ( vars.NO_TICKET_PATHS ) has nothing to test visually:
+  # the Visual review check passes straight away and the tests are skipped.
+  scope:
+    name: What the PR changes
+    if: ${{ !(github.event_name == 'pull_request' && endsWith(github.event.pull_request.user.login, '[bot]') && endsWith(github.event.sender.login, '[bot]')) }}
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.s.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: visual-agent/scripts
+      - id: s
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          NO_TICKET_PATHS: ${{ vars.NO_TICKET_PATHS }}
+        run: |
+          if [ -n "$PR" ] && [ "$(bash visual-agent/scripts/pr-scope.sh "$PR")" = no-app ]; then
+            echo "app=no" >> "$GITHUB_OUTPUT"
+            SHA=$(gh pr view "$PR" --json headRefOid --jq .headRefOid)
+            gh api "repos/${{ github.repository }}/statuses/$SHA" -f state=success -f context="Visual review" \
+              -f description="No app change: docs or pipeline only" >/dev/null
+            echo "Docs / pipeline only: visual review not needed" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "app=yes" >> "$GITHUB_OUTPUT"
+          fi
+
   visual:
+    needs: scope
     outputs:
       merged: ${{ steps.auto.outputs.merged }}
       via_app: ${{ steps.auto.outputs.via_app }}
@@ -33,7 +62,7 @@ jobs:
     # run — skip a second, identical review. A skipped job counts as passed for required checks.
     # Later pushes to such a PR (e.g. a person fixing a bug) are reviewed normally.
     # Skip only pushes made by the bot itself (sender ends in [bot]); a person pushing a fix is reviewed normally.
-    if: ${{ !(github.event_name == 'pull_request' && endsWith(github.event.pull_request.user.login, '[bot]') && endsWith(github.event.sender.login, '[bot]')) }}
+    if: ${{ needs.scope.outputs.app == 'yes' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

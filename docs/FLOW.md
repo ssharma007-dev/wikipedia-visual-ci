@@ -182,6 +182,7 @@ Files:
 
 What happens: after each execution, the pipeline collects the before / after / differences images from Eyes, builds the PDF report, attaches it to the Jira ticket, comments on the ticket and posts the PDF link on the pull request. It also sets two checks on the pull request, which must pass before anyone can merge:
 - Branch links to a Jira ticket: the branch name has a key, and the ticket exists in Jira. If not, the PR is blocked with a comment on how to rename the branch.
+- A PR that only changes docs or the pipeline ( `docs/`, `.github/`, `visual-agent/`, `README.md` ) needs no ticket: both checks pass straight away. As soon as a PR touches the app or its tests, the ticket and the review are required.
 - Visual review: the AI review passed, the functional checks passed, and there is a ticket.
 
 Who: the pipeline.

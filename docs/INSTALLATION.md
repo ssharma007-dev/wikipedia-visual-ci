@@ -69,6 +69,7 @@ The pipeline starts your app in GitHub Actions and tests it. You only tell it **
 | `APP_START_COMMAND` | `npm run build && npm run preview -- --port 4173` | Starts your app in CI (it runs in the background) |
 | `APP_URL` | `http://localhost:4173` | The pipeline waits until this answers, then runs the tests against it |
 | `AGENT_ALLOWED_PATHS` | `src/ public/ tests/` | The only folders Agent 1 may change; anything else is thrown away |
+| `NO_TICKET_PATHS` | `docs/ .github/ visual-agent/ README.md` ( default ) | Optional. A PR that only changes these needs no Jira ticket and no visual review |
 
 Now set up Playwright with Applitools Eyes. Copy `playwright.config.ts` from this sample and change only:
 
@@ -263,6 +264,7 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 | `APP_START_COMMAND` | How to start your app (Step 2) |
 | `APP_URL` | Where your app runs in CI (Step 2) |
 | `AGENT_ALLOWED_PATHS` | Folders Agent 1 may change (Step 2) |
+| `NO_TICKET_PATHS` | Optional: paths that need no Jira ticket ( default `docs/ .github/ visual-agent/ README.md` ) |
 | `MERGE_POLICY` | `code-approval` ( default: one person approves the PR ) or `auto` ( merge when the AI review passes ). The Jira label `auto-ai-merge` always merges automatically |
 
 ![Repository variables](installation/images/p10-repo-variables.png)
