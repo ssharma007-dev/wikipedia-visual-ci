@@ -286,7 +286,9 @@ Go to your repository → **Settings → Rules → Rulesets → New branch rules
 | Bypass list | Your GitHub App (Always). Repository admin (For pull requests only) |
 | Rules | Restrict deletions · Block force pushes · **Require a pull request before merging** · **Require status checks to pass:** `Branch links to a Jira ticket` and `Visual review` |
 
-From now on every change goes through a pull request. A PR without a valid Jira ticket, or with a failed review, cannot be merged.
+From now on every change goes through a pull request. A PR without a valid Jira ticket, or with a failed review, cannot be merged. A PR that only changes docs or the pipeline ( `NO_TICKET_PATHS` ) needs no ticket: both checks pass straight away.
+
+Why the GitHub App is on the bypass list: with the label `auto-ai-merge`, the pipeline merges by itself. It uses the bypass only after both required checks have passed; it skips only the approval. Without that label, a person still approves every pull request.
 
 ![Protect main](installation/images/p11-ruleset.png)
 
