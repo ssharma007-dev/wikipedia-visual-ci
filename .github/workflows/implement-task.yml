@@ -317,7 +317,7 @@ jobs:
         run: |
           # Only commit code the agent finished verifying (it wrote its report); never half-done work.
           if [ ! -f agent-report/report.json ]; then
-            if grep -q "session limit\|usage limit\|rate limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
+            if grep -q "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
               echo "::error::Agent 1 stopped early: Claude usage limit reached — re-run later (Jira button or Actions → Run workflow)."
             else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
             exit 1
@@ -467,7 +467,7 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
         run: |
           V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo "no report")
-          if [ "$V" = "no report" ] && grep -qi "session limit\|usage limit\|rate limit" agent-report/agent-transcript*.jsonl 2>/dev/null; then
+          if [ "$V" = "no report" ] && grep -qi "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" agent-report/agent-transcript*.jsonl 2>/dev/null; then
             printf '%s\n' "⏸️ Agent 1 paused on $KEY: the Claude usage limit was reached, so nothing was changed. Click Run Agent 1 again later." \
               "CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > ci-context/jira-note.txt
             node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
