@@ -367,7 +367,7 @@ For the full step-by-step setup in your own project ( with screenshots ), see [d
 
 1. Install **GitHub for Atlassian** in Jira and connect this repository.
 2. Jira workflow ( must do ): five statuses New → Ready → In Progress → In Review → Done, and the START arrow pointing to **New**, so every new ticket starts in New. See step 6.2 in [docs/INSTALLATION.md](docs/INSTALLATION.md).
-3. Jira board ( must do ): every ticket must be visible on the board. For this demo, sprints are turned off ( Space settings → Features → Sprints off ), and tickets are created from the board's New column ( + Create in the column ), because the + Create button at the top of Jira puts them in the Backlog. If your team uses sprints, add a Jira Automation rule "Work item created → Sprint = Active sprint" instead. See step 6.2b in [docs/INSTALLATION.md](docs/INSTALLATION.md).
+3. Jira board ( must do ): create tickets from the board's New column ( + Create in the column ), because the + Create button at the top of Jira puts them in the Backlog. If your team uses sprints, add a Jira Automation rule "Work item created → Sprint = Active sprint". See step 6.2b in [docs/INSTALLATION.md](docs/INSTALLATION.md).
 4. Add these repository secrets: `APPLITOOLS_API_KEY`, `APPLITOOLS_READ_KEY`, `APPLITOOLS_WRITE_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`), `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
 5. Optional: a Jira Automation rule for the **Run Agent 1** button, calling this repo's `implement-task.yml` workflow with the ticket key.
 

@@ -185,17 +185,11 @@ In the screenshot, START points to New and every status has the Any marker: this
 
 Board: the columns should be the same five ( Board → ⋯ → Configure board → Columns ).
 
-**6.2b Show every ticket on the board ( must do ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. Choose one:
-
-(1) Turn sprints off and create tickets from the board ( used in this demo ):
-- Space settings → **Features** → **Sprints** → off. The board then shows tickets by status ( New · Ready · In Progress · In Review · Done ).
-- Create tickets from the board: Board → **New** column → **+ Create**. The ticket appears in New straight away. The **+ Create** button at the top of Jira puts new tickets in the Backlog instead; move them with Backlog → right-click → **Move to board**.
-
-![Jira Features: Sprints turned off](installation/images/jira-sprints-off.png)
+**6.2b Create tickets from the board ( must do ).** Create every ticket from the board: Board → **New** column → **+ Create**. The ticket appears in New straight away. The **+ Create** button at the top of Jira puts new tickets in the Backlog instead, where they don't show on the board.
 
 ![Creating a ticket from the New column on the board](../docs/images/jira-create-ticket.gif)
 
-(2) Keep sprints: add a Jira Automation rule that puts every new ticket in the active sprint.
+If your team uses sprints: add a Jira Automation rule that puts every new ticket in the active sprint.
 1. Space settings → **Automation** → **Create rule** ( or "Create from scratch" ).
 2. Trigger: **Work item created**.
 3. Condition ( recommended ): **Work item fields condition** → Work type is one of **Task** ( sub-tasks follow their parent's sprint ).
