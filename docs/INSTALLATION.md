@@ -33,20 +33,17 @@ Note: images with a dashed border are placeholders. Take that screenshot in your
 
 **Requirement:** a developer with access to your repository.
 
-Copy these folders and files from this sample into the root of your repository:
+Copy these folders and files from this sample into the root of your repository. You don't need `examples/`: that is only the sample Wikipedia app.
 
 | Copy | What it is |
 |---|---|
 | `.github/workflows/` | The automation: tests, AI review, Agent 1, Ticket check, Jira updates |
-| `scripts/` | Helpers: Jira, Eyes, the PDF report, the trust report |
-| `guidelines/` | The rules the AI follows (you will edit these in Step 3) |
-| `.mcp.json` | Connects the AI to the Applitools Eyes MCP server |
+| `visual-agent/` | The reusable part: `scripts/` ( Jira, Eyes, the PDF report ), `guidelines/` ( the rules the AI follows, you will edit these in Step 3 ) and `mcp.json` ( connects the AI to the Applitools Eyes MCP Server ) |
 | `.github/pull_request_template.md`, `.github/CODEOWNERS` | Optional, recommended |
 
 ```bash
 # from the folder that contains both repositories
-cp -r wikipedia-visual-ci/.github wikipedia-visual-ci/scripts wikipedia-visual-ci/guidelines your-repo/
-cp wikipedia-visual-ci/.mcp.json your-repo/
+cp -r wikipedia-visual-ci/.github wikipedia-visual-ci/visual-agent your-repo/
 ```
 
 Then add the test tools to your project and ignore the pipeline's working folders:
@@ -85,7 +82,7 @@ browsersInfo: [                                   // the browsers and devices Ey
 
 Leave the rest as it is. It already takes care of Eyes branching, saving and `failTestsOnDiff: false`, so that the AI decides about the differences instead of Playwright.
 
-Write your test cases (functional and visual) in `tests/`. Use the app address from `SITE_URL`, which the pipeline sets for you:
+Write your test cases (functional and visual) in your test folder (the sample uses `examples/wikipedia/tests/`). Use the app address from `SITE_URL`, which the pipeline sets for you:
 
 ```ts
 import { test, expect } from '@applitools/eyes-playwright/fixture';
@@ -108,14 +105,14 @@ The results appear in your Applitools dashboard.
 
 **Requirement:** the design team and QA lead agree on the rules.
 
-The AI checks every change against the plain text files in `guidelines/`. You can edit them like documents, no code is needed:
+The AI checks every change against the plain text files in `visual-agent/guidelines/`. You can edit them like documents, no code is needed:
 
 | File | What to put in it |
 |---|---|
-| `guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules |
-| `guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
-| `guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`site/wikipedia/…`) with your own folders |
-| `guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
+| `visual-agent/guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules |
+| `visual-agent/guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
+| `visual-agent/guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`examples/wikipedia/site/wikipedia/…`) with your own folders |
+| `visual-agent/guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
 
 The rules are always read from `main`, so a pull request can't change the rules it is judged by.
 
@@ -389,9 +386,9 @@ images for every change:
 |---|---|
 | A person must approve this ticket | Add the label `human-review` to the Jira ticket |
 | Merge a ticket without waiting for approval | Add the label `auto-ai-merge` to the Jira ticket |
-| Merge everything without approval ( repository-wide ) | `scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
-| How strict the AI is | Edit `guidelines/review-rules.md` |
-| Your design rules | Edit `guidelines/design-system.md` |
+| Merge everything without approval ( repository-wide ) | `visual-agent/scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
+| How strict the AI is | Edit `visual-agent/guidelines/review-rules.md` |
+| Your design rules | Edit `visual-agent/guidelines/design-system.md` |
 | Browsers and devices | `browsersInfo` in `playwright.config.ts` |
 | How often people agree with the AI | **Actions → Trust report → Run workflow** |
 

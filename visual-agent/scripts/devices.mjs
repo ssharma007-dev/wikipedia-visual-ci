@@ -1,6 +1,6 @@
-// Read the "Test on below devices:" list from a ticket ( markdown, as printed by scripts/jira.mjs fetch ) and turn it
+// Read the "Test on below devices:" list from a ticket ( markdown, as printed by visual-agent/scripts/jira.mjs fetch ) and turn it
 // into Applitools Ultrafast Grid browsers for playwright.config.ts ( env EYES_DEVICES ).
-//   node scripts/devices.mjs <ticket.md>   → prints the JSON list, or nothing when the ticket lists no devices
+//   node visual-agent/scripts/devices.mjs <ticket.md>   → prints the JSON list, or nothing when the ticket lists no devices
 //
 //   "Chrome desktop 1200×800", "Firefox 1280x720", "Safari", "Edge"   → desktop browser at that size ( default 1200×800 )
 //   "iPhone 15", "iPad Air ( 5th generation )"                         → iOS device

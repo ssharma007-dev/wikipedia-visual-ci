@@ -102,9 +102,9 @@ jobs:
             BR=$(git branch -r --format='%(refname:short)' | sed 's#^origin/##' | grep -E "(^|[^0-9A-Za-z])$KEY([^0-9]|$)" | grep -vx main | head -1 || true)
             if [ -n "$BR" ]; then git switch "$BR"
             else
-              node scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
+              node visual-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
               SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
-              TYPE=$(node scripts/jira.mjs type "$KEY" 2>/dev/null || echo feature)
+              TYPE=$(node visual-agent/scripts/jira.mjs type "$KEY" 2>/dev/null || echo feature)
               case "$TYPE" in bug) PFX=bugfix ;; hotfix|refactor|chore|content|experiment|revert) PFX=$TYPE ;; *) PFX=feature ;; esac
               BR="$PFX/$KEY-$SLUG"; git switch -c "$BR" origin/main
             fi
@@ -112,7 +112,7 @@ jobs:
             BR="${{ github.ref_name }}"
           fi
           # The ticket copy on the branch always matches Jira: added if missing, refreshed if the PM edited the ticket.
-          if node scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
+          if node visual-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
             FILE=$(ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md 2>/dev/null | head -1 || true)
             if [ -z "$FILE" ]; then
               SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
@@ -150,21 +150,22 @@ jobs:
           printf '%s\n' "$MESSAGE" > ci-context/commit.txt
           # Review mode: the Jira label wins; the task file can also opt in.
           JIRA=no; LABELS=""
-          if LABELS=$(node scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
+          if LABELS=$(node visual-agent/scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
           if echo ",$LABELS," | grep -q ',human-review,' || grep -qi 'human-review' "$FILE"; then MODE=manual; else MODE=auto; fi
           echo "$MODE" > ci-context/mode.txt
           # Merge: by default a person approves the PR ( then GitHub merges ). Label auto-ai-merge → the pipeline merges by itself.
           if echo ",$LABELS," | grep -q ',auto-ai-merge,' || grep -qi 'auto-ai-merge' "$FILE"; then POLICY=auto; else POLICY="${{ vars.MERGE_POLICY || 'code-approval' }}"; fi
           echo "$POLICY" > ci-context/merge-policy.txt; echo "policy=$POLICY" >> "$GITHUB_OUTPUT"; echo "Merge policy: $POLICY"
           echo "$SITE_URL" > ci-context/app-url.txt   # where the app runs in CI (vars.APP_URL)
+          echo "${{ vars.AGENT_ALLOWED_PATHS || 'examples/wikipedia/site/ examples/wikipedia/tests/' }}" > ci-context/allowed-paths.txt   # the only folders the agent may change
           # Devices: the ticket's "Test on below devices:" list, if it has one; otherwise playwright.config.ts defaults.
-          DEV=$(node scripts/devices.mjs ci-context/task.md || true)
+          DEV=$(node visual-agent/scripts/devices.mjs ci-context/task.md || true)
           if [ -n "$DEV" ]; then echo "EYES_DEVICES=$DEV" >> "$GITHUB_ENV"; echo "$DEV" > ci-context/devices.json; echo "Devices from the ticket: $DEV"
           else echo "Devices: playwright.config.ts defaults"; fi
           # Auto mode lets Eyes save the first screenshot of tests the agent writes (on this PR's Eyes branch only);
           # manual mode leaves them for a person.
           [ "$MODE" = manual ] && echo "EYES_SAVE_NEW_TESTS=false" >> "$GITHUB_ENV"
-          WT=""; [ "$JIRA" = yes ] && WT=$(node scripts/jira.mjs type "$KEY" 2>/dev/null || true)
+          WT=""; [ "$JIRA" = yes ] && WT=$(node visual-agent/scripts/jira.mjs type "$KEY" 2>/dev/null || true)
           if [ -z "$WT" ] || [ "$WT" = feature ]; then
             case "$TASK_BRANCH" in bugfix/*|bug/*) WT=bug ;; hotfix/*) WT=hotfix ;; refactor/*) WT=refactor ;; chore/*) WT=chore ;;
               content/*) WT=content ;; experiment/*) WT=experiment ;; revert/*) WT=revert ;; *) WT=${WT:-feature} ;; esac
@@ -172,16 +173,16 @@ jobs:
           echo "$WT" > ci-context/worktype.txt; echo "worktype=$WT" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"; echo "jira=$JIRA" >> "$GITHUB_OUTPUT"
           # Rules come from main, so a branch can't change what it is judged by
-          git show origin/main:guidelines/design-system.md > ci-context/design-system.md
-          git show origin/main:guidelines/review-rules.md  > ci-context/review-rules.md
-          git show origin/main:guidelines/agent-implement.md > ci-context/agent-implement.md
-          git show origin/main:guidelines/agent-fix.md > ci-context/agent-fix.md 2>/dev/null || true
+          git show origin/main:visual-agent/guidelines/design-system.md > ci-context/design-system.md
+          git show origin/main:visual-agent/guidelines/review-rules.md  > ci-context/review-rules.md
+          git show origin/main:visual-agent/guidelines/agent-implement.md > ci-context/agent-implement.md
+          git show origin/main:visual-agent/guidelines/agent-fix.md > ci-context/agent-fix.md 2>/dev/null || true
           echo "APPLITOOLS_BATCH_NAME=$KEY · Agent 1 · $TASK_BRANCH" >> "$GITHUB_ENV"
           echo "Task file: $FILE · work type: $WT · review mode: $MODE · Jira: $JIRA ($LABELS)"; cat ci-context/task.md
 
       - name: "Jira: In Progress"
         if: steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
-        run: node scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "${{ vars.JIRA_STATUS_IN_PROGRESS || 'In Progress|Doing' }}" || true
+        run: node visual-agent/scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "${{ vars.JIRA_STATUS_IN_PROGRESS || 'In Progress|Doing' }}" || true
 
       - name: Install dependencies
         if: steps.task.outputs.key != ''
@@ -193,7 +194,7 @@ jobs:
       - name: Start the app (vars.APP_START_COMMAND, waits for vars.APP_URL)
         if: steps.task.outputs.key != ''
         run: |
-          ${{ vars.APP_START_COMMAND || 'node server.mjs' }} > ci-context/server.log 2>&1 &
+          ${{ vars.APP_START_COMMAND || 'npm start' }} > ci-context/server.log 2>&1 &
           for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && exit 0; sleep 1; done
           echo "Site did not start"; cat ci-context/server.log; exit 1
 
@@ -206,14 +207,14 @@ jobs:
           [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
           # It may edit files and run the tests. It can never save/reset Eyes baselines, commit, push or merge.
           claude -p "$(cat ci-context/agent-implement.md)" \
-            --mcp-config .mcp.json --strict-mcp-config \
+            --mcp-config visual-agent/mcp.json --strict-mcp-config \
             --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" "Edit" \
               "Bash(npx playwright test:*)" "Bash(git diff:*)" "Bash(git status:*)" "Bash(ls:*)" \
             --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" \
               "Bash(git commit:*)" "Bash(git push:*)" "Bash(gh:*)" \
             --max-turns 200 \
             --output-format stream-json --verbose \
-            | tee agent-report/agent-transcript.jsonl | node scripts/agent-progress.mjs
+            | tee agent-report/agent-transcript.jsonl | node visual-agent/scripts/agent-progress.mjs
 
       # Bugs the agent can fix (caused by this change): fix the code, re-test in a new Eyes batch, review again.
       # Up to 2 rounds. Bugs it can't fix, or still failing after 2 rounds, go to a person.
@@ -238,14 +239,14 @@ jobs:
             export APPLITOOLS_BATCH_NAME="$KEY · Agent 1 · fix round $ROUND · $TASK_BRANCH"
             rm -f "$R"
             claude -p "$(cat ci-context/agent-fix.md)" \
-              --mcp-config .mcp.json --strict-mcp-config \
+              --mcp-config visual-agent/mcp.json --strict-mcp-config \
               --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" "Edit" \
                 "Bash(npx playwright test:*)" "Bash(git diff:*)" "Bash(git status:*)" "Bash(ls:*)" \
               --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" \
                 "Bash(git commit:*)" "Bash(git push:*)" "Bash(gh:*)" \
               --max-turns 150 \
               --output-format stream-json --verbose \
-              | tee "agent-report/agent-transcript-fix$ROUND.jsonl" | node scripts/agent-progress.mjs
+              | tee "agent-report/agent-transcript-fix$ROUND.jsonl" | node visual-agent/scripts/agent-progress.mjs
             if [ ! -f "$R" ]; then
               echo "::warning::Fix round $ROUND did not finish — keeping the previous report."
               cp agent-report/previous-report.json "$R"; break
@@ -264,10 +265,10 @@ jobs:
           done
           echo "Final verdict: $(node -p 'require("./'$R'").verdict' 2>/dev/null || echo missing) · bugs left: $(node -p '(require("./'$R'").bugs||[]).length' 2>/dev/null || echo ?)"
 
-      - name: Keep only allowed changes (vars.AGENT_ALLOWED_PATHS, default site/ tests/)
+      - name: Keep only allowed changes (vars.AGENT_ALLOWED_PATHS, default is the example app)
         if: steps.task.outputs.key != ''
         env:
-          ALLOWED: ${{ vars.AGENT_ALLOWED_PATHS || 'site/ tests/' }}
+          ALLOWED: ${{ vars.AGENT_ALLOWED_PATHS || 'examples/wikipedia/site/ examples/wikipedia/tests/' }}
         run: |
           allowed() { for p in $ALLOWED; do case "$1" in "$p"*) return 0 ;; esac; done; return 1; }
           git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > ci-context/changed.txt || true
@@ -288,7 +289,7 @@ jobs:
         run: |
           B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || true)
           [ -n "$B" ] && [ "$B" != "undefined" ] || { echo "No Eyes batch in the report — skipping evidence"; exit 0; }
-          node scripts/eyes-evidence.mjs "$B" agent-report/evidence || true
+          node visual-agent/scripts/eyes-evidence.mjs "$B" agent-report/evidence || true
 
       # ---- auto mode: save only when there are no bugs and nothing unresolved ----
       - name: "Auto mode: save baselines in Eyes"
@@ -302,7 +303,7 @@ jobs:
           if [ "$V" = "bugs-found" ] || [ "$BUGS" != "0" ] || [ -z "$B" ] || [ "$TR" = "failed" ]; then
             echo "Auto mode: NOT saving (verdict $V, bugs $BUGS, tests $TR) — a person decides."; echo "saved=no" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if node scripts/eyes-save.mjs "$B"; then
+          if node visual-agent/scripts/eyes-save.mjs "$B"; then
             echo "saved=yes" >> "$GITHUB_OUTPUT"
             node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merges the PR automatically. Add the label human-review to the Jira ticket to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           else
@@ -340,13 +341,13 @@ jobs:
           export MERGE_POLICY="${{ steps.ctx.outputs.policy }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
           export REVIEW_MODE="$(cat ci-context/mode.txt 2>/dev/null)"
           # Test totals from the agent's last test run, and any failed functional checks, for "Results at a glance"
-          node scripts/failed-tests.mjs test-results/results.json agent-report/failed-tests.json /dev/null agent-report/test-stats.json || true
+          node visual-agent/scripts/failed-tests.mjs test-results/results.json agent-report/failed-tests.json /dev/null agent-report/test-stats.json || true
           if [ -f agent-report/report.json ] && [ -s agent-report/failed-tests.json ]; then
             node -e 'const fs=require("fs"),f="agent-report/report.json",r=JSON.parse(fs.readFileSync(f));const t=JSON.parse(fs.readFileSync("agent-report/failed-tests.json"));if(t.length)r.failedTests=t;fs.writeFileSync(f,JSON.stringify(r,null,2))' || true
           fi
           if [ -f agent-report/report.json ]; then
-            node scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
-            node scripts/report-pdf.mjs agent-report/report.html "agent-report/${{ steps.task.outputs.key }}-visual-report.pdf" || echo "::warning::PDF could not be created"
+            node visual-agent/scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
+            node visual-agent/scripts/report-pdf.mjs agent-report/report.html "agent-report/${{ steps.task.outputs.key }}-visual-report.pdf" || echo "::warning::PDF could not be created"
             printf '\n**Review mode:** %s\n' "$(cat ci-context/mode.txt)" >> agent-report/summary.md
             cat agent-report/summary.md >> "$GITHUB_STEP_SUMMARY"
           else
@@ -419,8 +420,8 @@ jobs:
                 `Pull request: ${process.argv[2]}`];
               require("fs").writeFileSync("ci-context/fixed.txt", L.filter(Boolean).join("\n"));
               require("fs").writeFileSync("ci-context/fixed-title.txt", "Fixed by AI: "+b.title);' "$i" "${{ steps.pr.outputs.url }}"
-            SUB=$(node scripts/jira.mjs subtask "$KEY" "$(cat ci-context/fixed-title.txt)" ci-context/fixed.txt "bug,found-by-agent,fixed-by-ai" | grep -oE '^[A-Z]+-[0-9]+' || true)
-            [ -n "$SUB" ] && node scripts/jira.mjs transition "$SUB" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
+            SUB=$(node visual-agent/scripts/jira.mjs subtask "$KEY" "$(cat ci-context/fixed-title.txt)" ci-context/fixed.txt "bug,found-by-agent,fixed-by-ai" | grep -oE '^[A-Z]+-[0-9]+' || true)
+            [ -n "$SUB" ] && node visual-agent/scripts/jira.mjs transition "$SUB" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
           done
           # Bugs the AI could not fix: one open sub-task each, for a person.
           N=$(node -p '(require("./agent-report/report.json").bugs||[]).length'); [ "$N" -gt 0 ] || { echo "No open bugs"; exit 0; }
@@ -433,7 +434,7 @@ jobs:
                 `Pull request: ${process.argv[2]}`, `Severity: ${b.severity}`];
               require("fs").writeFileSync("ci-context/bug.txt", L.filter(Boolean).join("\n"));
               require("fs").writeFileSync("ci-context/bug-title.txt", "Visual bug: "+b.title);' "$i" "${{ steps.pr.outputs.url }}"
-            node scripts/jira.mjs subtask "$KEY" "$(cat ci-context/bug-title.txt)" ci-context/bug.txt || true
+            node visual-agent/scripts/jira.mjs subtask "$KEY" "$(cat ci-context/bug-title.txt)" ci-context/bug.txt || true
           done
 
       - name: "Auto mode: merge the PR"
@@ -470,7 +471,7 @@ jobs:
           if [ "$V" = "no report" ] && grep -qi "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" agent-report/agent-transcript*.jsonl 2>/dev/null; then
             printf '%s\n' "⏸️ Agent 1 paused on $KEY: the Claude usage limit was reached, so nothing was changed. Click Run Agent 1 again later." \
               "CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > ci-context/jira-note.txt
-            node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+            node visual-agent/scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
             exit 0
           fi
           S=$(node -p 'require("./agent-report/report.json").implementation.summary' 2>/dev/null || echo "")
@@ -479,7 +480,7 @@ jobs:
           # Attach the PDF first, so the comment can link straight to it
           PDF="agent-report/$KEY-visual-report.pdf"; PDF_URL=""
           if [ -f "$PDF" ]; then
-            node scripts/jira.mjs attach "$KEY" "$PDF" > ci-context/attach.out 2>&1 || true
+            node visual-agent/scripts/jira.mjs attach "$KEY" "$PDF" > ci-context/attach.out 2>&1 || true
             cat ci-context/attach.out
             PDF_URL=$(sed -n 's/^ATTACHMENT_URL=//p' ci-context/attach.out)
             [ -n "$PDF_URL" ] || echo "::warning::The PDF was NOT attached to $KEY — see the error above. It is in this run's artifacts."
@@ -505,15 +506,15 @@ jobs:
             elif [ "${{ steps.ctx.outputs.mode }}" = "auto" ]; then echo "Automatic review could not finish alone (bugs, unresolved steps or a merge conflict) → a person reviews the PDF, saves and merges."
             else echo "human-review requested: a person reviews the PDF, saves the baselines in Eyes and merges the PR."; fi
           } > ci-context/jira-note.txt
-          node scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+          node visual-agent/scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
           if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then
-            node scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
-            node scripts/jira.mjs needs-human "$KEY" off || true
+            node visual-agent/scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
+            node visual-agent/scripts/jira.mjs needs-human "$KEY" off || true
             [ -n "${{ steps.pr.outputs.number }}" ] && gh pr edit "${{ steps.pr.outputs.number }}" --remove-label needs-human >/dev/null 2>&1 || true
           else
-            node scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
+            node visual-agent/scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
             # A decision is waiting: label the ticket and assign it to the person who wrote it, and label the PR.
-            node scripts/jira.mjs needs-human "$KEY" on || true
+            node visual-agent/scripts/jira.mjs needs-human "$KEY" on || true
             if [ -n "${{ steps.pr.outputs.number }}" ]; then
               gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
               gh pr edit "${{ steps.pr.outputs.number }}" --add-label needs-human || true
@@ -561,11 +562,11 @@ jobs:
       - name: Install and start the site
         run: |
           npm ci && npx playwright install --with-deps chromium
-          ${{ vars.APP_START_COMMAND || 'node server.mjs' }} > server.log 2>&1 &
+          ${{ vars.APP_START_COMMAND || 'npm start' }} > server.log 2>&1 &
           for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && break; sleep 1; done
       - name: Run the visual tests on merged main
         run: npx playwright test 2>&1 | tee main-run.log
       - name: Accept and save (the merged change was already approved)
         run: |
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' main-run.log)
-          node scripts/eyes-save.mjs "$B" --accept-all
+          node visual-agent/scripts/eyes-save.mjs "$B" --accept-all

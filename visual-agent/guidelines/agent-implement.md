@@ -17,8 +17,8 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 | `ci-context/mode.txt` | `auto` (default) or `manual` (someone added the label `human-review`). In **auto** mode, if your report has no bugs and nothing is left unresolved, the pipeline saves the baselines and merges — so be strict: anything you are unsure about must be left unresolved, never accepted. |
 | `ci-context/design-system.md` | The design system (from `main`). Your change must follow it. |
 | `ci-context/review-rules.md` | How to classify differences and what you may do in Eyes (from `main`). Follow its classes, thresholds and "Eyes MCP behaviour" switches. |
-| `site/wikipedia/` | The site. `styles/custom.css` is the team stylesheet; `pages/` holds the HTML; `flags.json` holds demo feature flags. |
-| `tests/` | The Playwright + Eyes visual tests. |
+| `ci-context/allowed-paths.txt` | The only folders you may change ( the app's code and its tests ). Any other file you change is discarded by the pipeline. |
+| The app and its tests | In the folders listed in `ci-context/allowed-paths.txt`. In the example project: `examples/wikipedia/site/wikipedia/` ( `styles/custom.css` is the team stylesheet, `pages/` holds the HTML ) and `examples/wikipedia/tests/`. |
 
 ## Work types — what to expect
 
@@ -46,16 +46,17 @@ explain in the baseline recommendation that the old baseline contained the bug.
    devices, and its "Must not change" list. Read `ci-context/design-system.md`.
 
 2. **Implement it — minimally.**
-   - Change only `site/` (prefer `site/wikipedia/styles/custom.css`; edit `pages/` only when markup
-     must change) and `tests/`. Any other file you change is discarded by the pipeline.
+   - Change only files in the folders listed in `ci-context/allowed-paths.txt`. Any other file you change is
+     discarded by the pipeline. In the example project, prefer the team stylesheet
+     `examples/wikipedia/site/wikipedia/styles/custom.css`; edit `pages/` only when markup must change.
    - Follow the design system (tokens, breakpoints, components, invariants).
    - Scope CSS to exactly what the task names (page, element, breakpoint).
 
-3. **Find the relevant tests.** Search `tests/` for tests that visit the pages and elements the task
+3. **Find the relevant tests.** Search the test folder ( see `ci-context/allowed-paths.txt` ) for tests that visit the pages and elements the task
    touches — use the task and the words in `ci-context/commit.txt` (e.g. "badge", "portal",
    "search"). List them and why they are relevant.
-   - If no existing test checks what the task changes, **write one** in `tests/` (Playwright +
-     `@applitools/eyes-playwright/fixture`, same style as `tests/wikipedia.spec.ts`; use
+   - If no existing test checks what the task changes, **write one** in the test folder (Playwright +
+     `@applitools/eyes-playwright/fixture`, same style as the existing tests; use
      `process.env.SITE_URL` as the app's address, like the existing tests). Name it after the task.
    - Use the Applitools Eyes MCP Server to add the visual checkpoints ( `eyes_add_checkpoints_to_test` ),
      and add Playwright `expect(...)` checks for each acceptance criterion that can be checked as a value
@@ -108,11 +109,11 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
   "verdict": "pass | changes-detected | bugs-found",
   "implementation": {
     "summary": "What you changed and why, in 1–3 sentences.",
-    "files": [ { "path": "site/wikipedia/styles/custom.css", "change": "…" } ]
+    "files": [ { "path": "examples/wikipedia/site/wikipedia/styles/custom.css", "change": "…" } ]
   },
   "tests": {
-    "relevant": [ { "name": "Portal page", "file": "tests/wikipedia.spec.ts", "why": "…", "eyesUrl": "https://eyes.applitools.com/app/test-results/<batch>/<session>?accountId=…" } ],
-    "added": [ { "name": "…", "file": "tests/….spec.ts", "why": "…", "eyesUrl": "…" } ],
+    "relevant": [ { "name": "Portal page", "file": "examples/wikipedia/tests/wikipedia.spec.ts", "why": "…", "eyesUrl": "https://eyes.applitools.com/app/test-results/<batch>/<session>?accountId=…" } ],
+    "added": [ { "name": "…", "file": "examples/wikipedia/tests/….spec.ts", "why": "…", "eyesUrl": "…" } ],
     "command": "npx playwright test",
     "result": "passed | differences | failed",
     "batchUrl": "https://eyes.applitools.com/app/test-results/…"
@@ -155,9 +156,9 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
 }
 ```
 
-`fixable`: `true` only when the bug was **caused by this branch's change** and can be fixed in `site/`
+`fixable`: `true` only when the bug was **caused by this branch's change** and can be fixed in the allowed folders
 without dropping anything the ticket asks for. If `true`, the pipeline gives you up to 2 more rounds to fix
-it and re-test (see `guidelines/agent-fix.md`). Use `false` when the fix needs a person: the ticket itself
+it and re-test (see `visual-agent/guidelines/agent-fix.md`). Use `false` when the fix needs a person: the ticket itself
 conflicts with the design system, a product decision is needed, or the cause is outside this change.
 
 `bugTicket` only for `bug` / `hotfix` work (omit otherwise). `before` / `after` are image paths from the Eyes MCP (baseline vs checkpoint).

@@ -1,5 +1,5 @@
 // List the Playwright tests that failed (functional checks), from the JSON reporter's output.
-//   node scripts/failed-tests.mjs test-results/results.json <out.json> <out.md>
+//   node visual-agent/scripts/failed-tests.mjs test-results/results.json <out.json> <out.md>
 import fs from 'node:fs';
 
 const [input, outJson, outMd, outStats] = process.argv.slice(2);

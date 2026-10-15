@@ -1,16 +1,16 @@
 // Jira Cloud helper for the visual-review pipeline (no dependencies).
-//   node scripts/jira.mjs fetch <KEY>                       → prints the ticket as markdown (for the AI)
-//   node scripts/jira.mjs comment <KEY> <verdict.json> <pr-url> <batch-url>
+//   node visual-agent/scripts/jira.mjs fetch <KEY>                       → prints the ticket as markdown (for the AI)
+//   node visual-agent/scripts/jira.mjs comment <KEY> <verdict.json> <pr-url> <batch-url>
 //                                                          → posts the AI verdict as a comment on the ticket
-//   node scripts/jira.mjs labels <KEY>                      → prints the ticket's labels (comma-separated)
-//   node scripts/jira.mjs type <KEY>                        → feature | bug | hotfix | refactor | chore | content | experiment | a11y | revert
-//   node scripts/jira.mjs subtask <KEY> <summary> <file>    → creates a sub-task under <KEY>, prints its key
-//   node scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
-//   node scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
-//   node scripts/jira.mjs attach <KEY> <file> [name]        → attaches a file (e.g. the PDF report)
-//   node scripts/jira.mjs create <PROJECT>-0 <summary> <description.md> [labels] → creates a ticket, prints its key
-//   node scripts/jira.mjs inspect <KEY>                     → status, labels, attachments, last comments
-//   node scripts/jira.mjs needs-human <KEY> on|off          → label needs-human (+ assign to the reporter), or clear it
+//   node visual-agent/scripts/jira.mjs labels <KEY>                      → prints the ticket's labels (comma-separated)
+//   node visual-agent/scripts/jira.mjs type <KEY>                        → feature | bug | hotfix | refactor | chore | content | experiment | a11y | revert
+//   node visual-agent/scripts/jira.mjs subtask <KEY> <summary> <file>    → creates a sub-task under <KEY>, prints its key
+//   node visual-agent/scripts/jira.mjs transition <KEY> <status name>    → moves the ticket (e.g. "In Review")
+//   node visual-agent/scripts/jira.mjs note <KEY> <file>                 → posts a plain-text comment
+//   node visual-agent/scripts/jira.mjs attach <KEY> <file> [name]        → attaches a file (e.g. the PDF report)
+//   node visual-agent/scripts/jira.mjs create <PROJECT>-0 <summary> <description.md> [labels] → creates a ticket, prints its key
+//   node visual-agent/scripts/jira.mjs inspect <KEY>                     → status, labels, attachments, last comments
+//   node visual-agent/scripts/jira.mjs needs-human <KEY> on|off          → label needs-human (+ assign to the reporter), or clear it
 // Needs JIRA_BASE_URL (https://<site>.atlassian.net), JIRA_EMAIL and JIRA_API_TOKEN.
 import fs from 'node:fs';
 

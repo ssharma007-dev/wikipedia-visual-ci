@@ -4,7 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 // In CI the workflow sets APPLITOOLS_BATCH_ID / APPLITOOLS_BATCH_NAME so every
 // PR run lands in one Eyes batch the review agent can find.
 export default defineConfig<EyesFixture>({
-  testDir: './tests',
+  // Your test cases. In this repository: the Wikipedia example app.
+  testDir: './examples/wikipedia/tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 2 : undefined,

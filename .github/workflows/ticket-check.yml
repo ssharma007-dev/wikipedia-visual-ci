@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: scripts
+          sparse-checkout: visual-agent/scripts
 
       - name: Check the ticket
         run: |
@@ -58,7 +58,7 @@ jobs:
           KEY=$(echo "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
           [ -n "$KEY" ] || fail "The branch \`$BRANCH\` has no Jira key in its name (expected something like \`WIKI-17\`)."
 
-          if ! node scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
+          if ! node visual-agent/scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
             if grep -q '→ 404' jira.err; then
               fail "The branch \`$BRANCH\` points to \`$KEY\`, but there is no such ticket in Jira. Check for a typo."
             fi
