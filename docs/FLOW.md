@@ -124,7 +124,7 @@ Files:
 ## Step 4: Test cases ( Jira status: In Progress )
 
 What happens:
-- AI agent: writes the test cases ( functional and visual, and a regression test for a bug ), using the Eyes MCP Server to add the visual checkpoints, and runs them.
+- AI agent: writes the test cases ( and a regression test for a bug ), using the Eyes MCP Server to add the visual checkpoints, and runs them.
 - Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them on the developer's branch.
 
 GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on the devices listed in the ticket under "Test on below devices" ( read by `visual-agent/scripts/devices.mjs` ), or on the defaults in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.

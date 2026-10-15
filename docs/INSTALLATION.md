@@ -83,7 +83,7 @@ browsersInfo: [                                   // the browsers and devices Ey
 
 Leave the rest as it is. It already takes care of Eyes branching, saving and `failTestsOnDiff: false`, so that the AI decides about the differences instead of Playwright.
 
-Write your test cases (functional and visual) in your test folder (the sample uses `examples/wikipedia/tests/`). Use the app address from `SITE_URL`, which the pipeline sets for you:
+Write your test cases in your test folder (the sample uses `examples/wikipedia/tests/`). Use the app address from `SITE_URL`, which the pipeline sets for you:
 
 ```ts
 import { test, expect } from '@applitools/eyes-playwright/fixture';

@@ -47,7 +47,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
    |---|---|---|
    | <img src="docs/images/jira-create-branch.png" width="260" alt="Create branch from the Jira ticket"> | <img src="docs/images/jira-run-agent-1.png" width="260" alt="The Agent 1 custom agent in the Jira Automation menu"> | <img src="docs/installation/images/05-actions-run.png" width="260" alt="The Agent 1 run in GitHub Actions"> |
 4. Test cases ( Jira status: In Progress ):
-   - AI agent: creates the test cases ( functional and visual ), using the Applitools Eyes MCP Server to add the visual checkpoints, and runs them.
+   - AI agent: creates the test cases, using the Applitools Eyes MCP Server to add the visual checkpoints, and runs them.
    - Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them. The AI continues on the developer's branch, so it also completes anything still missing from the ticket.
    - Applitools Eyes visually tests every screen, component or important area that the Jira ticket names: the full page, or only a component ( e.g. the header links ) when the change is local. It runs on the devices listed in the ticket under "Test on below devices", or, if the ticket lists none, on the defaults in `playwright.config.ts` ( here Chrome desktop and Galaxy S25 Ultra ).
 5. AI review ( Jira status: In Progress ): once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.

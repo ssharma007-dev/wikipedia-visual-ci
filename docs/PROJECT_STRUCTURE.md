@@ -25,7 +25,7 @@ wikipedia-visual-ci/
 │   └── mcp.json            Connects the AI to the Applitools Eyes MCP Server
 ├── examples/wikipedia/     The sample app: replace with your own app
 │   ├── site/               The Wikipedia copy
-│   ├── tests/              Playwright test cases (functional and visual)
+│   ├── tests/              Playwright test cases
 │   └── server.mjs          Starts the sample app locally
 ├── tasks/                  Copy of the Jira ticket, only on feature branches
 ├── docs/                   The documents: FLOW, INSTALLATION, PROJECT_STRUCTURE ( + screenshots )
