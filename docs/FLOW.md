@@ -11,7 +11,7 @@ For what each folder contains, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 - Jira: where the PM or team lead creates the ticket, and where the PDF report and the status updates land.
 - GitHub for Atlassian: links branches, commits and pull requests to the Jira ticket, using the ticket key ( e.g. WIKI-21 ) in their names.
 - GitHub Actions: runs the workflows in `.github/workflows/`. This is the pipeline.
-- AI agent: Claude Code, running inside GitHub Actions. It works as its own GitHub account, `eyes-mcp-visual-agent[bot]`.
+- AI agent: Claude Code in this demo ( any coding agent that can use an MCP server works ), running inside GitHub Actions. It works as its own GitHub account, `eyes-mcp-visual-agent[bot]`.
 - Playwright: runs the test cases in `examples/wikipedia/tests/` ( functional checks ).
 - Applitools Eyes and the Ultrafast Grid: capture every screen on Chrome desktop and Galaxy S25 Ultra and compare it with the baseline ( visual checks ).
 - Applitools Eyes MCP Server: gives the AI access to the Eyes results, and makes it go through every difference one by one ( deterministic guardrails ).

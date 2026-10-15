@@ -24,7 +24,7 @@ Note: images with a dashed border are placeholders. Take that screenshot in your
 | A GitHub repository with your web app | The code and the pipeline live here | - |
 | A Jira Cloud site | Tickets, statuses and the PDF reports | [atlassian.com](https://www.atlassian.com/software/jira) |
 | An Applitools account | Visual testing on many browsers and devices | [applitools.com](https://applitools.com) |
-| A Claude subscription or Anthropic API key | The AI agent that builds and reviews | [claude.com](https://claude.com) |
+| An AI coding agent ( Claude in this demo ) | The AI agent that builds and reviews | [claude.com](https://claude.com) |
 | Node.js 20 on your laptop | To try the tests locally | [nodejs.org](https://nodejs.org) |
 
 ---
@@ -123,19 +123,35 @@ The rules are always read from `main`, so a pull request can't change the rules 
 **Requirement:** an Applitools account admin.
 
 You need three keys:
-- **API key:** runs the tests.
+- **API key:** runs the tests. Find it in the Eyes dashboard under your profile → My API key.
 - **Read key:** lets the AI look at the results.
 - **Write key:** lets the AI accept or reject differences.
 
-![Applitools API keys](installation/images/p05-applitools-keys.png)
+Create the Read key and the Write key as two separate keys:
+
+1. In the Eyes dashboard, go to **Admin → API keys** and click the add key icon.
+
+![Admin → API keys → add key](installation/images/applitools-add-key.png)
+
+2. Read key: pick the **Team**, turn on **Read** only, set an **Expiry** and a **Purpose**, then click **Add**. Copy the key.
+
+![Read key: only Read turned on](installation/images/applitools-read-key.png)
+
+3. Write key: click the add key icon again, pick the same **Team**, turn on **Write** only, set an **Expiry** and a **Purpose**, then click **Add**. Copy the key.
+
+![Write key: only Write turned on](installation/images/applitools-write-key.png)
+
+Note: when the key expires, the AI review stops working. Put a reminder before the expiry date.
 
 ---
 
-## Step 5: Get a Claude token for CI (one-time setup)
+## Step 5: Get a token for the AI agent (one-time setup)
 
-**Requirement:** a Claude subscription or an Anthropic API key.
+**Requirement:** an account with the AI agent you want to use.
 
-On your laptop, run:
+The agent does not have to be Claude. Any coding agent that can run in GitHub Actions and use an MCP server can do this job ( e.g. GitHub Copilot, OpenAI Codex, Gemini CLI ). In this demo I am using Claude Code, so the steps below are for Claude. With another agent, change the agent step in `implement-task.yml` and `visual-tests.yml`; the guidelines and scripts stay the same.
+
+For Claude, run on your laptop:
 
 ```bash
 npm install -g @anthropic-ai/claude-code
@@ -143,8 +159,6 @@ claude setup-token
 ```
 
 Copy the token it prints. You can use an Anthropic API key (`ANTHROPIC_API_KEY`) instead.
-
-![Claude token](installation/images/p06-claude-token.png)
 
 ---
 
