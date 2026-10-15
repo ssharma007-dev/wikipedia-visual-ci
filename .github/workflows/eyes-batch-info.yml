@@ -1,0 +1,30 @@
+name: Eyes batch info
+
+# What was an Eyes batch tested on? Lists every test run with its environment ( browser, device, OS, viewport ).
+on:
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: 'Eyes batch URL ( https://eyes.applitools.com/app/test-results/… )'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    env:
+      APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
+      APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: eyes-demo-agent/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Environments in the batch
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: node eyes-demo-agent/scripts/eyes-batch-info.mjs "$BATCH" | tee -a "$GITHUB_STEP_SUMMARY"

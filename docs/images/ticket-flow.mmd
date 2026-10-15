@@ -1,0 +1,24 @@
+%%{init: {"flowchart": {"wrappingWidth": 260, "nodeSpacing": 45, "rankSpacing": 75, "curve": "basis"}, "themeVariables": {"fontSize": "15px"}}}%%
+flowchart LR
+    N["<span style='font-size:24px'><b>NEW</b></span><br/><span style='font-size:14px'>👩‍💼 Product manager</span>"]
+    R["<span style='font-size:24px'><b>READY</b></span><br/><span style='font-size:14px'>🧑‍💼 Team lead /<br/>engineering manager</span>"]
+    P["<span style='font-size:24px'><b>IN PROGRESS</b></span><br/><span style='font-size:14px'>👩‍💻 Developer [ or ] 🤖 AI agent</span>"]
+    V["<span style='font-size:24px'><b>IN REVIEW</b></span><br/><span style='font-size:14px'>👤 A person decides</span>"]
+    D["<span style='font-size:24px'><b>DONE</b></span><br/><span style='font-size:14px'>✅ Merged · PDF attached</span>"]
+
+    N -->|"reviews, then changes<br/>the status to Ready"| R
+    R -->|"assigns a developer"| P
+    R -->|"⚡ Run Agent 1"| P
+    P -->|"no bugs"| D
+    P -->|"needs a person"| V
+    V -->|"fix pushed"| V
+    V -->|"approved"| D
+
+    classDef todo fill:#F1F2F4,stroke:#8590A2,color:#172B4D,stroke-width:2px
+    classDef progress fill:#E9F2FF,stroke:#1D7AFC,color:#09326C,stroke-width:2px
+    classDef review fill:#FFECEB,stroke:#E2483D,color:#5D1F1A,stroke-width:2px
+    classDef done fill:#DCFFF1,stroke:#22A06B,color:#164B35,stroke-width:2px
+    class N,R todo
+    class P progress
+    class V review
+    class D done

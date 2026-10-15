@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "applitools-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@applitools/mcp@0.8.5"],
+      "env": {
+        "APPLITOOLS_API_KEY": "${APPLITOOLS_API_KEY}",
+        "APPLITOOLS_READ_KEY": "${APPLITOOLS_READ_KEY}",
+        "APPLITOOLS_WRITE_KEY": "${APPLITOOLS_WRITE_KEY}"
+      }
+    }
+  }
+}

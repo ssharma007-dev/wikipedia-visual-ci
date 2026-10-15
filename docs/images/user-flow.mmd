@@ -1,0 +1,54 @@
+%%{init: {"flowchart": {"wrappingWidth": 260, "nodeSpacing": 30, "rankSpacing": 45, "curve": "basis"}}}%%
+flowchart TD
+    subgraph S1["Jira status: New"]
+        A["👩‍💼 <b>Product manager</b><br/>creates the ticket: what should change, what must not"]
+    end
+    subgraph S2["Jira status: Ready"]
+        B["🧑‍💼 <b>Team lead / dev manager</b><br/>reviews the ticket, adds details and moves it to Ready"]
+        C{"Who builds it?"}
+    end
+    subgraph S3["Jira status: In Progress"]
+        D["👩‍💻 <b>Developer</b><br/>builds the change, writes the test cases, opens a pull request"]
+        E["🤖 <b>AI agent</b><br/>builds the change, writes the test cases, opens a pull request"]
+        F["🧪 <b>Tests run automatically</b><br/>Playwright + Applitools Eyes, on the defined devices"]
+        G["🔍 <b>AI review with the Eyes MCP Server</b><br/>every difference vs the ticket and the design system · PDF report to Jira and the PR"]
+        H{"Result?"}
+        I["🔧 <b>AI fixes its own bug</b><br/>and tests again ( max 2 rounds )"]
+    end
+    subgraph S4["Jira status: In Review"]
+        J["👤 <b>A person decides</b><br/>reads the PDF, then fixes or approves · label needs-human · Jira sub-task per bug"]
+    end
+    subgraph S5["Jira status: Done"]
+        K["✅ <b>Merged</b><br/>baselines saved in Eyes, PDF stays on the ticket"]
+    end
+
+    A -->|"ready for review"| B
+    B --> C
+    C -->|"assign a developer"| D
+    C -->|"⚡ Run Agent 1"| E
+    D --> F
+    E --> F
+    F --> G
+    G --> H
+    H -->|"no bugs: approved, or auto-ai-merge"| K
+    H -->|"a bug the AI caused"| I
+    I --> F
+    H -->|"bugs it can't fix · unsure · human-review"| J
+    J -->|"developer pushes a fix"| F
+    J -->|"approved and merged"| K
+
+    classDef person fill:#FFF4E5,stroke:#E8A33D,color:#3B2A12
+    classDef ai fill:#E8F1FF,stroke:#4A7BD0,color:#14284B
+    classDef auto fill:#EEF7F0,stroke:#4E9A64,color:#173B22
+    classDef good fill:#DFF3E4,stroke:#2E8B57,color:#123D24,stroke-width:2px
+    classDef decide fill:#FBE9E7,stroke:#C8553D,color:#4A1C12,stroke-width:2px
+    class A,B,D person
+    class E,G,I ai
+    class F auto
+    class K good
+    class J decide
+    style S1 fill:#FAFAFA,stroke:#B0B7C3
+    style S2 fill:#FAFAFA,stroke:#B0B7C3
+    style S3 fill:#F4F8FF,stroke:#8FA8D6
+    style S4 fill:#FFF6F4,stroke:#D9A093
+    style S5 fill:#F3FBF5,stroke:#8CC29E

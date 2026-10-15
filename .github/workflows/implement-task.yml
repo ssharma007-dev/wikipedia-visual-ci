@@ -1,0 +1,604 @@
+name: Agent 1 — implement task
+
+# A push to any branch except main whose commit message names a task (e.g. "WIKI-101") makes
+# Agent 1 implement tasks/WIKI-101-*.md from that branch, run the visual tests, analyse the
+# results with the Applitools Eyes MCP and publish an HTML report. One task per commit.
+#
+# Review mode (per ticket):
+#   auto (default)                   → if there are NO bugs and NO unresolved steps, the pipeline saves the
+#                                      baselines, merges the PR, refreshes main's baseline and moves the ticket
+#                                      to Done. If anything needs judgement, it falls back to a person.
+#   manual (Jira label human-review, or "human-review" in the task file)
+#                                    → the agent accepts/rejects in Eyes; a person saves and merges.
+#
+# Tests only (Jira label tests-only, or the input mode=tests-only):
+#   the developer's code is kept as it is. The agent only writes and runs the test cases and reviews them;
+#   it may change only the test folder (vars.AGENT_TEST_PATHS), and bugs are reported, not fixed.
+on:
+  push:
+    branches-ignore: [main]
+  # Started from Jira (Automation rule → GitHub API) or the Actions tab: only the ticket key is needed.
+  workflow_dispatch:
+    inputs:
+      key:
+        description: 'Jira ticket key, e.g. WIKI-8'
+        required: true
+        type: string
+      mode:
+        description: 'Optional: tests-only = only write and run the test cases, never change the app code'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write   # posts the "Visual review" result on the agent's PR (a required check on main)
+
+concurrency:
+  group: agent-${{ inputs.key || github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: true
+  SITE_URL: ${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}
+  TASKS_DIR: tasks
+  APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
+  APPLITOOLS_READ_KEY: ${{ secrets.APPLITOOLS_READ_KEY }}
+  APPLITOOLS_WRITE_KEY: ${{ secrets.APPLITOOLS_WRITE_KEY }}
+  JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+  JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+  JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+jobs:
+  implement:
+    name: Implement, test, analyse, report
+    # Skip the agent's own commits (they also never trigger workflows, since they use GITHUB_TOKEN)
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[agent]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      key: ${{ steps.task.outputs.key }}
+      merged: ${{ steps.merge.outputs.merged }}
+      via_app: ${{ steps.merge.outputs.via_app }}
+    env:
+      APPLITOOLS_BATCH_ID: agent-${{ github.run_id }}-${{ github.run_attempt }}
+      # Eyes branching: the task branch (set below), compared with main's baseline. New tests are NOT auto-saved.
+      EYES_PARENT_BRANCH_NAME: ${{ github.repository }}/main
+
+    steps:
+      - name: Note the start time ( for the report )
+        run: echo "RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Find the task (commit message, or the key sent from Jira)
+        id: task
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+          INPUT_KEY: ${{ inputs.key }}
+        run: |
+          KEY=$(printf '%s\n%s' "$INPUT_KEY" "$MESSAGE" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          if [ -z "$KEY" ]; then echo "No task key — nothing to implement."; echo "key=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+          echo "Task: $KEY (started by ${{ github.event_name }})"
+
+      # The agent works as the GitHub App "Eyes MCP Visual Agent" (vars.BOT_APP_ID + secrets.BOT_APP_PRIVATE_KEY).
+      # Unlike the default token, its pushes and PRs trigger the normal PR checks, like a developer's.
+      # Without the app configured, it falls back to the default token (checks then don't run on its PRs).
+      - name: Get the agent's GitHub App token
+        id: app
+        if: steps.task.outputs.key != '' && vars.BOT_APP_ID != ''
+        continue-on-error: true   # app not installed yet → fall back to the default token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        if: steps.task.outputs.key != ''
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token || github.token }}
+
+      # Started from Jira: use the ticket's branch if one exists, else create feature/<KEY>-<summary> from
+      # main and commit the task file synced from Jira. A push always runs on the pushed branch.
+      - name: Prepare the task branch
+        if: steps.task.outputs.key != ''
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BR=$(git branch -r --format='%(refname:short)' | sed 's#^origin/##' | grep -E "(^|[^0-9A-Za-z])$KEY([^0-9]|$)" | grep -vx main | head -1 || true)
+            if [ -n "$BR" ]; then git switch "$BR"
+              # Bring the branch up to date with main first ( main may have new code or a newer pipeline ).
+              if ! git merge --no-edit origin/main; then
+                git merge --abort
+                echo "::error::$BR conflicts with main. A person merges main into the branch, then clicks Run Agent 1 again."; exit 1
+              fi
+            else
+              if [ "${{ inputs.mode }}" = tests-only ] || node eyes-demo-agent/scripts/jira.mjs labels "$KEY" 2>/dev/null | tr ',' '\n' | grep -qx tests-only; then
+                echo "::error::Tests only: there is no branch for $KEY yet. Push the developer's change on a branch with $KEY in its name, then click the button again."; exit 1
+              fi
+              node eyes-demo-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
+              SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
+              TYPE=$(node eyes-demo-agent/scripts/jira.mjs type "$KEY" 2>/dev/null || echo feature)
+              case "$TYPE" in bug) PFX=bugfix ;; hotfix|refactor|chore|content|experiment|revert) PFX=$TYPE ;; *) PFX=feature ;; esac
+              BR="$PFX/$KEY-$SLUG"; git switch -c "$BR" origin/main
+            fi
+          else
+            BR="${{ github.ref_name }}"
+          fi
+          # The ticket copy on the branch always matches Jira: added if missing, refreshed if the PM edited the ticket.
+          if node eyes-demo-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md 2>/dev/null; then
+            FILE=$(ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md 2>/dev/null | head -1 || true)
+            if [ -z "$FILE" ]; then
+              SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
+              FILE="$TASKS_DIR/$KEY-$SLUG.md"; MSG="task synced from Jira"
+            else MSG="task refreshed from Jira (the ticket changed)"; fi
+            if [ ! -f "$FILE" ] || ! cmp -s /tmp/task.md "$FILE"; then
+              mkdir -p "$TASKS_DIR"; cp /tmp/task.md "$FILE"
+              git add "$TASKS_DIR" && git commit -m "[agent] $KEY: $MSG" && git push -u origin "HEAD:$BR"
+              echo "$MSG → $FILE"
+            fi
+          else
+            echo "::warning::Could not read $KEY from Jira — using the ticket copy already on the branch."
+          fi
+          echo "TASK_BRANCH=$BR" >> "$GITHUB_ENV"
+          echo "EYES_BRANCH_NAME=${{ github.repository }}/$BR" >> "$GITHUB_ENV"
+          echo "Task branch: $BR"
+
+      - uses: actions/setup-node@v4
+        if: steps.task.outputs.key != ''
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Load the task, review mode and guidelines
+        if: steps.task.outputs.key != ''
+        id: ctx
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          mkdir -p ci-context agent-report
+          FILE=$(ls "$TASKS_DIR"/"$KEY"-*.md "$TASKS_DIR"/"$KEY".md 2>/dev/null | head -1 || true)
+          [ -n "$FILE" ] || { echo "::error::No task file $TASKS_DIR/$KEY-*.md on this branch"; exit 1; }
+          cp "$FILE" ci-context/task.md; echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$MESSAGE" > ci-context/commit.txt
+          # Review mode: the Jira label wins; the task file can also opt in.
+          JIRA=no; LABELS=""
+          if LABELS=$(node eyes-demo-agent/scripts/jira.mjs labels "$KEY" 2>/dev/null); then JIRA=yes; fi
+          if echo ",$LABELS," | grep -q ',human-review,' || grep -qi 'human-review' "$FILE"; then MODE=manual; else MODE=auto; fi
+          echo "$MODE" > ci-context/mode.txt
+          # Merge: by default a person approves the PR ( then GitHub merges ). Label auto-ai-merge → the pipeline merges by itself.
+          if echo ",$LABELS," | grep -q ',auto-ai-merge,' || grep -qi 'auto-ai-merge' "$FILE"; then POLICY=auto; else POLICY="${{ vars.MERGE_POLICY || 'code-approval' }}"; fi
+          echo "$POLICY" > ci-context/merge-policy.txt; echo "policy=$POLICY" >> "$GITHUB_OUTPUT"; echo "Merge policy: $POLICY"
+          echo "$SITE_URL" > ci-context/app-url.txt   # where the app runs in CI (vars.APP_URL)
+          # The only folders the agent may change. Tests only: just the test folder, the developer's code stays as it is.
+          if echo ",$LABELS," | grep -q ',tests-only,' || [ "${{ inputs.mode }}" = tests-only ]; then
+            echo "${{ vars.AGENT_TEST_PATHS || 'examples/wikipedia/tests/' }}" > ci-context/allowed-paths.txt
+            echo "yes" > ci-context/tests-only.txt; echo "tests_only=yes" >> "$GITHUB_OUTPUT"; echo "Tests only: the app code is not changed"
+          else
+            echo "${{ vars.AGENT_ALLOWED_PATHS || 'examples/wikipedia/site/ examples/wikipedia/tests/' }}" > ci-context/allowed-paths.txt
+          fi
+          # Devices: the ticket's "Test on below devices:" list, if it has one; otherwise playwright.config.ts defaults.
+          DEV=$(node eyes-demo-agent/scripts/devices.mjs ci-context/task.md || true)
+          if [ -n "$DEV" ]; then echo "EYES_DEVICES=$DEV" >> "$GITHUB_ENV"; echo "$DEV" > ci-context/devices.json; echo "Devices from the ticket: $DEV"
+          else echo "Devices: playwright.config.ts defaults"; fi
+          # Auto mode lets Eyes save the first screenshot of tests the agent writes (on this PR's Eyes branch only);
+          # manual mode leaves them for a person.
+          [ "$MODE" = manual ] && echo "EYES_SAVE_NEW_TESTS=false" >> "$GITHUB_ENV"
+          WT=""; [ "$JIRA" = yes ] && WT=$(node eyes-demo-agent/scripts/jira.mjs type "$KEY" 2>/dev/null || true)
+          if [ -z "$WT" ] || [ "$WT" = feature ]; then
+            case "$TASK_BRANCH" in bugfix/*|bug/*) WT=bug ;; hotfix/*) WT=hotfix ;; refactor/*) WT=refactor ;; chore/*) WT=chore ;;
+              content/*) WT=content ;; experiment/*) WT=experiment ;; revert/*) WT=revert ;; *) WT=${WT:-feature} ;; esac
+          fi
+          echo "$WT" > ci-context/worktype.txt; echo "worktype=$WT" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"; echo "jira=$JIRA" >> "$GITHUB_OUTPUT"
+          # Rules come from main, so a branch can't change what it is judged by
+          git show origin/main:eyes-demo-agent/guidelines/design-system.md > ci-context/design-system.md
+          git show origin/main:eyes-demo-agent/guidelines/review-rules.md  > ci-context/review-rules.md
+          git show origin/main:eyes-demo-agent/guidelines/agent-implement.md > ci-context/agent-implement.md
+          git show origin/main:eyes-demo-agent/guidelines/agent-fix.md > ci-context/agent-fix.md 2>/dev/null || true
+          echo "APPLITOOLS_BATCH_NAME=$KEY · Agent 1 · $TASK_BRANCH" >> "$GITHUB_ENV"
+          echo "Task file: $FILE · work type: $WT · review mode: $MODE · Jira: $JIRA ($LABELS)"; cat ci-context/task.md
+
+      - name: "Jira: In Progress"
+        if: steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
+        run: |
+          node eyes-demo-agent/scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "${{ vars.JIRA_STATUS_IN_PROGRESS || 'In Progress|Doing' }}" || true
+          # A new run starts fresh: needs-human from an earlier run is removed, and set again only if this run needs a person.
+          node eyes-demo-agent/scripts/jira.mjs needs-human "${{ steps.task.outputs.key }}" off || true
+
+      - name: Install dependencies
+        if: steps.task.outputs.key != ''
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Start the app (vars.APP_START_COMMAND, waits for vars.APP_URL)
+        if: steps.task.outputs.key != ''
+        run: |
+          ${{ vars.APP_START_COMMAND || 'npm start' }} > ci-context/server.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && exit 0; sleep 1; done
+          echo "Site did not start"; cat ci-context/server.log; exit 1
+
+      - name: Agent 1 (Claude + Applitools Eyes MCP)
+        if: steps.task.outputs.key != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
+          # It may edit files and run the tests. It can never save/reset Eyes baselines, commit, push or merge.
+          claude -p "$(cat ci-context/agent-implement.md)" \
+            --mcp-config eyes-demo-agent/mcp.json --strict-mcp-config \
+            --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" "Edit" \
+              "Bash(npx playwright test:*)" "Bash(git diff:*)" "Bash(git status:*)" "Bash(ls:*)" \
+            --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" \
+              "Bash(git commit:*)" "Bash(git push:*)" "Bash(gh:*)" \
+            --max-turns 200 \
+            --output-format stream-json --verbose \
+            | tee agent-report/agent-transcript.jsonl | node eyes-demo-agent/scripts/agent-progress.mjs
+
+      # Bugs the agent can fix (caused by this change): fix the code, re-test in a new Eyes batch, review again.
+      # Up to 2 rounds. Bugs it can't fix, or still failing after 2 rounds, go to a person.
+      - name: "Agent 1: fix the bugs it found and re-test (up to 2 rounds)"
+        id: fix
+        # Tests only: bugs in the developer's code are reported, not fixed.
+        if: steps.task.outputs.key != '' && steps.ctx.outputs.tests_only != 'yes'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
+          R=agent-report/report.json
+          for ROUND in 1 2; do
+            [ -f "$R" ] || break
+            FIXABLE=$(node -p '(require("./'$R'").bugs||[]).filter(b=>b.fixable===true).length' 2>/dev/null || echo 0)
+            [ "$FIXABLE" -gt 0 ] || { echo "No fixable bugs — no fix round needed."; break; }
+            echo "Fix round $ROUND: $FIXABLE fixable bug(s)"
+            cp "$R" agent-report/previous-report.json; cp "$R" "agent-report/round-$((ROUND-1))-report.json"
+            echo "$ROUND" > ci-context/fix-round.txt
+            export APPLITOOLS_BATCH_ID="agent-${{ github.run_id }}-${{ github.run_attempt }}-fix$ROUND"
+            export APPLITOOLS_BATCH_NAME="$KEY · Agent 1 · fix round $ROUND · $TASK_BRANCH"
+            rm -f "$R"
+            claude -p "$(cat ci-context/agent-fix.md)" \
+              --mcp-config eyes-demo-agent/mcp.json --strict-mcp-config \
+              --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" "Edit" \
+                "Bash(npx playwright test:*)" "Bash(git diff:*)" "Bash(git status:*)" "Bash(ls:*)" \
+              --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" \
+                "Bash(git commit:*)" "Bash(git push:*)" "Bash(gh:*)" \
+              --max-turns 150 \
+              --output-format stream-json --verbose \
+              | tee "agent-report/agent-transcript-fix$ROUND.jsonl" | node eyes-demo-agent/scripts/agent-progress.mjs
+            if [ ! -f "$R" ]; then
+              echo "::warning::Fix round $ROUND did not finish — keeping the previous report."
+              cp agent-report/previous-report.json "$R"; break
+            fi
+            # Keep the history of what was fixed, for the PDF and Jira.
+            node -e '
+              const fs=require("fs"), r=JSON.parse(fs.readFileSync(process.argv[1])), p=JSON.parse(fs.readFileSync("agent-report/previous-report.json"));
+              const left=new Set((r.bugs||[]).map(b=>b.title));
+              const fixes=r.fixes||[];
+              r.fixHistory=[...(p.fixHistory||[]), { round:+process.argv[2], batchUrl:r.tests?.batchUrl,
+                bugs:(p.bugs||[]).filter(b=>b.fixable===true).map(b=>{ const f=fixes.find(x=>x.bug===b.title)||{};
+                  return { title:b.title, whyBug:b.whyBug, rootCause:f.rootCause||"", change:f.change||b.fix, fixed:!left.has(b.title) && f.fixed!==false,
+                           evidence:b.evidence||{} }; }) }];
+              fs.writeFileSync(process.argv[1], JSON.stringify(r,null,2));' "$R" "$ROUND"
+            echo "rounds=$ROUND" >> "$GITHUB_OUTPUT"
+          done
+          echo "Final verdict: $(node -p 'require("./'$R'").verdict' 2>/dev/null || echo missing) · bugs left: $(node -p '(require("./'$R'").bugs||[]).length' 2>/dev/null || echo ?)"
+
+      - name: Keep only allowed changes (ci-context/allowed-paths.txt)
+        if: steps.task.outputs.key != ''
+        run: |
+          ALLOWED=$(cat ci-context/allowed-paths.txt)
+          allowed() { for p in $ALLOWED; do case "$1" in "$p"*) return 0 ;; esac; done; return 1; }
+          git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > ci-context/changed.txt || true
+          # New files are kept only if the agent's report mentions them (implementation files, tests it added).
+          # Scratch files it made while investigating (probes, temp specs, empty files) are dropped.
+          git ls-files --others --exclude-standard > ci-context/new-files.txt
+          while read -r f; do
+            if allowed "$f"; then
+                if grep -qxF "$f" ci-context/new-files.txt && { [ ! -s "$f" ] || ! grep -qF "$f" agent-report/report.json 2>/dev/null; }; then
+                  echo "::warning::Agent left a scratch file $f (empty or not in its report) — discarded"; rm -f "$f"
+                else echo "kept:      $f"; fi
+            else echo "::warning::Agent changed $f — discarded (allowed: $ALLOWED)"; git checkout -- "$f" 2>/dev/null || rm -f "$f"; fi
+          done < ci-context/changed.txt
+
+      # Before / after / differences images for the report — must run before any save.
+      - name: Collect visual evidence from Eyes
+        if: steps.task.outputs.key != ''
+        run: |
+          B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || true)
+          [ -n "$B" ] && [ "$B" != "undefined" ] || { echo "No Eyes batch in the report — skipping evidence"; exit 0; }
+          node eyes-demo-agent/scripts/eyes-evidence.mjs "$B" agent-report/evidence || true
+
+      # ---- auto mode: save only when there are no bugs and nothing unresolved ----
+      - name: "Auto mode: save baselines in Eyes"
+        id: save
+        if: steps.task.outputs.key != '' && steps.ctx.outputs.mode == 'auto'
+        run: |
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo missing)
+          B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || echo "")
+          BUGS=$(node -p '(require("./agent-report/report.json").bugs||[]).length' 2>/dev/null || echo 1)
+          TR=$(node -p 'require("./agent-report/report.json").tests.result' 2>/dev/null || echo unknown)
+          if [ "$V" = "bugs-found" ] || [ "$BUGS" != "0" ] || [ -z "$B" ] || [ "$TR" = "failed" ]; then
+            echo "Auto mode: NOT saving (verdict $V, bugs $BUGS, tests $TR) — a person decides."; echo "saved=no" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if node eyes-demo-agent/scripts/eyes-save.mjs "$B"; then
+            echo "saved=yes" >> "$GITHUB_OUTPUT"
+            node -e 'const f="./agent-report/report.json",r=require(f);r.baseline=r.baseline||{};r.baseline.saved=true;r.baseline.note="Automatic review (default): no bugs and nothing unresolved, so the pipeline saved the baselines.";r.summary=r.summary||{};r.summary.nextSteps=["No action needed: the pipeline saved the baselines and merges the PR automatically. Add the label human-review to the Jira ticket to keep a person in the loop next time."];require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
+          else
+            echo "saved=no" >> "$GITHUB_OUTPUT"; echo "Auto mode: Eyes guard refused to save — a person decides."
+          fi
+
+      - name: Commit the implementation to this branch
+        id: commit
+        if: steps.task.outputs.key != ''
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          # Only commit code the agent finished verifying (it wrote its report); never half-done work.
+          if [ ! -f agent-report/report.json ]; then
+            if grep -q "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" agent-report/agent-transcript.jsonl 2>/dev/null; then
+              echo "::error::Agent 1 stopped early: Claude usage limit reached — re-run later (Jira button or Actions → Run workflow)."
+            else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
+            exit 1
+          fi
+          git add -A $(cat ci-context/allowed-paths.txt)
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then echo "No code changes to commit"
+          else git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."; fi
+          # Push the new commit, and the merge of main from "Prepare the task branch" if there was one.
+          # Someone (or another workflow) may have pushed to the branch meanwhile: merge it in first
+          # ( a merge, not a rebase, so the merge of main stays as it is ). Nothing new → the push does nothing.
+          if git fetch -q origin "$TASK_BRANCH" 2>/dev/null; then
+            git merge --no-edit FETCH_HEAD || { echo "::error::Could not combine with new commits on $TASK_BRANCH"; exit 1; }
+          fi
+          git push origin HEAD:"$TASK_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Render the HTML report
+        if: always() && steps.task.outputs.key != ''
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Test links point at the exact commit, so they keep working after the branch is merged and deleted.
+          export REPORT_SHA="${{ steps.commit.outputs.sha }}"
+          export MERGE_POLICY="${{ steps.ctx.outputs.policy }}" JIRA_BASE_URL="${{ secrets.JIRA_BASE_URL }}"
+          export REVIEW_MODE="$(cat ci-context/mode.txt 2>/dev/null)"
+          # Test totals from the agent's last test run, and any failed functional checks, for "Results at a glance"
+          node eyes-demo-agent/scripts/failed-tests.mjs test-results/results.json agent-report/failed-tests.json /dev/null agent-report/test-stats.json || true
+          if [ -f agent-report/report.json ] && [ -s agent-report/failed-tests.json ]; then
+            node -e 'const fs=require("fs"),f="agent-report/report.json",r=JSON.parse(fs.readFileSync(f));const t=JSON.parse(fs.readFileSync("agent-report/failed-tests.json"));if(t.length)r.failedTests=t;fs.writeFileSync(f,JSON.stringify(r,null,2))' || true
+          fi
+          if [ -f agent-report/report.json ]; then
+            node eyes-demo-agent/scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md "$RUN_URL"
+            node eyes-demo-agent/scripts/report-pdf.mjs agent-report/report.html "agent-report/${{ steps.task.outputs.key }}-visual-report.pdf" || echo "::warning::PDF could not be created"
+            printf '\n**Review mode:** %s\n' "$(cat ci-context/mode.txt)" >> agent-report/summary.md
+            cat agent-report/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## ⚠️ Agent 1 did not produce a report — see the run log" | tee agent-report/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the report
+        if: always() && steps.task.outputs.key != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-report-${{ steps.task.outputs.key }}
+          path: agent-report/
+          retention-days: 30
+
+      - name: Open or update the pull request
+        id: pr
+        if: always() && steps.task.outputs.key != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          BR="$TASK_BRANCH"
+          TITLE="$KEY: $(head -1 ci-context/task.md | sed -E 's/^#+ *//; s/^[A-Z]+-[0-9]+ *[—-]* *//')"
+          N=$(gh pr list --head "$BR" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$N" ]; then
+            gh pr create --base main --head "$BR" --title "$TITLE" --body-file agent-report/summary.md
+            N=$(gh pr list --head "$BR" --state open --json number --jq '.[0].number // empty')
+          else
+            gh pr comment "$N" --body-file agent-report/summary.md
+          fi
+          echo "number=$N" >> "$GITHUB_OUTPUT"
+          echo "url=${{ github.server_url }}/${{ github.repository }}/pull/$N" >> "$GITHUB_OUTPUT"
+
+      # Agent 1's verdict as the PR check "Visual review" (required on main), so a PR with bugs can't be merged by hand.
+      - name: Report the review result on the PR
+        if: always() && steps.task.outputs.key != '' && steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(gh pr view "${{ steps.pr.outputs.number }}" --json headRefOid --jq .headRefOid)
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo missing)
+          BUGS=$(node -p '(require("./agent-report/report.json").bugs||[]).length' 2>/dev/null || echo 1)
+          TR=$(node -p 'require("./agent-report/report.json").tests.result' 2>/dev/null || echo unknown)
+          if [ "$V" = missing ]; then STATE=failure; DESC="Agent 1 did not finish its review"
+          elif [ "$V" = bugs-found ] || [ "$BUGS" != 0 ]; then STATE=failure; DESC="Agent 1 found $BUGS bug(s) — see the PDF"
+          elif [ "$TR" = failed ]; then STATE=failure; DESC="Functional checks failed"
+          else STATE=success; DESC="Agent 1 review passed ($V)"; fi
+          gh api "repos/${{ github.repository }}/statuses/$SHA" -f state="$STATE" -f context="Visual review" \
+            -f description="$DESC" -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
+          echo "Visual review → $STATE ($DESC)"
+
+      - name: "Jira: a sub-task for each bug (fixed by the AI → Done, not fixed → open)"
+        if: always() && steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+        run: |
+          [ -f agent-report/report.json ] || exit 0
+          # Bugs the AI found and fixed itself: one sub-task each, already Done, saying what the issue was and how it was fixed.
+          F=$(node -p '(require("./agent-report/report.json").fixHistory||[]).flatMap(h=>(h.bugs||[]).map(b=>({...b,round:h.round,batchUrl:h.batchUrl}))).filter(b=>b.fixed).length' 2>/dev/null || echo 0)
+          for i in $(seq 0 $((F-1))); do
+            [ "$F" -gt 0 ] || break
+            node -e '
+              const r=require("./agent-report/report.json");
+              const b=(r.fixHistory||[]).flatMap(h=>(h.bugs||[]).map(x=>({...x,round:h.round,batchUrl:h.batchUrl}))).filter(x=>x.fixed)[+process.argv[1]];
+              const L=[`Found and fixed by the AI agent while implementing ${r.task.key} (fix round ${b.round}).`,
+                `What was the issue: ${b.title}`, `Why it was a bug: ${b.whyBug||"-"}`,
+                b.rootCause?`Root cause: ${b.rootCause}`:"", `What the AI changed ( how it was fixed ): ${b.change||"-"}`,
+                `Verified: the tests ran again and the AI reviewed the new results; the bug is no longer present.`,
+                b.batchUrl?`Eyes batch after the fix: ${b.batchUrl}`:"", b.evidence?.eyesUrl?`Eyes evidence of the bug: ${b.evidence.eyesUrl}`:"",
+                `Pull request: ${process.argv[2]}`];
+              require("fs").writeFileSync("ci-context/fixed.txt", L.filter(Boolean).join("\n"));
+              require("fs").writeFileSync("ci-context/fixed-title.txt", "Fixed by AI: "+b.title);' "$i" "${{ steps.pr.outputs.url }}"
+            SUB=$(node eyes-demo-agent/scripts/jira.mjs subtask "$KEY" "$(cat ci-context/fixed-title.txt)" ci-context/fixed.txt "bug,found-by-agent,fixed-by-ai" | grep -oE '^[A-Z]+-[0-9]+' || true)
+            [ -n "$SUB" ] && node eyes-demo-agent/scripts/jira.mjs transition "$SUB" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
+          done
+          # Bugs the AI could not fix: one open sub-task each, for a person.
+          N=$(node -p '(require("./agent-report/report.json").bugs||[]).length'); [ "$N" -gt 0 ] || { echo "No open bugs"; exit 0; }
+          for i in $(seq 0 $((N-1))); do
+            node -e '
+              const r=require("./agent-report/report.json"), b=r.bugs[+process.argv[1]], e=b.evidence||{};
+              const L=[`Found by Agent 1 while implementing ${r.task.key} (${r.task.workType||"feature"}).`,
+                `Why it is a bug: ${b.whyBug}`, `Rule: ${b.guidelineRef}`, `How to fix: ${b.fix}`,
+                e.eyesUrl?`Eyes evidence: ${e.eyesUrl}`:"", e.dom?`DOM: ${e.dom}`:"",
+                `Pull request: ${process.argv[2]}`, `Severity: ${b.severity}`];
+              require("fs").writeFileSync("ci-context/bug.txt", L.filter(Boolean).join("\n"));
+              require("fs").writeFileSync("ci-context/bug-title.txt", "Visual bug: "+b.title);' "$i" "${{ steps.pr.outputs.url }}"
+            node eyes-demo-agent/scripts/jira.mjs subtask "$KEY" "$(cat ci-context/bug-title.txt)" ci-context/bug.txt || true
+          done
+
+      - name: "Auto mode: merge the PR"
+        id: merge
+        if: steps.task.outputs.key != '' && steps.save.outputs.saved == 'yes' && steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+        run: |
+          N="${{ steps.pr.outputs.number }}"
+          # Merge policy: code-approval ( default ) → wait for one person to approve the code; label auto-ai-merge → merge now;
+          # GitHub then merges by itself (auto-merge), and the after-merge run on main finishes the job.
+          if [ "${{ steps.ctx.outputs.policy }}" = "code-approval" ]; then
+            gh pr merge "$N" --auto --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed." || true
+            gh pr comment "$N" --body "🤖 **Visual review passed** and the baselines were saved on this branch. Waiting for **one code approval** — once a reviewer approves, GitHub merges this PR automatically."
+            echo "merged=waiting" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # The PR's own checks (Ticket check, ...) run on the agent's PR too: wait for the required ones first.
+          sleep 20
+          # main needs one approval. The bot may skip it ( ruleset bypass ), but GitHub only applies that with --admin,
+          # so --admin is used only when every required check ( Jira ticket, Visual review ) has passed.
+          ADMIN=""; if gh pr checks "$N" --required --watch --interval 15 --fail-fast > checks.txt 2>&1; then ADMIN="--admin"; fi; tail -5 checks.txt
+          if gh pr merge "$N" $ADMIN --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
+            echo "merged=yes" >> "$GITHUB_OUTPUT"
+            [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "merged=no" >> "$GITHUB_OUTPUT"; echo "::warning::Auto-merge failed (e.g. a conflict with main) — a person merges."
+          fi
+
+      - name: "Jira: report back"
+        if: always() && steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
+        env:
+          KEY: ${{ steps.task.outputs.key }}
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+        run: |
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo "no report")
+          if [ "$V" = "no report" ] && grep -qi "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" agent-report/agent-transcript*.jsonl 2>/dev/null; then
+            printf '%s\n' "⏸️ Agent 1 paused on $KEY: the Claude usage limit was reached, so nothing was changed. Click Run Agent 1 again later." \
+              "CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > ci-context/jira-note.txt
+            node eyes-demo-agent/scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+            exit 0
+          fi
+          S=$(node -p 'require("./agent-report/report.json").implementation.summary' 2>/dev/null || echo "")
+          B=$(node -p 'require("./agent-report/report.json").tests.batchUrl' 2>/dev/null || echo "")
+          RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Attach the PDF first, so the comment can link straight to it
+          PDF="agent-report/$KEY-visual-report.pdf"; PDF_URL=""
+          if [ -f "$PDF" ]; then
+            node eyes-demo-agent/scripts/jira.mjs attach "$KEY" "$PDF" > ci-context/attach.out 2>&1 || true
+            cat ci-context/attach.out
+            PDF_URL=$(sed -n 's/^ATTACHMENT_URL=//p' ci-context/attach.out)
+            [ -n "$PDF_URL" ] || echo "::warning::The PDF was NOT attached to $KEY — see the error above. It is in this run's artifacts."
+            # The PR gets the PDF link too, so reviewers on GitHub find the report without going to Jira.
+            if [ -n "$PDF_URL" ] && [ -n "${{ steps.pr.outputs.number }}" ]; then
+              GH_TOKEN="${GH_TOKEN:-${{ github.token }}}" gh pr comment "${{ steps.pr.outputs.number }}" -R "${{ github.repository }}" \
+                --body "📄 **PDF report:** [$(basename "$PDF")]($PDF_URL) — attached to Jira [$KEY](${JIRA_BASE_URL%/}/browse/$KEY): summary, every visual change with before / after / difference images, and each bug with why it is a bug and how to fix it." || true
+            fi
+          else
+            echo "::warning::No PDF was produced for $KEY."
+          fi
+          {
+            echo "🤖 Agent 1 implemented $KEY — verdict: $V (review mode: ${{ steps.ctx.outputs.mode }}${{ steps.ctx.outputs.tests_only == 'yes' && ', tests only' || '' }})"
+            [ -n "$PDF_URL" ] && echo "📄 PDF report (summary, bugs with evidence and fixes, before/after images): [$KEY-visual-report.pdf]($PDF_URL)"
+            [ -n "$S" ] && echo "What it did: $S"
+            FIXED=$(node -p '(require("./agent-report/report.json").fixHistory||[]).flatMap(h=>h.bugs).filter(b=>b.fixed).length' 2>/dev/null || echo 0)
+            [ "$FIXED" -gt 0 ] && echo "🔧 The AI found and fixed $FIXED bug(s) by itself in ${{ steps.fix.outputs.rounds }} fix round(s) — details in the PDF."
+            [ -n "${{ steps.pr.outputs.url }}" ] && echo "Pull request: [${{ steps.pr.outputs.url }}](${{ steps.pr.outputs.url }})"
+            [ -n "$B" ] && [ "$B" != "undefined" ] && echo "Eyes batch (optional): [open in Eyes]($B)"
+            echo "CI run and HTML report: [run ${{ github.run_id }}]($RUN)"
+            if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then echo "Automatic review: no bugs, nothing unresolved → baselines saved and PR merged automatically."
+            elif [ "${{ steps.merge.outputs.merged }}" = "waiting" ]; then echo "✅ Visual review passed and baselines saved on the branch → waiting for one code approval on the PR; it then merges automatically."
+            elif [ "${{ steps.ctx.outputs.mode }}" = "auto" ]; then echo "Automatic review could not finish alone (bugs, unresolved steps or a merge conflict) → a person reviews the PDF, saves and merges."
+            else echo "human-review requested: a person reviews the PDF, saves the baselines in Eyes and merges the PR."; fi
+          } > ci-context/jira-note.txt
+          node eyes-demo-agent/scripts/jira.mjs note "$KEY" ci-context/jira-note.txt || true
+          if [ "${{ steps.merge.outputs.merged }}" = "yes" ]; then
+            node eyes-demo-agent/scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
+            node eyes-demo-agent/scripts/jira.mjs needs-human "$KEY" off || true
+            [ -n "${{ steps.pr.outputs.number }}" ] && gh pr edit "${{ steps.pr.outputs.number }}" --remove-label needs-human >/dev/null 2>&1 || true
+          else
+            node eyes-demo-agent/scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
+            # A decision is waiting: label the ticket and assign it to the person who wrote it, and label the PR.
+            node eyes-demo-agent/scripts/jira.mjs needs-human "$KEY" on || true
+            if [ -n "${{ steps.pr.outputs.number }}" ]; then
+              gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
+              gh pr edit "${{ steps.pr.outputs.number }}" --add-label needs-human || true
+            fi
+          fi
+
+      - name: Verdict
+        if: steps.task.outputs.key != ''
+        run: |
+          V=$(node -p 'require("./agent-report/report.json").verdict' 2>/dev/null || echo missing)
+          echo "Agent 1 verdict: $V"
+          [ "$V" = "bugs-found" ] && { echo "::error::Bugs found — see the HTML report"; exit 1; } || true
+          [ "$V" = "missing" ] && exit 1 || true
+
+  # After an auto-merge, refresh main's Eyes baseline from the merged code (one at a time).
+  main-baseline:
+    name: "Auto mode: refresh main's baseline"
+    needs: implement
+    # Only needed without the GitHub App: app merges trigger the after-merge run on main (visual-tests.yml).
+    if: needs.implement.outputs.merged == 'yes' && needs.implement.outputs.via_app != 'yes'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: main-baseline
+      cancel-in-progress: false
+    env:
+      APPLITOOLS_BATCH_ID: main-baseline-${{ github.run_id }}-${{ github.run_attempt }}
+      APPLITOOLS_BATCH_NAME: "main · baseline after ${{ needs.implement.outputs.key }} (auto)"
+      EYES_BRANCH_NAME: ${{ github.repository }}/main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Keep main free of task snapshots
+        run: |
+          [ -d tasks ] || exit 0
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rq tasks && git commit -m "[agent] Remove merged task snapshots from main [skip ci]" && git push origin HEAD:main
+      - name: Install and start the site
+        run: |
+          npm ci && npx playwright install --with-deps chromium
+          ${{ vars.APP_START_COMMAND || 'npm start' }} > server.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && break; sleep 1; done
+      - name: Run the visual tests on merged main
+        run: npx playwright test 2>&1 | tee main-run.log
+      - name: Accept and save (the merged change was already approved)
+        run: |
+          B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' main-run.log)
+          node eyes-demo-agent/scripts/eyes-save.mjs "$B" --accept-all

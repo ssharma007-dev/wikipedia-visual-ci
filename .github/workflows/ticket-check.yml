@@ -1,0 +1,86 @@
+name: Ticket check
+
+# Every pull request must belong to a Jira ticket: the branch name must contain a key (e.g. WIKI-17)
+# that exists in Jira. If not, this check fails and comments on the PR with how to fix it.
+# Without a ticket, the AI review has nothing to compare against.
+# A PR that only changes docs or the pipeline ( vars.NO_TICKET_PATHS ) needs no ticket.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: ticket-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ticket:
+    name: Branch links to a Jira ticket
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ github.head_ref }}
+      PR: ${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ github.token }}
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      NO_TICKET_PATHS: ${{ vars.NO_TICKET_PATHS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: eyes-demo-agent/scripts
+
+      - name: Check the ticket
+        run: |
+          MARK='<!-- ticket-check -->'
+          comment() {
+            # One comment per PR, updated in place, so repeated pushes don't spam the PR
+            ID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" --paginate \
+                 --jq ".[] | select(.body | startswith(\"$MARK\")) | .id" | head -1)
+            BODY=$(printf '%s\n%s' "$MARK" "$1")
+            if [ -n "$ID" ]; then gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$ID" -f body="$BODY" >/dev/null
+            else gh pr comment "$PR" -R "${{ github.repository }}" --body "$BODY"; fi
+          }
+          fail() {
+            comment "## ❌ No Jira ticket found
+          $1
+
+          Every change needs a Jira ticket, so the AI review knows what the change is supposed to do.
+          **Fix:** rename the branch so it contains the ticket key, then push again:
+          \`\`\`
+          git branch -m <prefix>/<KEY>-<short-name>      # e.g. feature/WIKI-17-make-donate-bold
+          git push origin -u <prefix>/<KEY>-<short-name>
+          \`\`\`
+          Then close this PR and open a new one from the renamed branch."
+            echo "::error::$1"; exit 1
+          }
+
+          if [ "$(bash eyes-demo-agent/scripts/pr-scope.sh "$PR")" = no-app ]; then
+            comment "## ✅ No Jira ticket needed
+          This pull request only changes docs or the pipeline, not the app, so it needs no Jira ticket and no visual review."
+            echo "Docs / pipeline only: no Jira ticket needed" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+
+          KEY=$(echo "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
+          [ -n "$KEY" ] || fail "The branch \`$BRANCH\` has no Jira key in its name (expected something like \`WIKI-17\`)."
+
+          if ! node eyes-demo-agent/scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
+            if grep -q '→ 404' jira.err; then
+              fail "The branch \`$BRANCH\` points to \`$KEY\`, but there is no such ticket in Jira. Check for a typo."
+            fi
+            # Jira down or not configured: don't block the PR for an outage, but say so.
+            echo "::warning::Could not reach Jira to check $KEY: $(head -c 300 jira.err)"
+            comment "## ⚠️ Could not check ticket \`$KEY\`
+          Jira could not be reached, so the ticket was not verified. The check will run again on the next push."
+            exit 0
+          fi
+
+          TITLE=$(head -1 ticket.md | sed -E 's/^#+ *//')
+          URL="${JIRA_BASE_URL%/}/browse/$KEY"
+          comment "## ✅ Linked to Jira ticket [$KEY]($URL)
+          **$TITLE**
+
+          Not the right ticket? Rename the branch and open a new PR."
+          echo "Linked to $KEY: $TITLE" | tee -a "$GITHUB_STEP_SUMMARY"

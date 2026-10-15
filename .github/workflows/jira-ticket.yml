@@ -1,0 +1,70 @@
+name: Jira ticket (create or inspect)
+
+# Create a Jira ticket, or check what the pipeline posted on one (status, attachments, comments),
+# using the pipeline's Jira credentials. Actions → "Jira ticket" → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'create or inspect'
+        type: choice
+        options: [inspect, create, transition, site-labels, add-label, remove-label, query, board]
+      key:
+        description: 'inspect: the ticket key (e.g. WIKI-8) · create, site-labels, remove-label: the project key (e.g. WIKI)'
+        required: true
+      summary:
+        description: 'create: ticket summary · transition: the status ( e.g. Ready ) · query: the JQL · board: the board id'
+        required: false
+      description:
+        description: 'create: description (markdown; use \n for new lines)'
+        required: false
+      labels:
+        description: 'create: labels, comma separated · add-label / remove-label: the label'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  jira:
+    runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: eyes-demo-agent/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run
+        env:
+          ACTION: ${{ inputs.action }}
+          KEY: ${{ inputs.key }}
+          SUMMARY: ${{ inputs.summary }}
+          DESCRIPTION: ${{ inputs.description }}
+          LABELS: ${{ inputs.labels }}
+        run: |
+          if [ "$ACTION" = create ]; then
+            printf '%b\n' "$DESCRIPTION" > desc.md
+            NEW=$(node eyes-demo-agent/scripts/jira.mjs create "${KEY%%-*}-0" "$SUMMARY" desc.md "$LABELS")
+            echo "Created $NEW: ${JIRA_BASE_URL%/}/browse/$NEW" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = site-labels ]; then
+            node eyes-demo-agent/scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = transition ]; then
+            node eyes-demo-agent/scripts/jira.mjs transition "$KEY" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = query ]; then
+            node eyes-demo-agent/scripts/jira.mjs query "${KEY%%-*}-0" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = board ]; then
+            node eyes-demo-agent/scripts/jira.mjs board "${KEY%%-*}-0" "${SUMMARY:-1}" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = add-label ]; then
+            node eyes-demo-agent/scripts/jira.mjs add-label "$KEY" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$ACTION" = remove-label ]; then
+            # A project key (WIKI) removes the label from every ticket; a ticket key (WIKI-18) from that ticket only.
+            T="$KEY"; echo "$KEY" | grep -q -- '-' || T="$KEY-0"
+            node eyes-demo-agent/scripts/jira.mjs remove-label "$T" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            node eyes-demo-agent/scripts/jira.mjs inspect "$KEY" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

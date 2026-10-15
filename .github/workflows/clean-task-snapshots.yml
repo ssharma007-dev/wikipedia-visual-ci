@@ -1,0 +1,35 @@
+name: Housekeeping — remove task snapshots from main
+
+# tasks/<KEY>-*.md is a per-branch snapshot of the Jira ticket. When a PR is merged it lands on main;
+# remove it again so main never accumulates other branches' tickets (the PR keeps it in its history).
+on:
+  push:
+    branches: [main]
+    paths: ['tasks/**']
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      # Pushes to main are protected; the app "Eyes MCP Visual Agent" is allowed to make this housekeeping commit.
+      - name: Get the agent's GitHub App token
+        id: app
+        if: vars.BOT_APP_ID != ''
+        continue-on-error: true
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app.outputs.token || github.token }}
+      - name: Remove tasks/ from main
+        run: |
+          [ -d tasks ] || exit 0
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rq tasks
+          git commit -m "[agent] Remove merged task snapshots from main [skip ci]"
+          git push

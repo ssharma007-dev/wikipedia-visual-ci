@@ -1,0 +1,15 @@
+{
+  "name": "wikipedia-visual-ci",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node examples/wikipedia/server.mjs",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@applitools/eyes-playwright": "^1.47.4",
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1"
+  }
+}
