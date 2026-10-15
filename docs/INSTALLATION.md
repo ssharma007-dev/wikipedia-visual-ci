@@ -69,6 +69,8 @@ The pipeline starts your app in GitHub Actions and tests it. You only tell it **
 | `APP_START_COMMAND` | `npm run build && npm run preview -- --port 4173` | Starts your app in CI (it runs in the background) |
 | `APP_URL` | `http://localhost:4173` | The pipeline waits until this answers, then runs the tests against it |
 | `AGENT_ALLOWED_PATHS` | `src/ public/ tests/` | The only folders Agent 1 may change; anything else is thrown away |
+| `AGENT_TEST_PATHS` | `tests/` | Optional. The test folder: the only folder Agent 1 may change in tests-only mode ( default `examples/wikipedia/tests/` ) |
+| `NO_TICKET_PATHS` | `docs/ .github/ visual-agent/ README.md` ( default ) | Optional. A PR that only changes these needs no Jira ticket and no visual review |
 
 Now set up Playwright with Applitools Eyes. Copy `playwright.config.ts` from this sample and change only:
 
@@ -82,7 +84,7 @@ browsersInfo: [                                   // the browsers and devices Ey
 
 Leave the rest as it is. It already takes care of Eyes branching, saving and `failTestsOnDiff: false`, so that the AI decides about the differences instead of Playwright.
 
-Write your test cases (functional and visual) in your test folder (the sample uses `examples/wikipedia/tests/`). Use the app address from `SITE_URL`, which the pipeline sets for you:
+Write your test cases in your test folder (the sample uses `examples/wikipedia/tests/`). Use the app address from `SITE_URL`, which the pipeline sets for you:
 
 ```ts
 import { test, expect } from '@applitools/eyes-playwright/fixture';
@@ -263,6 +265,7 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 | `APP_START_COMMAND` | How to start your app (Step 2) |
 | `APP_URL` | Where your app runs in CI (Step 2) |
 | `AGENT_ALLOWED_PATHS` | Folders Agent 1 may change (Step 2) |
+| `NO_TICKET_PATHS` | Optional: paths that need no Jira ticket ( default `docs/ .github/ visual-agent/ README.md` ) |
 | `MERGE_POLICY` | `code-approval` ( default: one person approves the PR ) or `auto` ( merge when the AI review passes ). The Jira label `auto-ai-merge` always merges automatically |
 
 ![Repository variables](installation/images/p10-repo-variables.png)
@@ -340,7 +343,7 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 ### (1) The AI agent builds it
 
 **1. The product manager creates the ticket** ( New ) with two lists: *what should change* and *what must not change*. The team lead or dev manager reviews it and moves it to **Ready**.
-Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`.
+Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`, `tests-only`.
 
 **2. In Ready, the team lead or dev manager ( or anyone ) clicks the ⚡ ( Automation ) button → Agent 1** on the ticket. It moves to **In Progress**.
 
@@ -382,9 +385,43 @@ images for every change:
 
 1. Create the branch from the ticket: (1) in Jira, **Development → Create branch** [ or ] (2) in git, with the
    ticket key in its name, e.g. `feature/WIKI-17-make-donate-bold`. Either way it is linked to the ticket.
-2. Make the change, add or update the tests, push, and open a pull request.
-3. The same checks, AI review, PDF and decision happen automatically. The AI reports bugs but never
+2. Make the change and push.
+3. Add the test cases: (1) in your IDE with the Eyes MCP Server ( Step 13 ) [ or ] (2) add the label `tests-only` to the ticket and click ⚡ Run Agent 1. The AI writes and runs the tests on your branch and never changes your code; then `git pull`.
+4. Open a pull request. The same checks, AI review, PDF and decision happen automatically. The AI reports bugs but never
    changes a developer's code.
+
+---
+
+## Step 13: Use the Eyes MCP Server in your IDE (optional, for developers)
+
+**Requirement:** a developer with Applitools keys ( Step 4 ) and an AI assistant in the IDE ( Claude Code, GitHub Copilot in VS Code, or Cursor ).
+
+Developers can write and check the test cases on their laptop, before pushing, with the same Eyes MCP Server and the same rules as the AI agent. This is the fastest way: write the test, run it, and see the Eyes result in minutes.
+
+1. Set your keys in the terminal ( don't commit them ):
+
+```bash
+export APPLITOOLS_API_KEY=<your API key>
+export APPLITOOLS_READ_KEY=<read key>
+export APPLITOOLS_WRITE_KEY=<write key>
+```
+
+2. Connect the Eyes MCP Server to your IDE. It is the same server as in `visual-agent/mcp.json`:
+- (1) Claude Code: copy `visual-agent/mcp.json` to `.mcp.json` in the repository root, then start `claude` in that folder.
+- (2) Cursor: copy `visual-agent/mcp.json` to `.cursor/mcp.json`.
+- (3) VS Code with GitHub Copilot: create `.vscode/mcp.json` with the same content, but rename `mcpServers` to `servers`.
+
+3. Start the app ( `npm start` ) and ask the AI, for example:
+
+```
+Read tasks/WIKI-17-*.md and visual-agent/guidelines/agent-implement.md.
+Write the Playwright + Eyes test cases for this ticket, run them,
+and review the results with the Eyes MCP Server.
+```
+
+4. Push. The pipeline runs the same tests and the AI review on the pull request, so nothing is skipped.
+
+No IDE setup? Use the label `tests-only` and ⚡ Run Agent 1 instead ( Step 12 ).
 
 ---
 

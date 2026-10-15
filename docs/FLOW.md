@@ -94,7 +94,7 @@ Files: none. The ticket lives in Jira.
 
 ## Step 2: Review the ticket ( Jira status: Ready )
 
-What happens: the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( a person approves before anything is saved or merged ), `auto-ai-merge` ( merge without waiting for a person's approval ). In Ready, they choose who builds it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent.
+What happens: the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review` ( a person approves before anything is saved or merged ), `auto-ai-merge` ( merge without waiting for a person's approval ), `tests-only` ( the developer built it; the AI only writes and runs the tests ). In Ready, they choose who builds it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent.
 
 Who: team lead or dev manager.
 
@@ -124,8 +124,8 @@ Files:
 ## Step 4: Test cases ( Jira status: In Progress )
 
 What happens:
-- AI agent: writes the test cases ( functional and visual, and a regression test for a bug ), using the Eyes MCP Server to add the visual checkpoints, and runs them.
-- Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them on the developer's branch.
+- AI agent: writes the test cases ( and a regression test for a bug ), using the Eyes MCP Server to add the visual checkpoints, and runs them.
+- Developer: (1) writes the test cases in their IDE with the help of the Eyes MCP Server, following the same `visual-agent/guidelines/` ( see step 13 in [INSTALLATION.md](INSTALLATION.md) ) [ or ] (2) adds the label `tests-only` and clicks ⚡ Run Agent 1. The AI then only writes and runs the test cases on the developer's branch: it can change only the test folder ( `AGENT_TEST_PATHS` ), and bugs in the developer's code are reported, not fixed.
 
 GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on the devices listed in the ticket under "Test on below devices" ( read by `visual-agent/scripts/devices.mjs` ), or on the defaults in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.
 
@@ -182,6 +182,7 @@ Files:
 
 What happens: after each execution, the pipeline collects the before / after / differences images from Eyes, builds the PDF report, attaches it to the Jira ticket, comments on the ticket and posts the PDF link on the pull request. It also sets two checks on the pull request, which must pass before anyone can merge:
 - Branch links to a Jira ticket: the branch name has a key, and the ticket exists in Jira. If not, the PR is blocked with a comment on how to rename the branch.
+- A PR that only changes docs or the pipeline ( `docs/`, `.github/`, `visual-agent/`, `README.md` ) needs no ticket: both checks pass straight away. As soon as a PR touches the app or its tests, the ticket and the review are required.
 - Visual review: the AI review passed, the functional checks passed, and there is a ticket.
 
 Who: the pipeline.

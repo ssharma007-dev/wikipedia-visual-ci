@@ -40,6 +40,13 @@ If it does **not** reproduce, do not guess a fix: report `reproduced: false` wit
 Note: if `main`'s baseline already contains the bug, the fix shows up as a difference — accept it and
 explain in the baseline recommendation that the old baseline contained the bug.
 
+## Tests only
+
+If `ci-context/tests-only.txt` exists, the developer has already built the change and only wants the tests:
+- Do **not** change the app code. `ci-context/allowed-paths.txt` lists only the test folder; any other change is discarded.
+- Skip step 2 ( Implement it ). Do steps 3 to 6: find or write the test cases for what the ticket asks, run them and review every difference.
+- If the developer's code does not do what the ticket asks, or breaks the "Must not change" list, report it as a bug with evidence and a suggested fix. Don't fix it: a person decides.
+
 ## Steps
 
 1. **Understand the task.** Read `ci-context/task.md`: what must change, on which pages and

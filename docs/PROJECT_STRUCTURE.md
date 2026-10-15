@@ -25,7 +25,7 @@ wikipedia-visual-ci/
 │   └── mcp.json            Connects the AI to the Applitools Eyes MCP Server
 ├── examples/wikipedia/     The sample app: replace with your own app
 │   ├── site/               The Wikipedia copy
-│   ├── tests/              Playwright test cases (functional and visual)
+│   ├── tests/              Playwright test cases
 │   └── server.mjs          Starts the sample app locally
 ├── tasks/                  Copy of the Jira ticket, only on feature branches
 ├── docs/                   The documents: FLOW, INSTALLATION, PROJECT_STRUCTURE ( + screenshots )
@@ -161,7 +161,7 @@ Reuse: Adapt. Change `appName` and `browsersInfo`. Leave the branching settings 
 
 ## visual-agent/mcp.json: connection to the Applitools Eyes MCP Server
 
-What it does: tells the AI how to start the Applitools Eyes MCP Server and which keys to use. The keys come from the repository secrets.
+What it does: tells the AI how to start the Applitools Eyes MCP Server and which keys to use. The keys come from the repository secrets. Developers can use the same file in their IDE ( step 13 in [INSTALLATION.md](INSTALLATION.md) ).
 
 Importance: high. Without it, the AI cannot see the Eyes results.
 

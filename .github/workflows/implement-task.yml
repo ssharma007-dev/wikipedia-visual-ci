@@ -10,6 +10,10 @@ name: Agent 1 — implement task
 #                                      to Done. If anything needs judgement, it falls back to a person.
 #   manual (Jira label human-review, or "human-review" in the task file)
 #                                    → the agent accepts/rejects in Eyes; a person saves and merges.
+#
+# Tests only (Jira label tests-only, or the input mode=tests-only):
+#   the developer's code is kept as it is. The agent only writes and runs the test cases and reviews them;
+#   it may change only the test folder (vars.AGENT_TEST_PATHS), and bugs are reported, not fixed.
 on:
   push:
     branches-ignore: [main]
@@ -20,6 +24,11 @@ on:
         description: 'Jira ticket key, e.g. WIKI-8'
         required: true
         type: string
+      mode:
+        description: 'Optional: tests-only = only write and run the test cases, never change the app code'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -101,7 +110,15 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BR=$(git branch -r --format='%(refname:short)' | sed 's#^origin/##' | grep -E "(^|[^0-9A-Za-z])$KEY([^0-9]|$)" | grep -vx main | head -1 || true)
             if [ -n "$BR" ]; then git switch "$BR"
+              # Bring the branch up to date with main first ( main may have new code or a newer pipeline ).
+              if ! git merge --no-edit origin/main; then
+                git merge --abort
+                echo "::error::$BR conflicts with main. A person merges main into the branch, then clicks Run Agent 1 again."; exit 1
+              fi
             else
+              if [ "${{ inputs.mode }}" = tests-only ] || node visual-agent/scripts/jira.mjs labels "$KEY" 2>/dev/null | tr ',' '\n' | grep -qx tests-only; then
+                echo "::error::Tests only: there is no branch for $KEY yet. Push the developer's change on a branch with $KEY in its name, then click the button again."; exit 1
+              fi
               node visual-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
               SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
               TYPE=$(node visual-agent/scripts/jira.mjs type "$KEY" 2>/dev/null || echo feature)
@@ -157,7 +174,13 @@ jobs:
           if echo ",$LABELS," | grep -q ',auto-ai-merge,' || grep -qi 'auto-ai-merge' "$FILE"; then POLICY=auto; else POLICY="${{ vars.MERGE_POLICY || 'code-approval' }}"; fi
           echo "$POLICY" > ci-context/merge-policy.txt; echo "policy=$POLICY" >> "$GITHUB_OUTPUT"; echo "Merge policy: $POLICY"
           echo "$SITE_URL" > ci-context/app-url.txt   # where the app runs in CI (vars.APP_URL)
-          echo "${{ vars.AGENT_ALLOWED_PATHS || 'examples/wikipedia/site/ examples/wikipedia/tests/' }}" > ci-context/allowed-paths.txt   # the only folders the agent may change
+          # The only folders the agent may change. Tests only: just the test folder, the developer's code stays as it is.
+          if echo ",$LABELS," | grep -q ',tests-only,' || [ "${{ inputs.mode }}" = tests-only ]; then
+            echo "${{ vars.AGENT_TEST_PATHS || 'examples/wikipedia/tests/' }}" > ci-context/allowed-paths.txt
+            echo "yes" > ci-context/tests-only.txt; echo "tests_only=yes" >> "$GITHUB_OUTPUT"; echo "Tests only: the app code is not changed"
+          else
+            echo "${{ vars.AGENT_ALLOWED_PATHS || 'examples/wikipedia/site/ examples/wikipedia/tests/' }}" > ci-context/allowed-paths.txt
+          fi
           # Devices: the ticket's "Test on below devices:" list, if it has one; otherwise playwright.config.ts defaults.
           DEV=$(node visual-agent/scripts/devices.mjs ci-context/task.md || true)
           if [ -n "$DEV" ]; then echo "EYES_DEVICES=$DEV" >> "$GITHUB_ENV"; echo "$DEV" > ci-context/devices.json; echo "Devices from the ticket: $DEV"
@@ -223,7 +246,8 @@ jobs:
       # Up to 2 rounds. Bugs it can't fix, or still failing after 2 rounds, go to a person.
       - name: "Agent 1: fix the bugs it found and re-test (up to 2 rounds)"
         id: fix
-        if: steps.task.outputs.key != ''
+        # Tests only: bugs in the developer's code are reported, not fixed.
+        if: steps.task.outputs.key != '' && steps.ctx.outputs.tests_only != 'yes'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -268,11 +292,10 @@ jobs:
           done
           echo "Final verdict: $(node -p 'require("./'$R'").verdict' 2>/dev/null || echo missing) · bugs left: $(node -p '(require("./'$R'").bugs||[]).length' 2>/dev/null || echo ?)"
 
-      - name: Keep only allowed changes (vars.AGENT_ALLOWED_PATHS, default is the example app)
+      - name: Keep only allowed changes (ci-context/allowed-paths.txt)
         if: steps.task.outputs.key != ''
-        env:
-          ALLOWED: ${{ vars.AGENT_ALLOWED_PATHS || 'examples/wikipedia/site/ examples/wikipedia/tests/' }}
         run: |
+          ALLOWED=$(cat ci-context/allowed-paths.txt)
           allowed() { for p in $ALLOWED; do case "$1" in "$p"*) return 0 ;; esac; done; return 1; }
           git status --porcelain --untracked-files=all | awk '{print $2}' | grep -vE '^(ci-context|agent-report|test-results|playwright-report)/' > ci-context/changed.txt || true
           # New files are kept only if the agent's report mentions them (implementation files, tests it added).
@@ -498,7 +521,7 @@ jobs:
             echo "::warning::No PDF was produced for $KEY."
           fi
           {
-            echo "🤖 Agent 1 implemented $KEY — verdict: $V (review mode: ${{ steps.ctx.outputs.mode }})"
+            echo "🤖 Agent 1 implemented $KEY — verdict: $V (review mode: ${{ steps.ctx.outputs.mode }}${{ steps.ctx.outputs.tests_only == 'yes' && ', tests only' || '' }})"
             [ -n "$PDF_URL" ] && echo "📄 PDF report (summary, bugs with evidence and fixes, before/after images): [$KEY-visual-report.pdf]($PDF_URL)"
             [ -n "$S" ] && echo "What it did: $S"
             FIXED=$(node -p '(require("./agent-report/report.json").fixHistory||[]).flatMap(h=>h.bugs).filter(b=>b.fixed).length' 2>/dev/null || echo 0)
