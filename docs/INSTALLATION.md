@@ -4,7 +4,7 @@ This guide explains how to set up the sample project's flow in your own project.
 
 *Flow*
 
-- Jira ticket: the PM or team lead creates a ticket with what should change and what must not change.
+- Jira ticket: the product manager creates a ticket with what should change and what must not change, and the team lead or dev manager reviews it and moves it to Ready.
 - Implementation: a developer [ or ] the AI agent implements the change and writes the test cases.
 - Tests: Playwright and Applitools Eyes run the test cases on the defined devices ( set in `playwright.config.ts` ).
 - AI review: the AI checks every visual difference against the ticket and the design system, using the Eyes MCP Server ( deterministic agentic workflow ).
@@ -339,7 +339,7 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 
 ### (1) The AI agent builds it
 
-**1. The PM or team lead creates the ticket** with two lists: *what should change* and *what must not change*.
+**1. The product manager creates the ticket** ( New ) with two lists: *what should change* and *what must not change*. The team lead or dev manager reviews it and moves it to **Ready**.
 Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`.
 
 **2. In Ready, the team lead or dev manager ( or anyone ) clicks the ⚡ ( Automation ) button → Agent 1** on the ticket. It moves to **In Progress**.
@@ -371,7 +371,7 @@ images for every change:
 ![Before, after and differences](installation/images/11-pdf-before-after.png)
 
 **7. The decision:**
-- No bugs found: the baselines are saved, the PR is merged and the ticket moves to Done. No manual effort is needed.
+- No bugs found: the baselines are saved. By default a person approves the PR ( one click ), then GitHub merges it and the ticket moves to Done. With the `auto-ai-merge` label, the pipeline merges it by itself.
 - Bugs the AI cannot fix, or the `human-review` label: the PR and the ticket get the label `needs-human`, the ticket moves to In Review and is assigned to the person who created it, and the PR is blocked.
 
 ![A PR blocked because of a bug](installation/images/12-pr-blocked-bugs.png)
