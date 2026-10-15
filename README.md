@@ -8,7 +8,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 
 ## Ticket flow
 
-![Ticket flow: New → Ready → In Progress → In Review or Done](docs/images/ticket-flow.png)
+![Ticket flow: New → Ready ( the team lead chooses a developer or the AI agent ) → In Progress → In Review or Done](docs/images/ticket-flow.png)
 
 ## How it works
 
