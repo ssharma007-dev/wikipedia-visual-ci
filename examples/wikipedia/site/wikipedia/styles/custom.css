@@ -35,3 +35,13 @@
 @media (max-width: 480px) {
   #search-form button[type="submit"] { margin-right: -28px; }
 }
+
+/* WIKI-34: remove the "Download on the App Store" badge from the portal's
+   "Download Wikipedia" box — iOS users are moved to the mobile website.
+   visibility:hidden (not display:none) keeps the badge's layout box, so the
+   Google Play badge doesn't re-center into its place — the ticket requires
+   Google Play to stay in the same place. visibility:hidden also drops the
+   hidden link out of the tab order, so it isn't a focusable dead end. */
+.app-badges .app-badge-ios {
+	visibility: hidden;
+}
