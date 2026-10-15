@@ -302,7 +302,10 @@ jobs:
             echo "waiting=code-approval" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if gh pr merge "$PR" --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
+          # main needs one approval. The bot may skip it ( ruleset bypass ), but GitHub only applies that with --admin,
+          # so --admin is used only when every required check ( Jira ticket, Visual review ) has passed.
+          ADMIN=""; if gh pr checks "$PR" --required > checks.txt 2>&1; then ADMIN="--admin"; fi; cat checks.txt
+          if gh pr merge "$PR" $ADMIN --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."

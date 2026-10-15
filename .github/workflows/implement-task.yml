@@ -182,7 +182,10 @@ jobs:
 
       - name: "Jira: In Progress"
         if: steps.task.outputs.key != '' && steps.ctx.outputs.jira == 'yes'
-        run: node visual-agent/scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "${{ vars.JIRA_STATUS_IN_PROGRESS || 'In Progress|Doing' }}" || true
+        run: |
+          node visual-agent/scripts/jira.mjs transition "${{ steps.task.outputs.key }}" "${{ vars.JIRA_STATUS_IN_PROGRESS || 'In Progress|Doing' }}" || true
+          # A new run starts fresh: needs-human from an earlier run is removed, and set again only if this run needs a person.
+          node visual-agent/scripts/jira.mjs needs-human "${{ steps.task.outputs.key }}" off || true
 
       - name: Install dependencies
         if: steps.task.outputs.key != ''
@@ -453,8 +456,10 @@ jobs:
           fi
           # The PR's own checks (Ticket check, ...) run on the agent's PR too: wait for the required ones first.
           sleep 20
-          gh pr checks "$N" --required --watch --interval 15 --fail-fast 2>&1 | tail -5 || true
-          if gh pr merge "$N" --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
+          # main needs one approval. The bot may skip it ( ruleset bypass ), but GitHub only applies that with --admin,
+          # so --admin is used only when every required check ( Jira ticket, Visual review ) has passed.
+          ADMIN=""; if gh pr checks "$N" --required --watch --interval 15 --fail-fast > checks.txt 2>&1; then ADMIN="--admin"; fi; tail -5 checks.txt
+          if gh pr merge "$N" $ADMIN --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
           else
