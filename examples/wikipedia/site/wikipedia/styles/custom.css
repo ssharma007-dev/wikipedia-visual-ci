@@ -31,7 +31,10 @@
 	}
 }
 
-/* Portal: line the Search button up with the edge of the screen on phones */
+/* Portal: line the Search button up with the edge of the screen on phones.
+   -10px brings the button's right edge flush with the viewport edge
+   (baseline gap measured at 10px on Galaxy S25 Ultra); -28px overshot by
+   18px and pushed the button off-screen, causing horizontal overflow. */
 @media (max-width: 480px) {
-  #search-form button[type="submit"] { margin-right: -28px; }
+  #search-form button[type="submit"] { margin-right: -10px; }
 }
