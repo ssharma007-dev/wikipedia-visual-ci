@@ -1,8 +1,8 @@
 # WIKI-31 — Rename "Free quote compendium" to "Free quotation collection" on the portal
 
-**Type:** Task · **Priority:** Medium · **Status:** Ready · **Reporter:** Shreya Sharma
+**Type:** Task · **Priority:** Medium · **Status:** In Review · **Reporter:** Shreya Sharma
 **Source:** Jira — https://testing-visual-ci.atlassian.net/browse/WIKI-31
-**Labels:** human-review, text
+**Labels:** human-review, needs-human, text
 
 Why:
 
