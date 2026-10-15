@@ -131,3 +131,22 @@ test('Donate header link is bold, other header links are not (WIKI-16)', async (
   );
   expect(donateColor).toBe('rgb(51, 102, 204)'); // color-progressive
 });
+
+// WIKI-31: the Wikiquote sister-project description reads "Free quotation collection" instead
+// of "Free quote compendium". The other sister project descriptions, tagline, search bar and
+// language links must not change.
+test('Wikiquote sister-project description reads "Free quotation collection" (WIKI-31)', async ({ page, eyes }) => {
+  await page.goto(BASE);
+
+  await expect(page.locator('[data-jsl10n="wikiquote.slogan"]')).toHaveText('Free quotation collection');
+  await expect(page.locator('[data-jsl10n="commons.slogan"]')).toHaveText('Free media library');
+  await expect(page.locator('[data-jsl10n="wikiversity.slogan"]')).toHaveText('Free learning materials');
+  await expect(page.locator('[data-jsl10n="wikivoyage.slogan"]')).toHaveText('Free travel guide');
+  await expect(page.locator('[data-jsl10n="wiktionary.slogan"]')).toHaveText('Free dictionary');
+
+  await eyes.check('Sister projects list (WIKI-31)', { region: '.other-projects', fully: false });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('[data-jsl10n="wikiquote.slogan"]')).toHaveText('Free quotation collection');
+  await eyes.check('Sister projects list phone (WIKI-31)', { region: '.other-projects', fully: false });
+});
