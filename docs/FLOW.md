@@ -15,7 +15,7 @@ For what each folder contains, see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md).
 - Playwright: runs the test cases in `examples/wikipedia/tests/` ( functional checks ).
 - Applitools Eyes and the Ultrafast Grid: capture every screen on the devices listed in the ticket ( or the defaults ) and compare it with the baseline ( visual checks ).
 - Applitools Eyes MCP Server: gives the AI access to the Eyes results, and makes it go through every difference one by one ( deterministic guardrails ).
-- Guidelines: the plain text rules in `visual-agent/guidelines/` that the AI follows.
+- Guidelines: the plain text rules in `eyes-demo-agent/guidelines/` that the AI follows.
 
 ---
 
@@ -115,8 +115,8 @@ Who: developer [ or ] AI agent.
 Files:
 - `.github/workflows/implement-task.yml`: the whole Agent 1 run.
 - `.github/workflows/sync-task-on-branch.yml`: copies the ticket when a developer creates the branch.
-- `visual-agent/scripts/jira.mjs`: reads the ticket from Jira.
-- `visual-agent/guidelines/agent-implement.md`: the AI's instructions.
+- `eyes-demo-agent/scripts/jira.mjs`: reads the ticket from Jira.
+- `eyes-demo-agent/guidelines/agent-implement.md`: the AI's instructions.
 - Repository variable `AGENT_ALLOWED_PATHS`: the only folders the AI may change. Anything else is thrown away.
 
 ---
@@ -125,9 +125,9 @@ Files:
 
 What happens:
 - AI agent: writes the test cases ( and a regression test for a bug ), using the Eyes MCP Server to add the visual checkpoints, and runs them.
-- Developer: (1) writes the test cases in their IDE with the help of the Eyes MCP Server, following the same `visual-agent/guidelines/` ( see step 13 in [INSTALLATION.md](INSTALLATION.md) ) [ or ] (2) adds the label `tests-only` and clicks ⚡ Run Agent 1. The AI then only writes and runs the test cases on the developer's branch: it can change only the test folder ( `AGENT_TEST_PATHS` ), and bugs in the developer's code are reported, not fixed.
+- Developer: (1) writes the test cases in their IDE with the help of the Eyes MCP Server, following the same `eyes-demo-agent/guidelines/` ( see step 13 in [INSTALLATION.md](INSTALLATION.md) ) [ or ] (2) adds the label `tests-only` and clicks ⚡ Run Agent 1. The AI then only writes and runs the test cases on the developer's branch: it can change only the test folder ( `AGENT_TEST_PATHS` ), and bugs in the developer's code are reported, not fixed.
 
-GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on the devices listed in the ticket under "Test on below devices" ( read by `visual-agent/scripts/devices.mjs` ), or on the defaults in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.
+GitHub Actions starts the app ( `APP_START_COMMAND`, `APP_URL` ) and runs the Playwright test cases. Each `eyes.check()` sends the screen to Applitools Eyes, and the Ultrafast Grid renders it on the devices listed in the ticket under "Test on below devices" ( read by `eyes-demo-agent/scripts/devices.mjs` ), or on the defaults in `playwright.config.ts`. Each screen is compared with the baseline of the branch the PR merges into ( Eyes branching ), usually `main`.
 
 Who: AI agent or developer ( test cases ), GitHub Actions, Playwright and Applitools Eyes ( the run ).
 
@@ -135,7 +135,7 @@ Files:
 - `.github/workflows/visual-tests.yml`: runs on every pull request.
 - `playwright.config.ts`: browsers, devices, Eyes branching, `failTestsOnDiff: false` ( the AI decides, not Playwright ).
 - `examples/wikipedia/tests/`: the test cases.
-- `visual-agent/scripts/failed-tests.mjs`: lists failed functional checks. They don't stop the review, but the PR can't be merged until they pass.
+- `eyes-demo-agent/scripts/failed-tests.mjs`: lists failed functional checks. They don't stop the review, but the PR can't be merged until they pass.
 
 ---
 
@@ -146,9 +146,9 @@ What happens: through the Eyes MCP Server, the AI goes through every difference 
 Who: AI agent with the Eyes MCP Server.
 
 Files:
-- `visual-agent/mcp.json`: connects the AI to the Eyes MCP Server.
-- `visual-agent/guidelines/review-rules.md`: the classes and thresholds ( e.g. 2px or less is noise ).
-- `visual-agent/guidelines/design-system.md`: the design rules every page must follow.
+- `eyes-demo-agent/mcp.json`: connects the AI to the Eyes MCP Server.
+- `eyes-demo-agent/guidelines/review-rules.md`: the classes and thresholds ( e.g. 2px or less is noise ).
+- `eyes-demo-agent/guidelines/design-system.md`: the design rules every page must follow.
 
 ---
 
@@ -162,7 +162,7 @@ The AI can accept and reject in Eyes, but it can never save baselines, push or m
 
 Who: AI agent.
 
-Files: `visual-agent/guidelines/review-rules.md`.
+Files: `eyes-demo-agent/guidelines/review-rules.md`.
 
 ---
 
@@ -173,8 +173,8 @@ What happens: if the AI's change caused a bug, the AI fixes the code, runs the t
 Who: AI agent.
 
 Files:
-- `visual-agent/guidelines/agent-fix.md`: how the AI fixes its own bugs.
-- `visual-agent/scripts/jira.mjs`: the sub-tasks.
+- `eyes-demo-agent/guidelines/agent-fix.md`: how the AI fixes its own bugs.
+- `eyes-demo-agent/scripts/jira.mjs`: the sub-tasks.
 
 ---
 
@@ -182,14 +182,14 @@ Files:
 
 What happens: after each execution, the pipeline collects the before / after / differences images from Eyes, builds the PDF report, attaches it to the Jira ticket, comments on the ticket and posts the PDF link on the pull request. It also sets two checks on the pull request, which must pass before anyone can merge:
 - Branch links to a Jira ticket: the branch name has a key, and the ticket exists in Jira. If not, the PR is blocked with a comment on how to rename the branch.
-- A PR that only changes docs or the pipeline ( `docs/`, `.github/`, `visual-agent/`, `README.md` ) needs no ticket: both checks pass straight away. As soon as a PR touches the app or its tests, the ticket and the review are required.
+- A PR that only changes docs or the pipeline ( `docs/`, `.github/`, `eyes-demo-agent/`, `README.md` ) needs no ticket: both checks pass straight away. As soon as a PR touches the app or its tests, the ticket and the review are required.
 - Visual review: the AI review passed, the functional checks passed, and there is a ticket.
 
 Who: the pipeline.
 
 Files:
-- `visual-agent/scripts/eyes-evidence.mjs`: images from Eyes.
-- `visual-agent/scripts/render-report.mjs` and `visual-agent/scripts/report-pdf.mjs`: the HTML and PDF report.
+- `eyes-demo-agent/scripts/eyes-evidence.mjs`: images from Eyes.
+- `eyes-demo-agent/scripts/render-report.mjs` and `eyes-demo-agent/scripts/report-pdf.mjs`: the HTML and PDF report.
 - `.github/workflows/ticket-check.yml`: the "Branch links to a Jira ticket" check.
 
 ---
@@ -209,8 +209,8 @@ After every merge to `main`, the pipeline updates `main`'s baseline in Eyes, mov
 Who: a person ( approves ), or the pipeline ( `auto-ai-merge` ).
 
 Files:
-- `visual-agent/scripts/eyes-save.mjs`: saves the baselines, only when nothing is unresolved.
-- `visual-agent/scripts/set-merge-policy.sh`: changes the default for the whole repository ( `code-approval` or `auto` ).
+- `eyes-demo-agent/scripts/eyes-save.mjs`: saves the baselines, only when nothing is unresolved.
+- `eyes-demo-agent/scripts/set-merge-policy.sh`: changes the default for the whole repository ( `code-approval` or `auto` ).
 - `.github/workflows/visual-tests.yml`: the after-merge update on `main`.
 - `.github/workflows/clean-task-snapshots.yml`: removes `tasks/` from `main`.
 
@@ -239,12 +239,12 @@ Status names can be changed with the repository variables `JIRA_STATUS_IN_PROGRE
 | Fix a bug it caused | yes ( up to 2 rounds ) | | |
 | Save baselines in Eyes | never | yes, only when there are no bugs and nothing unresolved | yes |
 | Merge the PR | never | only with the label `auto-ai-merge` ( after the checks pass ) | yes: approves the PR ( default ), then GitHub merges |
-| Change the rules ( `visual-agent/guidelines/` ) | never | | yes, with CODEOWNERS approval |
+| Change the rules ( `eyes-demo-agent/guidelines/` ) | never | | yes, with CODEOWNERS approval |
 
 ---
 
 ## Over time: the trust report
 
-Every Monday ( or on demand: Actions → Trust report ) the pipeline compares each AI verdict with what people did afterwards: merged, fixed, or overridden. This shows how often people agree with the AI, and where the rules in `visual-agent/guidelines/` need tuning.
+Every Monday ( or on demand: Actions → Trust report ) the pipeline compares each AI verdict with what people did afterwards: merged, fixed, or overridden. This shows how often people agree with the AI, and where the rules in `eyes-demo-agent/guidelines/` need tuning.
 
-Files: `.github/workflows/trust-report.yml`, `visual-agent/scripts/trust-report.mjs`.
+Files: `.github/workflows/trust-report.yml`, `eyes-demo-agent/scripts/trust-report.mjs`.

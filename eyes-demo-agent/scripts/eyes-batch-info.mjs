@@ -1,5 +1,5 @@
 // Show what an Eyes batch was tested on: every test run with its raw environment ( browser, device, OS, viewport ).
-//   node visual-agent/scripts/eyes-batch-info.mjs <batch-url>     ( needs APPLITOOLS_READ_KEY )
+//   node eyes-demo-agent/scripts/eyes-batch-info.mjs <batch-url>     ( needs APPLITOOLS_READ_KEY )
 import { spawn } from 'node:child_process';
 const server = spawn('npx', ['-y', '@applitools/mcp@0.8.5'], { stdio: ['pipe', 'pipe', 'ignore'], env: process.env });
 let buf = '', id = 1; const pend = new Map();

@@ -41,7 +41,7 @@ jobs:
           KEY: ${{ steps.key.outputs.key }}
         run: |
           if ls tasks/"$KEY"-*.md tasks/"$KEY".md >/dev/null 2>&1; then echo "tasks/ already has $KEY"; exit 0; fi
-          node visual-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::warning::Could not read $KEY from Jira"; exit 0; }
+          node eyes-demo-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::warning::Could not read $KEY from Jira"; exit 0; }
           SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
           mkdir -p tasks && cp /tmp/task.md "tasks/$KEY-$SLUG.md"
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

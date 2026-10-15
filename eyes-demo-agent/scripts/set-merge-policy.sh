@@ -2,7 +2,7 @@
 # Switch how passing PRs are merged ( for tickets without a label; the Jira label auto-ai-merge always merges automatically ):
 #   code-approval  → the AI review must pass AND one person approves the PR; GitHub then merges by itself ( default )
 #   auto           → the pipeline merges as soon as the AI review passes
-# Usage: visual-agent/scripts/set-merge-policy.sh auto|code-approval      (needs gh, logged in as a repo admin)
+# Usage: eyes-demo-agent/scripts/set-merge-policy.sh auto|code-approval      (needs gh, logged in as a repo admin)
 set -euo pipefail
 POLICY="${1:?auto or code-approval}"
 REPO="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"

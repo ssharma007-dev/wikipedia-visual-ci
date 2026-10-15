@@ -1,6 +1,6 @@
 // Save an Eyes batch through the Applitools Eyes MCP — only when it is safe to.
-//   node visual-agent/scripts/eyes-save.mjs <batch-url>                → saves only if 0 unresolved and 0 failed (rejected) steps
-//   node visual-agent/scripts/eyes-save.mjs <batch-url> --accept-all   → first accepts every unresolved step, then saves
+//   node eyes-demo-agent/scripts/eyes-save.mjs <batch-url>                → saves only if 0 unresolved and 0 failed (rejected) steps
+//   node eyes-demo-agent/scripts/eyes-save.mjs <batch-url> --accept-all   → first accepts every unresolved step, then saves
 //                                                            (used to refresh main's baseline after an approved auto-merge)
 // Exit codes: 0 saved · 3 not saved (reason printed) · 1 error. Needs APPLITOOLS_* keys in the environment.
 import { spawn } from 'node:child_process';

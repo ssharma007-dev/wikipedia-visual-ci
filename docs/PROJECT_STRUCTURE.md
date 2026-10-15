@@ -19,7 +19,7 @@ wikipedia-visual-ci/
 │   ├── workflows/          The pipeline (GitHub Actions)
 │   ├── CODEOWNERS          Who must approve changes to the rules and the pipeline
 │   └── pull_request_template.md
-├── visual-agent/           The reusable part: copy it into your own project
+├── eyes-demo-agent/           The reusable part: copy it into your own project
 │   ├── guidelines/         The rules the AI follows (plain text)
 │   ├── scripts/            Helpers used by the workflows (Jira, Eyes, PDF report)
 │   └── mcp.json            Connects the AI to the Applitools Eyes MCP Server
@@ -67,7 +67,7 @@ Reuse: copy the whole folder. Your project-specific values (how to start the app
 
 What they do:
 
-- `CODEOWNERS`: names the people who must approve changes to the rules (`visual-agent/guidelines/`) and to the pipeline (`.github/`).
+- `CODEOWNERS`: names the people who must approve changes to the rules (`eyes-demo-agent/guidelines/`) and to the pipeline (`.github/`).
 - `pull_request_template.md`: the form a developer fills in when opening a PR, including the Jira ticket.
 
 Importance: medium. CODEOWNERS makes sure nobody, including the AI, can quietly change the rules it is judged by.
@@ -76,7 +76,7 @@ Reuse: Adapt. Replace `@ssharma007-dev` with your design lead, QA lead or platfo
 
 ---
 
-## visual-agent/guidelines/: the rules the AI follows
+## eyes-demo-agent/guidelines/: the rules the AI follows
 
 What it does: plain text files that tell the AI how to work and how to decide. There is no code here. The AI always reads them from `main`, so a pull request cannot change the rules it is judged by.
 
@@ -92,7 +92,7 @@ Importance: high. This is where your team's knowledge goes. Better rules mean be
 
 ---
 
-## visual-agent/scripts/: helpers used by the workflows
+## eyes-demo-agent/scripts/: helpers used by the workflows
 
 What it does: small Node.js scripts the workflows call. You don't run them by hand.
 
@@ -160,7 +160,7 @@ Reuse: Adapt. Change `appName` and `browsersInfo`. Leave the branching settings 
 
 ---
 
-## visual-agent/mcp.json: connection to the Applitools Eyes MCP Server
+## eyes-demo-agent/mcp.json: connection to the Applitools Eyes MCP Server
 
 What it does: tells the AI how to start the Applitools Eyes MCP Server and which keys to use. The keys come from the repository secrets. Developers can use the same file in their IDE ( step 13 in [INSTALLATION.md](INSTALLATION.md) ).
 
@@ -190,6 +190,6 @@ Reuse: Optional.
 
 | Keep as it is | Adapt | Replace with your own | Leave out |
 |---|---|---|---|
-| `.github/workflows/`, `visual-agent/scripts/`, `visual-agent/guidelines/agent-fix.md`, `visual-agent/guidelines/README.md`, `visual-agent/mcp.json` | `playwright.config.ts`, `visual-agent/guidelines/review-rules.md`, `visual-agent/guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `examples/wikipedia/site/` and `examples/wikipedia/server.mjs` (your app), `examples/wikipedia/tests/` (your test cases), `visual-agent/guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (keep it if you want the guides in your repository) |
+| `.github/workflows/`, `eyes-demo-agent/scripts/`, `eyes-demo-agent/guidelines/agent-fix.md`, `eyes-demo-agent/guidelines/README.md`, `eyes-demo-agent/mcp.json` | `playwright.config.ts`, `eyes-demo-agent/guidelines/review-rules.md`, `eyes-demo-agent/guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `examples/wikipedia/site/` and `examples/wikipedia/server.mjs` (your app), `examples/wikipedia/tests/` (your test cases), `eyes-demo-agent/guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (keep it if you want the guides in your repository) |
 
 Note: the only values you set per project are repository variables (`APP_START_COMMAND`, `APP_URL`, `AGENT_ALLOWED_PATHS`, `AGENT_TEST_PATHS`, `NO_TICKET_PATHS`, `MERGE_POLICY`, `BOT_APP_ID`) and secrets. Everything else is the same for every project.

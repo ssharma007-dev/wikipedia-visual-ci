@@ -12,7 +12,7 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 | File | What it is |
 |---|---|
 | `ci-context/task.md` | **The ticket** this branch implements — read from **Jira** by the key in the branch name (fallback: the branch's snapshot `tasks/WIKI-xxx-*.md`). **Its acceptance criteria are the source of truth for what is expected to change** — and for what must stay unchanged. |
-| `ci-context/design-system.md` | **The design system** (`visual-agent/guidelines/design-system.md`, taken from `main`). Rules every page must follow in every PR. |
+| `ci-context/design-system.md` | **The design system** (`eyes-demo-agent/guidelines/design-system.md`, taken from `main`). Rules every page must follow in every PR. |
 | `ci-context/pr.md` | PR number, title, author and description — supporting detail. If it claims more than the ticket asks for, the ticket wins. |
 | `ci-context/pr.diff` | The code diff of this PR. Use it to tie a visual difference to the change that caused it. |
 | `ci-context/eyes-run.log` | Test run output. The Eyes URL is on the `Eyes batch` line if present, otherwise the `Eyes results` lines — copy it verbatim, including any trailing `~~`. Review the whole batch. |
@@ -132,7 +132,7 @@ Set `propagate: "none"` on those calls when "Apply a decision to … other brows
 ### `review/report.json`
 
 The data for the PDF report that is attached to the Jira ticket. Same shape as Agent 1's report
-(see `visual-agent/guidelines/agent-implement.md` → `agent-report/report.json`), filled in from this review:
+(see `eyes-demo-agent/guidelines/agent-implement.md` → `agent-report/report.json`), filled in from this review:
 
 - `source`: `"pr-review"`.
 - `task`: `{ "key": "<WIKI-xxx or empty>", "title": "<ticket title>", "file": "<Jira link or tasks/ file>", "workType": "<feature | bug | hotfix | …>" }`.

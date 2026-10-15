@@ -1,6 +1,6 @@
 // Readable diff for minified files: for each changed line, print only the part
 // that changed plus some context, instead of the whole (possibly 100 KB) line.
-// Usage: git diff -U0 <base>...HEAD | node visual-agent/scripts/compact-diff.mjs
+// Usage: git diff -U0 <base>...HEAD | node eyes-demo-agent/scripts/compact-diff.mjs
 const CONTEXT = 120;
 const MAX = 600;
 

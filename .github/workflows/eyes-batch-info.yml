@@ -20,11 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: visual-agent/scripts
+          sparse-checkout: eyes-demo-agent/scripts
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Environments in the batch
         env:
           BATCH: ${{ inputs.batch }}
-        run: node visual-agent/scripts/eyes-batch-info.mjs "$BATCH" | tee -a "$GITHUB_STEP_SUMMARY"
+        run: node eyes-demo-agent/scripts/eyes-batch-info.mjs "$BATCH" | tee -a "$GITHUB_STEP_SUMMARY"

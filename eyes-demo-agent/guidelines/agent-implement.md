@@ -165,7 +165,7 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
 
 `fixable`: `true` only when the bug was **caused by this branch's change** and can be fixed in the allowed folders
 without dropping anything the ticket asks for. If `true`, the pipeline gives you up to 2 more rounds to fix
-it and re-test (see `visual-agent/guidelines/agent-fix.md`). Use `false` when the fix needs a person: the ticket itself
+it and re-test (see `eyes-demo-agent/guidelines/agent-fix.md`). Use `false` when the fix needs a person: the ticket itself
 conflicts with the design system, a product decision is needed, or the cause is outside this change.
 
 `bugTicket` only for `bug` / `hotfix` work (omit otherwise). `before` / `after` are image paths from the Eyes MCP (baseline vs checkpoint).

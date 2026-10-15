@@ -118,7 +118,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Why | Optional | The reason for the change | Helps the reviewer and the AI understand the intent |
 | Pages / screens | Optional | Where the change is visible | Helps the AI find the relevant test cases |
 | Test on below devices | Optional | e.g. "Galaxy S25 Ultra", "Chrome desktop 1200×800" | The devices Applitools Eyes tests this ticket on. Without it, the defaults in `playwright.config.ts` are used |
-| Design reference | Optional | A design system rule or a Figma link | Checked together with `visual-agent/guidelines/design-system.md` |
+| Design reference | Optional | A design system rule or a Figma link | Checked together with `eyes-demo-agent/guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
 | Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review`, `auto-ai-merge` ( merge without waiting for a person's approval ), `tests-only` ( the developer built it; the AI only writes and runs the tests ) ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
 | Work type | Optional | Task ( default, treated as a feature ) or Bug | A Bug work type is treated like the `bug` label |
@@ -229,7 +229,7 @@ All the documents are in the [`docs/`](docs/) folder. Please read them in this o
 - Team lead / dev manager: reviews the ticket, moves it to Ready and chooses who builds it: a developer [ or ] the AI agent.
 - Developer: creates the branch from the ticket, or lets the AI agent build it. Gets the review in the pull request within minutes, before the change reaches QA.
 - QA team: no longer compares every screen by hand. The AI does the first review, and QA looks only at what was flagged: bugs, design rule breaks and unclear changes. The PDF ( differences classified by severity, with evidence ) becomes the starting point for the discussion with design and development.
-- Design team: the design system is written once in `visual-agent/guidelines/design-system.md`, and every pull request is checked against it. An undocumented change to a component is caught in the build, not in production.
+- Design team: the design system is written once in `eyes-demo-agent/guidelines/design-system.md`, and every pull request is checked against it. An undocumented change to a component is caught in the build, not in production.
 - Engineering manager: sees in the trust report how often people agree with the AI, before deciding how much to automate.
 
 *Example*
@@ -307,12 +307,12 @@ Each band is explained step by step in [How it works](#how-it-works) above, and 
 
 | Path | What it is |
 | --- | --- |
-| `visual-agent/` | The reusable part: copy it into your own project |
+| `eyes-demo-agent/` | The reusable part: copy it into your own project |
 | `examples/wikipedia/` | The demo: the Wikipedia site ( `site/` ) and its Playwright + Eyes tests ( `tests/` ) |
 | `docs/` | The documents: how it works, project structure, installation guide |
-| `visual-agent/guidelines/` | The rules the AI follows: plain text, edit to change its behaviour |
+| `eyes-demo-agent/guidelines/` | The rules the AI follows: plain text, edit to change its behaviour |
 | `.github/workflows/` | The pipeline |
-| `visual-agent/scripts/` | Helpers: Jira, Eyes, the PDF report |
+| `eyes-demo-agent/scripts/` | Helpers: Jira, Eyes, the PDF report |
 
 ## Setup
 
@@ -346,6 +346,6 @@ The AI can accept or reject changes in Eyes, but it can never save baselines, pu
 
 `main` is protected: every change goes through a pull request, and two checks must pass before anyone can merge: **Branch links to a Jira ticket** and **Visual review** (the AI review, functional checks included). A PR that only changes docs or the pipeline needs no Jira ticket and no visual review. The AI works as its own GitHub account, `eyes-mcp-visual-agent[bot]`, so everything it does is visible and checked like a developer's.
 
-By default a person approves every pull request. To let the pipeline merge without approval for the whole repository, run `visual-agent/scripts/set-merge-policy.sh auto` (back with `code-approval`), or use the `auto-ai-merge` label per ticket. How often people agree with the AI: **Actions → Trust report**.
+By default a person approves every pull request. To let the pipeline merge without approval for the whole repository, run `eyes-demo-agent/scripts/set-merge-policy.sh auto` (back with `code-approval`), or use the `auto-ai-merge` label per ticket. How often people agree with the AI: **Actions → Trust report**.
 
 This is a demo that merges straight into `main`. Adapt it to your branches (staging, QA, release) and add a human code approval as your team needs.

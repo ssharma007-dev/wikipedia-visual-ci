@@ -1,7 +1,7 @@
 // Collect before / after / differences-highlighted images for every changed step of an Eyes batch,
 // through the Applitools Eyes MCP, so the report shows the changes without opening the dashboard.
 // Run it BEFORE baselines are saved (after a save, Eyes reports the steps as matching).
-//   node visual-agent/scripts/eyes-evidence.mjs <batch-url> <out-dir>      → <out-dir>/evidence.json + PNGs
+//   node eyes-demo-agent/scripts/eyes-evidence.mjs <batch-url> <out-dir>      → <out-dir>/evidence.json + PNGs
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';

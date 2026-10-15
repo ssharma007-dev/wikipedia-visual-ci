@@ -1,6 +1,6 @@
 // How often do people agree with the AI reviewer? Reads closed pull requests and compares the AI's last verdict
 // with what happened next. No extra storage: the PR history is the record.
-//   GH_TOKEN=… GITHUB_REPOSITORY=owner/repo node visual-agent/scripts/trust-report.mjs [how-many-PRs]   → markdown on stdout
+//   GH_TOKEN=… GITHUB_REPOSITORY=owner/repo node eyes-demo-agent/scripts/trust-report.mjs [how-many-PRs]   → markdown on stdout
 //
 //   AI said pass → merged                          = agreed (automatic if a bot merged it)
 //   AI said fail → code changed afterwards, merged = agreed (the bug was real and got fixed)

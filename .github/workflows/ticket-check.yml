@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: visual-agent/scripts
+          sparse-checkout: eyes-demo-agent/scripts
 
       - name: Check the ticket
         run: |
@@ -57,7 +57,7 @@ jobs:
             echo "::error::$1"; exit 1
           }
 
-          if [ "$(bash visual-agent/scripts/pr-scope.sh "$PR")" = no-app ]; then
+          if [ "$(bash eyes-demo-agent/scripts/pr-scope.sh "$PR")" = no-app ]; then
             comment "## ✅ No Jira ticket needed
           This pull request only changes docs or the pipeline, not the app, so it needs no Jira ticket and no visual review."
             echo "Docs / pipeline only: no Jira ticket needed" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
@@ -66,7 +66,7 @@ jobs:
           KEY=$(echo "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
           [ -n "$KEY" ] || fail "The branch \`$BRANCH\` has no Jira key in its name (expected something like \`WIKI-17\`)."
 
-          if ! node visual-agent/scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
+          if ! node eyes-demo-agent/scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
             if grep -q '→ 404' jira.err; then
               fail "The branch \`$BRANCH\` points to \`$KEY\`, but there is no such ticket in Jira. Check for a typo."
             fi

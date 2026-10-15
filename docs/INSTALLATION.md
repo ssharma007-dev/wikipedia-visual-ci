@@ -38,12 +38,12 @@ Copy these folders and files from this sample into the root of your repository. 
 | Copy | What it is |
 |---|---|
 | `.github/workflows/` | The automation: tests, AI review, Agent 1, Ticket check, Jira updates |
-| `visual-agent/` | The reusable part: `scripts/` ( Jira, Eyes, the PDF report ), `guidelines/` ( the rules the AI follows, you will edit these in Step 3 ) and `mcp.json` ( connects the AI to the Applitools Eyes MCP Server ) |
+| `eyes-demo-agent/` | The reusable part: `scripts/` ( Jira, Eyes, the PDF report ), `guidelines/` ( the rules the AI follows, you will edit these in Step 3 ) and `mcp.json` ( connects the AI to the Applitools Eyes MCP Server ) |
 | `.github/pull_request_template.md`, `.github/CODEOWNERS` | Optional, recommended. In `CODEOWNERS`, replace `@ssharma007-dev` with your own GitHub users or teams |
 
 ```bash
 # from the folder that contains both repositories
-cp -r wikipedia-visual-ci/.github wikipedia-visual-ci/visual-agent your-repo/
+cp -r wikipedia-visual-ci/.github wikipedia-visual-ci/eyes-demo-agent your-repo/
 ```
 
 Then add the test tools to your project and ignore the pipeline's working folders:
@@ -70,7 +70,7 @@ The pipeline starts your app in GitHub Actions and tests it. You only tell it **
 | `APP_URL` | `http://localhost:4173` | The pipeline waits until this answers, then runs the tests against it |
 | `AGENT_ALLOWED_PATHS` | `src/ public/ tests/` | The only folders Agent 1 may change; anything else is thrown away |
 | `AGENT_TEST_PATHS` | `tests/` | Optional. The test folder: the only folder Agent 1 may change in tests-only mode ( default `examples/wikipedia/tests/` ) |
-| `NO_TICKET_PATHS` | `docs/ .github/ visual-agent/ README.md` ( default ) | Optional. A PR that only changes these needs no Jira ticket and no visual review |
+| `NO_TICKET_PATHS` | `docs/ .github/ eyes-demo-agent/ README.md` ( default ) | Optional. A PR that only changes these needs no Jira ticket and no visual review |
 
 Now set up Playwright with Applitools Eyes. Copy `playwright.config.ts` from this sample and change only:
 
@@ -110,14 +110,14 @@ The results appear in your Applitools dashboard.
 
 **Requirement:** the design team and QA lead agree on the rules.
 
-The AI checks every change against the plain text files in `visual-agent/guidelines/`. You can edit them like documents, no code is needed:
+The AI checks every change against the plain text files in `eyes-demo-agent/guidelines/`. You can edit them like documents, no code is needed:
 
 | File | What to put in it |
 |---|---|
-| `visual-agent/guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules. Replace the Wikipedia one completely: the AI rejects anything that breaks it |
-| `visual-agent/guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
-| `visual-agent/guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`examples/wikipedia/site/wikipedia/…`) with your own folders |
-| `visual-agent/guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
+| `eyes-demo-agent/guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules. Replace the Wikipedia one completely: the AI rejects anything that breaks it |
+| `eyes-demo-agent/guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
+| `eyes-demo-agent/guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`examples/wikipedia/site/wikipedia/…`) with your own folders |
+| `eyes-demo-agent/guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
 
 The rules are always read from `main`, so a pull request can't change the rules it is judged by.
 
@@ -268,7 +268,7 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 | `APP_START_COMMAND` | How to start your app (Step 2) |
 | `APP_URL` | Where your app runs in CI (Step 2) |
 | `AGENT_ALLOWED_PATHS` | Folders Agent 1 may change (Step 2) |
-| `NO_TICKET_PATHS` | Optional: paths that need no Jira ticket ( default `docs/ .github/ visual-agent/ README.md` ) |
+| `NO_TICKET_PATHS` | Optional: paths that need no Jira ticket ( default `docs/ .github/ eyes-demo-agent/ README.md` ) |
 | `MERGE_POLICY` | `code-approval` ( default: one person approves the PR ) or `auto` ( merge when the AI review passes ). The Jira label `auto-ai-merge` always merges automatically |
 
 ![Repository variables](installation/images/p10-repo-variables.png)
@@ -413,15 +413,15 @@ export APPLITOOLS_READ_KEY=<read key>
 export APPLITOOLS_WRITE_KEY=<write key>
 ```
 
-2. Connect the Eyes MCP Server to your IDE. It is the same server as in `visual-agent/mcp.json`:
-- (1) Claude Code: copy `visual-agent/mcp.json` to `.mcp.json` in the repository root, then start `claude` in that folder.
-- (2) Cursor: copy `visual-agent/mcp.json` to `.cursor/mcp.json`.
+2. Connect the Eyes MCP Server to your IDE. It is the same server as in `eyes-demo-agent/mcp.json`:
+- (1) Claude Code: copy `eyes-demo-agent/mcp.json` to `.mcp.json` in the repository root, then start `claude` in that folder.
+- (2) Cursor: copy `eyes-demo-agent/mcp.json` to `.cursor/mcp.json`.
 - (3) VS Code with GitHub Copilot: create `.vscode/mcp.json` with the same content, but rename `mcpServers` to `servers`.
 
 3. Start the app ( `npm start` ) and ask the AI, for example:
 
 ```
-Read tasks/WIKI-17-*.md and visual-agent/guidelines/agent-implement.md.
+Read tasks/WIKI-17-*.md and eyes-demo-agent/guidelines/agent-implement.md.
 Write the Playwright + Eyes test cases for this ticket, run them,
 and review the results with the Eyes MCP Server.
 ```
@@ -438,9 +438,9 @@ No IDE setup? Use the label `tests-only` and ⚡ Run Agent 1 instead ( Step 12 )
 |---|---|
 | A person must approve this ticket | Add the label `human-review` to the Jira ticket |
 | Merge a ticket without waiting for approval | Add the label `auto-ai-merge` to the Jira ticket |
-| Merge everything without approval ( repository-wide ) | `visual-agent/scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
-| How strict the AI is | Edit `visual-agent/guidelines/review-rules.md` |
-| Your design rules | Edit `visual-agent/guidelines/design-system.md` |
+| Merge everything without approval ( repository-wide ) | `eyes-demo-agent/scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
+| How strict the AI is | Edit `eyes-demo-agent/guidelines/review-rules.md` |
+| Your design rules | Edit `eyes-demo-agent/guidelines/design-system.md` |
 | Browsers and devices | `browsersInfo` in `playwright.config.ts` |
 | How often people agree with the AI | **Actions → Trust report → Run workflow** |
 
