@@ -65,7 +65,10 @@ const isReview = r.source === 'pr-review';   // a developer's PR reviewed by the
 const who = isReview ? 'AI visual review of the pull request' : 'Agent 1 · visual implementation report';
 const bugs = list(r.bugs);
 const recs = list(r.baseline?.recommendations);
-const fixed = list(r.fixHistory).flatMap((h) => list(h.bugs).map((b) => ({ ...b, round: h.round, batchUrl: h.batchUrl })));
+const fixed = [
+  ...list(r.fixedWhileImplementing).filter((b) => b.fixed !== false).map((b) => ({ fixed: true, ...b, round: 0, batchUrl: r.tests?.batchUrl })),
+  ...list(r.fixHistory).flatMap((h) => list(h.bugs).map((b) => ({ ...b, round: h.round, batchUrl: h.batchUrl }))),
+];
 const fixedCount = fixed.filter((b) => b.fixed).length;
 const count = (cls) => findings.filter((f) => f.class === cls).length;
 
@@ -172,7 +175,7 @@ ${bugs.length ? bugs.map((b) => `<div class="box"><h3>${esc(b.title)} <span clas
 
 ${fixed.length ? `<h2>Bugs the AI found and fixed by itself</h2>
 <p class="muted">The AI rejected these in Eyes, fixed the code, ran the tests again in a new Eyes batch and reviewed the result.</p>
-${fixed.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag ${b.fixed ? 'good' : 'bad'}">${b.fixed ? 'fixed' : 'still present'}</span> <span class="tag info">fix round ${esc(b.round)}</span></h3>
+${fixed.map((b) => `<div class="box"><h3>${esc(b.title)} <span class="tag ${b.fixed ? 'good' : 'bad'}">${b.fixed ? 'fixed' : 'still present'}</span> <span class="tag info">${b.round ? `fix round ${esc(b.round)}` : 'while implementing'}</span></h3>
 <p><b>Why it was a bug:</b> ${esc(b.whyBug)}</p>${b.rootCause ? `<p><b>Root cause:</b> ${esc(b.rootCause)}</p>` : ''}<p><b>What the AI changed:</b> ${esc(b.change)}</p>
 ${evidenceBlock(b.evidence)}${b.batchUrl ? `<p class="meta">${link(b.batchUrl, 'Eyes batch after the fix')}</p>` : ''}</div>`).join('')}` : ''}
 

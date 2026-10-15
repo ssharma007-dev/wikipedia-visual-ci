@@ -88,9 +88,14 @@ If `ci-context/tests-only.txt` exists, the developer has already built the chang
    - **Bug** — not asked for by the task, on its "Must not change" list, or breaks the design
      system → reject it in Eyes and document it.
    - **Noise** — ≤ 2px with no DOM change → accept.
-   - **Pre-existing** — already on `main` before your change and not caused by your diff (e.g. another
-     open bug) → leave unresolved, list it under findings with class `pre-existing`, and say which
-     ticket or area it belongs to. It is **not** a bug of this task and does not go in `bugs`.
+   - **Breaks the ticket's "Must not change" list, even if it was already on `main`** → it is a **bug**
+     of this task: reject it in Eyes and put it in `bugs`. The ticket says it must not change, so the
+     change can't be done while it is broken. Say in `whyBug` when it was already there before your
+     change. Set `fixable: true` when you can fix it in the allowed folders.
+   - **Pre-existing** — already on `main` before your change, not caused by your diff, and **not** on the
+     ticket's "Must not change" list nor a design-system break (e.g. another team's open bug elsewhere)
+     → leave unresolved, list it under findings with class `pre-existing`, and say which ticket or
+     area it belongs to. It does not go in `bugs`.
    - Not sure → leave unresolved for a person.
    - Also use the review rules' other classes where they fit (environment/infra change, flaky capture,
      content change, third-party) — each has its own action.
@@ -155,6 +160,10 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
       "evidence": { "imageDiff": "/abs/path.png", "eyesUrl": "https://…", "dom": "…" }
     }
   ],
+  "fixedWhileImplementing": [
+    { "title": "…", "whyBug": "…", "rootCause": "…", "change": "What you changed, in which file", "fixed": true,
+      "evidence": { "eyesUrl": "https://…" } }
+  ],
   "summary": {
     "realChanges": ["One line per intended change confirmed."],
     "bugs": ["One line per bug."],
@@ -163,10 +172,14 @@ Do not commit, push, merge or open pull requests — the pipeline does that.
 }
 ```
 
-`fixable`: `true` only when the bug was **caused by this branch's change** and can be fixed in the allowed folders
-without dropping anything the ticket asks for. If `true`, the pipeline gives you up to 2 more rounds to fix
+`fixable`: `true` when the bug can be fixed in the allowed folders without dropping anything the ticket asks for,
+whether this branch's change caused it or it was already on `main` and breaks the ticket's "Must not change" list. If `true`, the pipeline gives you up to 2 more rounds to fix
 it and re-test (see `eyes-demo-agent/guidelines/agent-fix.md`). Use `false` when the fix needs a person: the ticket itself
 conflicts with the design system, a product decision is needed, or the cause is outside this change.
+
+`fixedWhileImplementing`: bugs you found **and already fixed** before writing this report ( e.g. your change
+shifted a nearby element, you fixed it and re-ran ). One entry each, so the fix reaches the PDF and Jira. Bugs
+still present go in `bugs` instead.
 
 `bugTicket` only for `bug` / `hotfix` work (omit otherwise). `before` / `after` are image paths from the Eyes MCP (baseline vs checkpoint).
 

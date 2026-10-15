@@ -436,13 +436,13 @@ jobs:
         run: |
           [ -f agent-report/report.json ] || exit 0
           # Bugs the AI found and fixed itself: one sub-task each, already Done, saying what the issue was and how it was fixed.
-          F=$(node -p '(require("./agent-report/report.json").fixHistory||[]).flatMap(h=>(h.bugs||[]).map(b=>({...b,round:h.round,batchUrl:h.batchUrl}))).filter(b=>b.fixed).length' 2>/dev/null || echo 0)
+          F=$(node -p '(()=>{const r=require("./agent-report/report.json");return [...(r.fixedWhileImplementing||[]).map(b=>({...b,round:0,batchUrl:r.tests?.batchUrl})),...(r.fixHistory||[]).flatMap(h=>(h.bugs||[]).map(b=>({...b,round:h.round,batchUrl:h.batchUrl})))].filter(b=>b.fixed!==false).length})()' 2>/dev/null || echo 0)
           for i in $(seq 0 $((F-1))); do
             [ "$F" -gt 0 ] || break
             node -e '
               const r=require("./agent-report/report.json");
-              const b=(r.fixHistory||[]).flatMap(h=>(h.bugs||[]).map(x=>({...x,round:h.round,batchUrl:h.batchUrl}))).filter(x=>x.fixed)[+process.argv[1]];
-              const L=[`Found and fixed by the AI agent while implementing ${r.task.key} (fix round ${b.round}).`,
+              const b=[...(r.fixedWhileImplementing||[]).map(x=>({...x,round:0,batchUrl:r.tests?.batchUrl})),...(r.fixHistory||[]).flatMap(h=>(h.bugs||[]).map(x=>({...x,round:h.round,batchUrl:h.batchUrl})))].filter(x=>x.fixed!==false)[+process.argv[1]];
+              const L=[`Found and fixed by the AI agent while implementing ${r.task.key} (${b.round?"fix round "+b.round:"before it opened the pull request"}).`,
                 `What was the issue: ${b.title}`, `Why it was a bug: ${b.whyBug||"-"}`,
                 b.rootCause?`Root cause: ${b.rootCause}`:"", `What the AI changed ( how it was fixed ): ${b.change||"-"}`,
                 `Verified: the tests ran again and the AI reviewed the new results; the bug is no longer present.`,
@@ -528,7 +528,7 @@ jobs:
             echo "🤖 Agent 1 implemented $KEY — verdict: $V (review mode: ${{ steps.ctx.outputs.mode }}${{ steps.ctx.outputs.tests_only == 'yes' && ', tests only' || '' }})"
             [ -n "$PDF_URL" ] && echo "📄 PDF report (summary, bugs with evidence and fixes, before/after images): [$KEY-visual-report.pdf]($PDF_URL)"
             [ -n "$S" ] && echo "What it did: $S"
-            FIXED=$(node -p '(require("./agent-report/report.json").fixHistory||[]).flatMap(h=>h.bugs).filter(b=>b.fixed).length' 2>/dev/null || echo 0)
+            FIXED=$(node -p '(()=>{const r=require("./agent-report/report.json");return (r.fixedWhileImplementing||[]).filter(b=>b.fixed!==false).length+(r.fixHistory||[]).flatMap(h=>h.bugs).filter(b=>b.fixed).length})()' 2>/dev/null || echo 0)
             [ "$FIXED" -gt 0 ] && echo "🔧 The AI found and fixed $FIXED bug(s) by itself in ${{ steps.fix.outputs.rounds }} fix round(s) — details in the PDF."
             [ -n "${{ steps.pr.outputs.url }}" ] && echo "Pull request: [${{ steps.pr.outputs.url }}](${{ steps.pr.outputs.url }})"
             [ -n "$B" ] && [ "$B" != "undefined" ] && echo "Eyes batch (optional): [open in Eyes]($B)"
