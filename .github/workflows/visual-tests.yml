@@ -240,7 +240,7 @@ jobs:
           elif [ "$NO_TICKET" = yes ]; then
             gh pr comment "$PR" --body "## ⏭️ AI visual review skipped: no Jira ticket
           Without a ticket the AI has nothing to compare the changes against. See the **Ticket check** comment for how to fix the branch name.$( [ -s ci-context/failed-tests.md ] && printf '\n\n%s' "$(cat ci-context/failed-tests.md)" )"
-          elif grep -qi "session limit\|usage limit\|rate limit" review/agent-transcript.jsonl 2>/dev/null; then
+          elif grep -qi "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" review/agent-transcript.jsonl 2>/dev/null; then
             gh pr comment "$PR" --body "## ⏸️ AI visual review paused: Claude usage limit reached
           Nothing is wrong with the change itself. Re-run this check later (Actions → this run → Re-run jobs)."
           else
