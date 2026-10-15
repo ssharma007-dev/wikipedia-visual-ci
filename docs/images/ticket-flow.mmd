@@ -1,14 +1,14 @@
 %%{init: {"flowchart": {"wrappingWidth": 220, "nodeSpacing": 40, "rankSpacing": 55, "curve": "basis"}}}%%
 flowchart LR
     N["<b>New</b><br/>👩‍💼 Product manager<br/>creates the ticket"]
-    R["<b>Ready</b><br/>🧑‍💼 Team lead / dev manager<br/>reviews it and adds details"]
+    R["<b>Ready</b><br/>🧑‍💼 Team lead / engineering manager<br/>adds details and chooses<br/>who builds it"]
     C{"Who builds it?"}
     D["<b>In Progress</b><br/>👩‍💻 Developer<br/>builds the change and the tests,<br/>opens a pull request,<br/>the AI reviews it"]
     A["<b>In Progress</b><br/>🤖 AI agent<br/>builds, tests, reviews<br/>and fixes its own bugs"]
     V["<b>In Review</b><br/>👤 A person decides<br/>( PDF attached )"]
     K["<b>Done</b><br/>✅ Merged<br/>( PDF attached )"]
 
-    N -->|"team lead reviews<br/>· moves to Ready"| R
+    N -->|"team lead / engineering manager<br/>reviews, then changes<br/>the status to Ready"| R
     R --> C
     C -->|"assigns a developer"| D
     C -->|"⚡ Run Agent 1"| A
