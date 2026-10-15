@@ -349,12 +349,16 @@ jobs:
             else echo "::error::Agent 1 did not finish (no report) — its changes were NOT committed."; fi
             exit 1
           fi
-          git add -A site tests
-          if git diff --cached --quiet; then echo "No code changes to commit"; echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git add -A $(cat ci-context/allowed-paths.txt)
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."
-          # Someone (or another workflow) may have pushed to the branch meanwhile: rebase onto it, then push.
-          git pull --rebase origin "$TASK_BRANCH" || { echo "::error::Could not combine with new commits on $TASK_BRANCH"; exit 1; }
+          if git diff --cached --quiet; then echo "No code changes to commit"
+          else git commit -m "[agent] $KEY: implement task" -m "Implemented by Agent 1 from ${{ steps.ctx.outputs.file }}."; fi
+          # Push the new commit, and the merge of main from "Prepare the task branch" if there was one.
+          # Someone (or another workflow) may have pushed to the branch meanwhile: merge it in first
+          # ( a merge, not a rebase, so the merge of main stays as it is ). Nothing new → the push does nothing.
+          if git fetch -q origin "$TASK_BRANCH" 2>/dev/null; then
+            git merge --no-edit FETCH_HEAD || { echo "::error::Could not combine with new commits on $TASK_BRANCH"; exit 1; }
+          fi
           git push origin HEAD:"$TASK_BRANCH"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 

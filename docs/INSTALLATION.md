@@ -39,7 +39,7 @@ Copy these folders and files from this sample into the root of your repository. 
 |---|---|
 | `.github/workflows/` | The automation: tests, AI review, Agent 1, Ticket check, Jira updates |
 | `visual-agent/` | The reusable part: `scripts/` ( Jira, Eyes, the PDF report ), `guidelines/` ( the rules the AI follows, you will edit these in Step 3 ) and `mcp.json` ( connects the AI to the Applitools Eyes MCP Server ) |
-| `.github/pull_request_template.md`, `.github/CODEOWNERS` | Optional, recommended |
+| `.github/pull_request_template.md`, `.github/CODEOWNERS` | Optional, recommended. In `CODEOWNERS`, replace `@ssharma007-dev` with your own GitHub users or teams |
 
 ```bash
 # from the folder that contains both repositories
@@ -75,12 +75,15 @@ The pipeline starts your app in GitHub Actions and tests it. You only tell it **
 Now set up Playwright with Applitools Eyes. Copy `playwright.config.ts` from this sample and change only:
 
 ```ts
+testDir: './tests',                               // your test folder ( the sample points to examples/wikipedia/tests )
 appName: 'Your app name',
 browsersInfo: [                                   // the browsers and devices Eyes checks
   { name: 'chrome', width: 1200, height: 800 },
   { chromeEmulationInfo: { deviceName: 'Galaxy S25 Ultra', screenOrientation: 'portrait' } },
 ],
 ```
+
+For `browsersInfo`, change only the default list after `process.env.EYES_DEVICES ? JSON.parse(process.env.EYES_DEVICES) :`, so the devices from the ticket still win.
 
 Leave the rest as it is. It already takes care of Eyes branching, saving and `failTestsOnDiff: false`, so that the AI decides about the differences instead of Playwright.
 
@@ -111,7 +114,7 @@ The AI checks every change against the plain text files in `visual-agent/guideli
 
 | File | What to put in it |
 |---|---|
-| `visual-agent/guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules |
+| `visual-agent/guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules. Replace the Wikipedia one completely: the AI rejects anything that breaks it |
 | `visual-agent/guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
 | `visual-agent/guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`examples/wikipedia/site/wikipedia/…`) with your own folders |
 | `visual-agent/guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
@@ -224,7 +227,7 @@ The AI works with its own GitHub account. This way its pull requests are checked
 2. Name: e.g. `Eyes MCP Visual Agent`. On pull requests it appears as `eyes-mcp-visual-agent[bot]`.
 3. Homepage URL: your repository's URL.
 4. Webhook: untick Active.
-5. Repository permissions: set Contents, Pull requests and Issues to Read and write.
+5. Repository permissions: set Contents, Pull requests, Issues and **Workflows** to Read and write. Workflows is needed when Agent 1 brings an old branch up to date with `main` and `main` has a newer pipeline.
    Leave everything else as it is.
 6. Where can this app be installed: Only on this account.
 7. Click **Create GitHub App**. Copy the **App ID**, then click **Generate a private key**. A `.pem` file downloads.
@@ -275,6 +278,8 @@ Go to your repository → **Settings → Secrets and variables → Actions**.
 ## Step 9: Protect `main` (one-time setup)
 
 **Requirement:** a repository admin.
+
+Note: rulesets on a **private** repository need GitHub Pro, Team or Enterprise. On GitHub Free, they only work on public repositories.
 
 Go to your repository → **Settings → Rules → Rulesets → New branch ruleset**:
 
