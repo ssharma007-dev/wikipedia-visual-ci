@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: scripts
+          sparse-checkout: visual-agent/scripts
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -49,22 +49,22 @@ jobs:
         run: |
           if [ "$ACTION" = create ]; then
             printf '%b\n' "$DESCRIPTION" > desc.md
-            NEW=$(node scripts/jira.mjs create "${KEY%%-*}-0" "$SUMMARY" desc.md "$LABELS")
+            NEW=$(node visual-agent/scripts/jira.mjs create "${KEY%%-*}-0" "$SUMMARY" desc.md "$LABELS")
             echo "Created $NEW: ${JIRA_BASE_URL%/}/browse/$NEW" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = site-labels ]; then
-            node scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs site-labels "${KEY%%-*}-0" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = transition ]; then
-            node scripts/jira.mjs transition "$KEY" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs transition "$KEY" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = query ]; then
-            node scripts/jira.mjs query "${KEY%%-*}-0" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs query "${KEY%%-*}-0" "$SUMMARY" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = board ]; then
-            node scripts/jira.mjs board "${KEY%%-*}-0" "${SUMMARY:-1}" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs board "${KEY%%-*}-0" "${SUMMARY:-1}" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = add-label ]; then
-            node scripts/jira.mjs add-label "$KEY" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs add-label "$KEY" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$ACTION" = remove-label ]; then
             # A project key (WIKI) removes the label from every ticket; a ticket key (WIKI-18) from that ticket only.
             T="$KEY"; echo "$KEY" | grep -q -- '-' || T="$KEY-0"
-            node scripts/jira.mjs remove-label "$T" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs remove-label "$T" "$LABELS" | tee -a "$GITHUB_STEP_SUMMARY"
           else
-            node scripts/jira.mjs inspect "$KEY" | tee -a "$GITHUB_STEP_SUMMARY"
+            node visual-agent/scripts/jira.mjs inspect "$KEY" | tee -a "$GITHUB_STEP_SUMMARY"
           fi

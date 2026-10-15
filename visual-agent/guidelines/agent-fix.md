@@ -19,10 +19,10 @@ You run unattended. Nobody will answer questions — decide, and explain your re
 ## Rules for fixing
 
 - Fix only bugs with `"fixable": true`. Leave the others as they are and keep them in `bugs`.
-- Fix the **code** (`site/`), never the evidence. Do not weaken tests, remove checkpoints, or add
+- Fix the **code** ( in the folders listed in `ci-context/allowed-paths.txt` ), never the evidence. Do not weaken tests, remove checkpoints, or add
   ignore / layout regions to hide a bug.
 - Keep everything the ticket asks for. A fix that drops an acceptance criterion is not a fix.
-- Change as little as possible. Only `site/` and `tests/` are kept by the pipeline.
+- Change as little as possible. Only files in the folders listed in `ci-context/allowed-paths.txt` are kept by the pipeline.
 
 ## Steps
 

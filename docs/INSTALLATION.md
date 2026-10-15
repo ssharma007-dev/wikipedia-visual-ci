@@ -4,7 +4,7 @@ This guide explains how to set up the sample project's flow in your own project.
 
 *Flow*
 
-- Jira ticket: the PM or team lead creates a ticket with what should change and what must not change.
+- Jira ticket: the product manager creates a ticket with what should change and what must not change, and the team lead or dev manager reviews it and moves it to Ready.
 - Implementation: a developer [ or ] the AI agent implements the change and writes the test cases.
 - Tests: Playwright and Applitools Eyes run the test cases on the defined devices ( set in `playwright.config.ts` ).
 - AI review: the AI checks every visual difference against the ticket and the design system, using the Eyes MCP Server ( deterministic agentic workflow ).
@@ -24,7 +24,7 @@ Note: images with a dashed border are placeholders. Take that screenshot in your
 | A GitHub repository with your web app | The code and the pipeline live here | - |
 | A Jira Cloud site | Tickets, statuses and the PDF reports | [atlassian.com](https://www.atlassian.com/software/jira) |
 | An Applitools account | Visual testing on many browsers and devices | [applitools.com](https://applitools.com) |
-| A Claude subscription or Anthropic API key | The AI agent that builds and reviews | [claude.com](https://claude.com) |
+| An AI coding agent ( Claude in this demo ) | The AI agent that builds and reviews | [claude.com](https://claude.com) |
 | Node.js 20 on your laptop | To try the tests locally | [nodejs.org](https://nodejs.org) |
 
 ---
@@ -33,20 +33,17 @@ Note: images with a dashed border are placeholders. Take that screenshot in your
 
 **Requirement:** a developer with access to your repository.
 
-Copy these folders and files from this sample into the root of your repository:
+Copy these folders and files from this sample into the root of your repository. You don't need `examples/`: that is only the sample Wikipedia app.
 
 | Copy | What it is |
 |---|---|
 | `.github/workflows/` | The automation: tests, AI review, Agent 1, Ticket check, Jira updates |
-| `scripts/` | Helpers: Jira, Eyes, the PDF report, the trust report |
-| `guidelines/` | The rules the AI follows (you will edit these in Step 3) |
-| `.mcp.json` | Connects the AI to the Applitools Eyes MCP server |
+| `visual-agent/` | The reusable part: `scripts/` ( Jira, Eyes, the PDF report ), `guidelines/` ( the rules the AI follows, you will edit these in Step 3 ) and `mcp.json` ( connects the AI to the Applitools Eyes MCP Server ) |
 | `.github/pull_request_template.md`, `.github/CODEOWNERS` | Optional, recommended |
 
 ```bash
 # from the folder that contains both repositories
-cp -r wikipedia-visual-ci/.github wikipedia-visual-ci/scripts wikipedia-visual-ci/guidelines your-repo/
-cp wikipedia-visual-ci/.mcp.json your-repo/
+cp -r wikipedia-visual-ci/.github wikipedia-visual-ci/visual-agent your-repo/
 ```
 
 Then add the test tools to your project and ignore the pipeline's working folders:
@@ -85,7 +82,7 @@ browsersInfo: [                                   // the browsers and devices Ey
 
 Leave the rest as it is. It already takes care of Eyes branching, saving and `failTestsOnDiff: false`, so that the AI decides about the differences instead of Playwright.
 
-Write your test cases (functional and visual) in `tests/`. Use the app address from `SITE_URL`, which the pipeline sets for you:
+Write your test cases (functional and visual) in your test folder (the sample uses `examples/wikipedia/tests/`). Use the app address from `SITE_URL`, which the pipeline sets for you:
 
 ```ts
 import { test, expect } from '@applitools/eyes-playwright/fixture';
@@ -108,14 +105,14 @@ The results appear in your Applitools dashboard.
 
 **Requirement:** the design team and QA lead agree on the rules.
 
-The AI checks every change against the plain text files in `guidelines/`. You can edit them like documents, no code is needed:
+The AI checks every change against the plain text files in `visual-agent/guidelines/`. You can edit them like documents, no code is needed:
 
 | File | What to put in it |
 |---|---|
-| `guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules |
-| `guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
-| `guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`site/wikipedia/…`) with your own folders |
-| `guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
+| `visual-agent/guidelines/design-system.md` | Your colours, fonts, spacing, breakpoints and component rules |
+| `visual-agent/guidelines/review-rules.md` | How strict the AI is (e.g. a shift of 2px or less is noise) and what it may do in Eyes |
+| `visual-agent/guidelines/agent-implement.md` | How Agent 1 works. Replace the sample's paths (`examples/wikipedia/site/wikipedia/…`) with your own folders |
+| `visual-agent/guidelines/agent-fix.md` | How Agent 1 fixes its own bugs. Usually no change needed |
 
 The rules are always read from `main`, so a pull request can't change the rules it is judged by.
 
@@ -126,19 +123,35 @@ The rules are always read from `main`, so a pull request can't change the rules 
 **Requirement:** an Applitools account admin.
 
 You need three keys:
-- **API key:** runs the tests.
+- **API key:** runs the tests. Find it in the Eyes dashboard under your profile → My API key.
 - **Read key:** lets the AI look at the results.
 - **Write key:** lets the AI accept or reject differences.
 
-![Applitools API keys](installation/images/p05-applitools-keys.png)
+Create the Read key and the Write key as two separate keys:
+
+1. In the Eyes dashboard, go to **Admin → API keys** and click the add key icon.
+
+![Admin → API keys → add key](installation/images/applitools-add-key.png)
+
+2. Read key: pick the **Team**, turn on **Read** only, set an **Expiry** and a **Purpose**, then click **Add**. Copy the key.
+
+![Read key: only Read turned on](installation/images/applitools-read-key.png)
+
+3. Write key: click the add key icon again, pick the same **Team**, turn on **Write** only, set an **Expiry** and a **Purpose**, then click **Add**. Copy the key.
+
+![Write key: only Write turned on](installation/images/applitools-write-key.png)
+
+Note: when the key expires, the AI review stops working. Put a reminder before the expiry date.
 
 ---
 
-## Step 5: Get a Claude token for CI (one-time setup)
+## Step 5: Get a token for the AI agent (one-time setup)
 
-**Requirement:** a Claude subscription or an Anthropic API key.
+**Requirement:** an account with the AI agent you want to use.
 
-On your laptop, run:
+The agent does not have to be Claude. Any coding agent that can run in GitHub Actions and use an MCP server can do this job ( e.g. GitHub Copilot, OpenAI Codex, Gemini CLI ). In this demo I am using Claude Code, so the steps below are for Claude. With another agent, change the agent step in `implement-task.yml` and `visual-tests.yml`; the guidelines and scripts stay the same.
+
+For Claude, run on your laptop:
 
 ```bash
 npm install -g @anthropic-ai/claude-code
@@ -146,8 +159,6 @@ claude setup-token
 ```
 
 Copy the token it prints. You can use an Anthropic API key (`ANTHROPIC_API_KEY`) instead.
-
-![Claude token](installation/images/p06-claude-token.png)
 
 ---
 
@@ -174,17 +185,11 @@ In the screenshot, START points to New and every status has the Any marker: this
 
 Board: the columns should be the same five ( Board → ⋯ → Configure board → Columns ).
 
-**6.2b Show every ticket on the board ( must do ).** A Scrum board only shows tickets in the active sprint, and Jira puts every new ticket in the Backlog. Choose one:
-
-(1) Turn sprints off and create tickets from the board ( used in this demo ):
-- Space settings → **Features** → **Sprints** → off. The board then shows tickets by status ( New · Ready · In Progress · In Review · Done ).
-- Create tickets from the board: Board → **New** column → **+ Create**. The ticket appears in New straight away. The **+ Create** button at the top of Jira puts new tickets in the Backlog instead; move them with Backlog → right-click → **Move to board**.
-
-![Jira Features: Sprints turned off](installation/images/jira-sprints-off.png)
+**6.2b Create tickets from the board ( must do ).** Create every ticket from the board: Board → **New** column → **+ Create**. The ticket appears in New straight away. The **+ Create** button at the top of Jira puts new tickets in the Backlog instead, where they don't show on the board.
 
 ![Creating a ticket from the New column on the board](../docs/images/jira-create-ticket.gif)
 
-(2) Keep sprints: add a Jira Automation rule that puts every new ticket in the active sprint.
+If your team uses sprints: add a Jira Automation rule that puts every new ticket in the active sprint.
 1. Space settings → **Automation** → **Create rule** ( or "Create from scratch" ).
 2. Trigger: **Work item created**.
 3. Condition ( recommended ): **Work item fields condition** → Work type is one of **Task** ( sub-tasks follow their parent's sprint ).
@@ -334,7 +339,7 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 
 ### (1) The AI agent builds it
 
-**1. The PM or team lead creates the ticket** with two lists: *what should change* and *what must not change*.
+**1. The product manager creates the ticket** ( New ) with two lists: *what should change* and *what must not change*. The team lead or dev manager reviews it and moves it to **Ready**.
 Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`.
 
 **2. In Ready, the team lead or dev manager ( or anyone ) clicks the ⚡ ( Automation ) button → Agent 1** on the ticket. It moves to **In Progress**.
@@ -366,7 +371,7 @@ images for every change:
 ![Before, after and differences](installation/images/11-pdf-before-after.png)
 
 **7. The decision:**
-- No bugs found: the baselines are saved, the PR is merged and the ticket moves to Done. No manual effort is needed.
+- No bugs found: the baselines are saved. By default a person approves the PR ( one click ), then GitHub merges it and the ticket moves to Done. With the `auto-ai-merge` label, the pipeline merges it by itself.
 - Bugs the AI cannot fix, or the `human-review` label: the PR and the ticket get the label `needs-human`, the ticket moves to In Review and is assigned to the person who created it, and the PR is blocked.
 
 ![A PR blocked because of a bug](installation/images/12-pr-blocked-bugs.png)
@@ -389,9 +394,9 @@ images for every change:
 |---|---|
 | A person must approve this ticket | Add the label `human-review` to the Jira ticket |
 | Merge a ticket without waiting for approval | Add the label `auto-ai-merge` to the Jira ticket |
-| Merge everything without approval ( repository-wide ) | `scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
-| How strict the AI is | Edit `guidelines/review-rules.md` |
-| Your design rules | Edit `guidelines/design-system.md` |
+| Merge everything without approval ( repository-wide ) | `visual-agent/scripts/set-merge-policy.sh auto` ( back with `code-approval`, the default ) |
+| How strict the AI is | Edit `visual-agent/guidelines/review-rules.md` |
+| Your design rules | Edit `visual-agent/guidelines/design-system.md` |
 | Browsers and devices | `browsersInfo` in `playwright.config.ts` |
 | How often people agree with the AI | **Actions → Trust report → Run workflow** |
 
