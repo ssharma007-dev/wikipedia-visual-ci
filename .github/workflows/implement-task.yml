@@ -101,6 +101,11 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BR=$(git branch -r --format='%(refname:short)' | sed 's#^origin/##' | grep -E "(^|[^0-9A-Za-z])$KEY([^0-9]|$)" | grep -vx main | head -1 || true)
             if [ -n "$BR" ]; then git switch "$BR"
+              # Bring the branch up to date with main first ( main may have new code or a newer pipeline ).
+              if ! git merge --no-edit origin/main; then
+                git merge --abort
+                echo "::error::$BR conflicts with main. A person merges main into the branch, then clicks Run Agent 1 again."; exit 1
+              fi
             else
               node visual-agent/scripts/jira.mjs fetch "$KEY" > /tmp/task.md || { echo "::error::Could not read $KEY from Jira"; exit 1; }
               SLUG=$(head -1 /tmp/task.md | sed -E 's/^# [A-Z]+-[0-9]+ — //' | tr 'A-Z' 'a-z' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40 | sed -E 's/-$//')
