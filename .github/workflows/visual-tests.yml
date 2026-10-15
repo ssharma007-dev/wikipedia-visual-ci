@@ -464,6 +464,11 @@ jobs:
           NUM=$(echo "$PRJSON" | node -pe 'JSON.parse(require("fs").readFileSync(0)).number')
           HEADREF=$(echo "$PRJSON" | node -pe 'JSON.parse(require("fs").readFileSync(0)).head.ref')
           echo "Merged PR #$NUM ($HEADREF)"
+          # A PR that changed no app code ( docs / pipeline only ) must not touch the baseline: whatever is on main
+          # now was never reviewed by that PR, so accepting it would hide real differences.
+          if [ "$(NO_TICKET_PATHS="${{ vars.NO_TICKET_PATHS }}" bash eyes-demo-agent/scripts/pr-scope.sh "$NUM")" = no-app ]; then
+            echo "PR #$NUM changed no app code — main's baseline is left as is."; exit 0
+          fi
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           if [ -n "$B" ]; then node eyes-demo-agent/scripts/eyes-save.mjs "$B" --accept-all || echo "::warning::Could not save main's baseline"; fi
           KEY=$(echo "$HEADREF" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)

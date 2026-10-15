@@ -30,17 +30,3 @@
 		min-height: 48px;
 	}
 }
-
-/* Portal: line the Search button up with the edge of the screen on phones */
-@media (max-width: 480px) {
-  #search-form button[type="submit"] { margin-right: -28px; }
-}
-
-/* WIKI-35: remove the "Download on the App Store" badge from the portal's
-   "Download Wikipedia" box — iOS users are moved to the mobile website.
-   `.app-badge-ios` only exists on the portal, so this can't reach article
-   pages. The Google Play badge (`.app-badge-android`) and the "Download
-   Wikipedia for Android or iOS" text are untouched. */
-.app-badge-ios {
-	display: none;
-}

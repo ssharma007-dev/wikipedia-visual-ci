@@ -12,7 +12,7 @@ export default defineConfig<EyesFixture>({
   reporter: [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/results.json' }], ['@applitools/eyes-playwright/reporter']],
   use: {
     eyesConfig: {
-      appName: 'Wikipedia - Eyes demo agent',
+      appName: 'Wikipedia - Eyes agent demo',
       // Differences must not fail the run: the review agent decides. On CI the fixture
       // defaults to 'afterAll', i.e. getAllTestResults(true), which throws on diffs.
       failTestsOnDiff: false,
