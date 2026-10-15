@@ -24,7 +24,36 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # A PR that only changes docs or the pipeline ( vars.NO_TICKET_PATHS ) has nothing to test visually:
+  # the Visual review check passes straight away and the tests are skipped.
+  scope:
+    name: What the PR changes
+    if: ${{ !(github.event_name == 'pull_request' && endsWith(github.event.pull_request.user.login, '[bot]') && endsWith(github.event.sender.login, '[bot]')) }}
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.s.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: visual-agent/scripts
+      - id: s
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+          NO_TICKET_PATHS: ${{ vars.NO_TICKET_PATHS }}
+        run: |
+          if [ -n "$PR" ] && [ "$(bash visual-agent/scripts/pr-scope.sh "$PR")" = no-app ]; then
+            echo "app=no" >> "$GITHUB_OUTPUT"
+            SHA=$(gh pr view "$PR" --json headRefOid --jq .headRefOid)
+            gh api "repos/${{ github.repository }}/statuses/$SHA" -f state=success -f context="Visual review" \
+              -f description="No app change: docs or pipeline only" >/dev/null
+            echo "Docs / pipeline only: visual review not needed" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "app=yes" >> "$GITHUB_OUTPUT"
+          fi
+
   visual:
+    needs: scope
     outputs:
       merged: ${{ steps.auto.outputs.merged }}
       via_app: ${{ steps.auto.outputs.via_app }}
@@ -33,7 +62,7 @@ jobs:
     # run — skip a second, identical review. A skipped job counts as passed for required checks.
     # Later pushes to such a PR (e.g. a person fixing a bug) are reviewed normally.
     # Skip only pushes made by the bot itself (sender ends in [bot]); a person pushing a fix is reviewed normally.
-    if: ${{ !(github.event_name == 'pull_request' && endsWith(github.event.pull_request.user.login, '[bot]') && endsWith(github.event.sender.login, '[bot]')) }}
+    if: ${{ needs.scope.outputs.app == 'yes' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -92,7 +121,7 @@ jobs:
 
       - name: Start the app (vars.APP_START_COMMAND, waits for vars.APP_URL)
         run: |
-          ${{ vars.APP_START_COMMAND || 'node server.mjs' }} > server.log 2>&1 &
+          ${{ vars.APP_START_COMMAND || 'npm start' }} > server.log 2>&1 &
           for i in $(seq 1 120); do
             curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && exit 0
             sleep 1
@@ -112,8 +141,8 @@ jobs:
           BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
           KEY=$(echo "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
           [ -n "$KEY" ] || { echo "No ticket key: default devices"; exit 0; }
-          node scripts/jira.mjs fetch "$KEY" > /tmp/ticket.md 2>/dev/null || cp tasks/"$KEY"-*.md /tmp/ticket.md 2>/dev/null || { echo "Ticket not readable: default devices"; exit 0; }
-          DEV=$(node scripts/devices.mjs /tmp/ticket.md || true)
+          node visual-agent/scripts/jira.mjs fetch "$KEY" > /tmp/ticket.md 2>/dev/null || cp tasks/"$KEY"-*.md /tmp/ticket.md 2>/dev/null || { echo "Ticket not readable: default devices"; exit 0; }
+          DEV=$(node visual-agent/scripts/devices.mjs /tmp/ticket.md || true)
           if [ -n "$DEV" ]; then echo "EYES_DEVICES=$DEV" >> "$GITHUB_ENV"; echo "Devices from $KEY: $DEV"
           else echo "Devices: playwright.config.ts defaults"; fi
 
@@ -125,7 +154,7 @@ jobs:
           mkdir -p ci-context
           npx playwright test 2>&1 | tee ci-context/eyes-run.log
           CODE=${PIPESTATUS[0]}
-          node scripts/failed-tests.mjs test-results/results.json ci-context/failed-tests.json ci-context/failed-tests.md ci-context/test-stats.json
+          node visual-agent/scripts/failed-tests.mjs test-results/results.json ci-context/failed-tests.json ci-context/failed-tests.md ci-context/test-stats.json
           if [ "$CODE" != 0 ]; then
             echo "TESTS_FAILED=yes" >> "$GITHUB_ENV"
             echo "::error::Functional checks failed — the review continues, but this PR can't merge until they pass."
@@ -156,14 +185,14 @@ jobs:
             > ci-context/pr.md
           printf '\nTest framework: Playwright (JS)\n' >> ci-context/pr.md
           # Compact diff: only the changed part of each line (pages are minified)
-          git diff -U0 HEAD^1 HEAD | node scripts/compact-diff.mjs > ci-context/pr.diff
+          git diff -U0 HEAD^1 HEAD | node visual-agent/scripts/compact-diff.mjs > ci-context/pr.diff
           # The ticket: from this PR's branch, matched by the ticket ID in the branch name
           BRANCH="${{ github.head_ref }}"; [ -n "$BRANCH" ] || BRANCH=$(gh pr view "$PR" --json headRefName --jq .headRefName)
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           TASK=$(ls tasks/"$TICKET"-*.md 2>/dev/null | head -1 || true)
           echo "TICKET=$TICKET" >> "$GITHUB_ENV"
           # 1st choice: the ticket from Jira. Fallback: the branch's own snapshot tasks/<KEY>-*.md.
-          if [ -n "$TICKET" ] && node scripts/jira.mjs fetch "$TICKET" > ci-context/task.md 2> ci-context/jira.err; then
+          if [ -n "$TICKET" ] && node visual-agent/scripts/jira.mjs fetch "$TICKET" > ci-context/task.md 2> ci-context/jira.err; then
             TASK="Jira $JIRA_BASE_URL/browse/$TICKET"
           elif [ -n "$TICKET" ] && [ -n "$TASK" ]; then cp "$TASK" ci-context/task.md
           else printf 'No ticket found for branch `%s` (expected a Jira key such as WIKI-123 in the branch name).\n' "$BRANCH" > ci-context/task.md; TASK=""
@@ -171,9 +200,9 @@ jobs:
           cat ci-context/jira.err 2>/dev/null || true
           # Design system + review rules: always from main, so a PR can't change the rules it is judged by
           git fetch -q --depth=1 origin "${{ github.base_ref || 'main' }}"
-          git show FETCH_HEAD:guidelines/design-system.md > ci-context/design-system.md
-          git show FETCH_HEAD:guidelines/review-rules.md > ci-context/review-rules.md
-          CHANGED=$(git diff --name-only HEAD^1 HEAD -- guidelines || true)
+          git show FETCH_HEAD:visual-agent/guidelines/design-system.md > ci-context/design-system.md
+          git show FETCH_HEAD:visual-agent/guidelines/review-rules.md > ci-context/review-rules.md
+          CHANGED=$(git diff --name-only HEAD^1 HEAD -- visual-agent/guidelines || true)
           if [ -n "$CHANGED" ]; then
             printf '\n## ⚠️ This PR changes the review guidelines\n\n%s\n\nThese edits were NOT applied: the versions on main were used.\n' "$CHANGED" >> ci-context/pr.md
           fi
@@ -203,12 +232,12 @@ jobs:
           # The agent may inspect, accept, reject and add regions in Eyes.
           # It can never save or reset baselines, edit code, or run shell commands.
           claude -p "$(cat ci-context/review-rules.md)" \
-            --mcp-config .mcp.json --strict-mcp-config \
+            --mcp-config visual-agent/mcp.json --strict-mcp-config \
             --allowedTools "mcp__applitools-mcp" "Read" "Glob" "Grep" "Write" \
             --disallowedTools "mcp__applitools-mcp__eyes_resolve_save" "mcp__applitools-mcp__eyes_resolve_reset" "Bash" "Edit" \
             --max-turns 150 \
             --output-format stream-json --verbose \
-            | tee review/agent-transcript.jsonl | node scripts/agent-progress.mjs
+            | tee review/agent-transcript.jsonl | node visual-agent/scripts/agent-progress.mjs
 
       # Before / after / differences images for the PDF — must run before any save.
       - name: Collect visual evidence from Eyes
@@ -219,7 +248,7 @@ jobs:
         run: |
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           [ -n "$B" ] || { echo "No Eyes batch found — skipping evidence"; exit 0; }
-          node scripts/eyes-evidence.mjs "$B" review/evidence || true
+          node visual-agent/scripts/eyes-evidence.mjs "$B" review/evidence || true
 
       - name: Comment on the PR
         if: always() && env.PR != ''
@@ -234,13 +263,13 @@ jobs:
               echo
               [ -s ci-context/failed-tests.md ] && { cat ci-context/failed-tests.md; echo; }
               echo '---'
-              echo '📏 **Decided using [the guidelines](${{ github.server_url }}/${{ github.repository }}/tree/main/guidelines)** (from main): not asked for by the ticket → reject · asked for but breaks the [design system](${{ github.server_url }}/${{ github.repository }}/blob/main/guidelines/design-system.md) → reject, a person decides · asked for and on-design → accept · shift of **2px or less** with no HTML change → noise · unsure → left for a person.'
+              echo '📏 **Decided using [the guidelines](${{ github.server_url }}/${{ github.repository }}/tree/main/visual-agent/guidelines)** (from main): not asked for by the ticket → reject · asked for but breaks the [design system](${{ github.server_url }}/${{ github.repository }}/blob/main/visual-agent/guidelines/design-system.md) → reject, a person decides · asked for and on-design → accept · shift of **2px or less** with no HTML change → noise · unsure → left for a person.'
             } > review/comment.md
             gh pr comment "$PR" --body-file review/comment.md
           elif [ "$NO_TICKET" = yes ]; then
             gh pr comment "$PR" --body "## ⏭️ AI visual review skipped: no Jira ticket
           Without a ticket the AI has nothing to compare the changes against. See the **Ticket check** comment for how to fix the branch name.$( [ -s ci-context/failed-tests.md ] && printf '\n\n%s' "$(cat ci-context/failed-tests.md)" )"
-          elif grep -qi "session limit\|usage limit\|rate limit" review/agent-transcript.jsonl 2>/dev/null; then
+          elif grep -qi "session limit\|usage limit\|rate limit\|weekly limit\|hit your .* limit" review/agent-transcript.jsonl 2>/dev/null; then
             gh pr comment "$PR" --body "## ⏸️ AI visual review paused: Claude usage limit reached
           Nothing is wrong with the change itself. Re-run this check later (Actions → this run → Re-run jobs)."
           else
@@ -282,7 +311,7 @@ jobs:
           [ "$TESTS_FAILED" != yes ] || { echo "Functional checks failed — not merging."; exit 0; }
           V=$(node -p 'require("./review/verdict.json").verdict' 2>/dev/null || echo missing)
           [ "$V" = "pass" ] || { echo "Verdict $V — a person decides."; exit 0; }
-          LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(",")'),$( [ -n "$TICKET" ] && node scripts/jira.mjs labels "$TICKET" 2>/dev/null )"
+          LABELS="$(gh pr view "$PR" --json labels --jq '[.labels[].name]|join(",")'),$( [ -n "$TICKET" ] && node visual-agent/scripts/jira.mjs labels "$TICKET" 2>/dev/null )"
           if echo ",$LABELS," | grep -q ',human-review,'; then echo "human-review requested — a person saves and merges."; exit 0; fi
           # Label auto-ai-merge ( on the Jira ticket or the PR ) → the pipeline merges by itself; otherwise a person approves first.
           if echo ",$LABELS," | grep -q ',auto-ai-merge,'; then MERGE_POLICY=auto; fi
@@ -291,7 +320,7 @@ jobs:
           case "$AUTHOR" in app/*|github-actions*|*\[bot\]) echo "Agent-opened PR — Agent 1 handles it."; exit 0 ;; esac
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
           [ -n "$B" ] || { echo "No Eyes batch found — a person decides."; exit 0; }
-          node scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
+          node visual-agent/scripts/eyes-save.mjs "$B" || { echo "Eyes guard refused to save — a person decides."; exit 0; }
           echo "saved=yes" >> "$GITHUB_OUTPUT"
           # Merge policy: code-approval ( default ) waits for one person to approve the code; label auto-ai-merge merges now.
           # code-approval: wait for one
@@ -302,11 +331,14 @@ jobs:
             echo "waiting=code-approval" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if gh pr merge "$PR" --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
+          # main needs one approval. The bot may skip it ( ruleset bypass ), but GitHub only applies that with --admin,
+          # so --admin is used only when every required check ( Jira ticket, Visual review ) has passed.
+          ADMIN=""; if gh pr checks "$PR" --required > checks.txt 2>&1; then ADMIN="--admin"; fi; cat checks.txt
+          if gh pr merge "$PR" $ADMIN --squash --delete-branch --body "Merged by the pipeline after the AI visual review passed."; then
             echo "merged=yes" >> "$GITHUB_OUTPUT"
             [ -n "${{ steps.app.outputs.token }}" ] && echo "via_app=yes" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR" --body "🤖 **Automatic review:** no bugs and nothing unresolved, so the baselines were saved in Eyes and this PR was merged. Add the label \`human-review\` to the Jira ticket or the PR to keep a person in the loop next time."
-            [ -n "$TICKET" ] && node scripts/jira.mjs transition "$TICKET" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
+            [ -n "$TICKET" ] && node visual-agent/scripts/jira.mjs transition "$TICKET" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
           else
             echo "::warning::Merge failed (e.g. a conflict) — a person merges."
           fi
@@ -325,9 +357,9 @@ jobs:
           fi
           node -e 'const f="./review/report.json",r=require(f);try{r.failedTests=JSON.parse(require("fs").readFileSync("ci-context/failed-tests.json"))}catch{};r.source="pr-review";r.task=r.task||{};r.task.key=r.task.key||process.env.TICKET||"PR-"+process.env.PR;require("fs").writeFileSync(f,JSON.stringify(r,null,2))'
           cp ci-context/test-stats.json review/test-stats.json 2>/dev/null || true
-          node scripts/render-report.mjs review/report.json review/report.html review/report-summary.md "$RUN_URL"
+          node visual-agent/scripts/render-report.mjs review/report.json review/report.html review/report-summary.md "$RUN_URL"
           NAME="${TICKET:-PR-$PR}-visual-report.pdf"
-          node scripts/report-pdf.mjs review/report.html "review/$NAME" || echo "::warning::PDF could not be created"
+          node visual-agent/scripts/report-pdf.mjs review/report.html "review/$NAME" || echo "::warning::PDF could not be created"
 
       - name: "Jira: attach the PDF and comment"
         if: always() && env.PR != '' && env.TICKET != '' && env.NO_TICKET != 'yes'
@@ -343,7 +375,7 @@ jobs:
           PDF="review/$TICKET-visual-report.pdf"; PDF_URL=""
           # Attach the PDF first, so the comment can link straight to it
           if [ -f "$PDF" ]; then
-            node scripts/jira.mjs attach "$TICKET" "$PDF" > ci-context/attach.out 2>&1 || true
+            node visual-agent/scripts/jira.mjs attach "$TICKET" "$PDF" > ci-context/attach.out 2>&1 || true
             cat ci-context/attach.out
             PDF_URL=$(sed -n 's/^ATTACHMENT_URL=//p' ci-context/attach.out)
             [ -n "$PDF_URL" ] || echo "::warning::The PDF was NOT attached to $TICKET — see the error above. It is in this run's artifacts."
@@ -368,7 +400,7 @@ jobs:
             if [ "${{ steps.auto.outputs.merged }}" = "yes" ]; then echo "Automatic review: baselines saved and PR merged — ticket moved to Done."
             else echo "👤 A person decides: review the PDF, then fix or approve, save the baselines in Eyes and merge."; fi
           } > review/jira-note.txt
-          node scripts/jira.mjs note "$TICKET" review/jira-note.txt \
+          node visual-agent/scripts/jira.mjs note "$TICKET" review/jira-note.txt \
             || echo "::warning::Could not comment on Jira ticket $TICKET (Jira not configured or not reachable)"
 
       - name: Upload the review and report
@@ -389,14 +421,14 @@ jobs:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           if [ "${{ steps.auto.outputs.merged }}" = yes ]; then
-            [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ] && node scripts/jira.mjs needs-human "$TICKET" off || true
+            [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ] && node visual-agent/scripts/jira.mjs needs-human "$TICKET" off || true
             exit 0
           fi
           gh label create needs-human --color D93F0B --description "Waiting for a person to decide" --force >/dev/null 2>&1 || true
           gh pr edit "$PR" --add-label needs-human || true
           if [ -n "$TICKET" ] && [ "$NO_TICKET" != yes ]; then
-            node scripts/jira.mjs transition "$TICKET" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
-            node scripts/jira.mjs needs-human "$TICKET" on || true
+            node visual-agent/scripts/jira.mjs transition "$TICKET" "${{ vars.JIRA_STATUS_IN_REVIEW || 'In Review|Review' }}" || true
+            node visual-agent/scripts/jira.mjs needs-human "$TICKET" on || true
           fi
 
       - name: Enforce verdict
@@ -433,11 +465,11 @@ jobs:
           HEADREF=$(echo "$PRJSON" | node -pe 'JSON.parse(require("fs").readFileSync(0)).head.ref')
           echo "Merged PR #$NUM ($HEADREF)"
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' ci-context/eyes-run.log || true)
-          if [ -n "$B" ]; then node scripts/eyes-save.mjs "$B" --accept-all || echo "::warning::Could not save main's baseline"; fi
+          if [ -n "$B" ]; then node visual-agent/scripts/eyes-save.mjs "$B" --accept-all || echo "::warning::Could not save main's baseline"; fi
           KEY=$(echo "$HEADREF" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
           if [ -n "$KEY" ]; then
-            node scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
-            node scripts/jira.mjs needs-human "$KEY" off || true
+            node visual-agent/scripts/jira.mjs transition "$KEY" "${{ vars.JIRA_STATUS_DONE || 'Done' }}" || true
+            node visual-agent/scripts/jira.mjs needs-human "$KEY" off || true
           fi
 
   # Fallback when the GitHub App isn't configured: merges made with the default token don't trigger the
@@ -477,11 +509,11 @@ jobs:
       - name: Install and start the site
         run: |
           npm ci && npx playwright install --with-deps chromium
-          ${{ vars.APP_START_COMMAND || 'node server.mjs' }} > server.log 2>&1 &
+          ${{ vars.APP_START_COMMAND || 'npm start' }} > server.log 2>&1 &
           for i in $(seq 1 120); do curl -sf "${{ vars.APP_URL || 'http://localhost:3001/wikipedia' }}" > /dev/null && break; sleep 1; done
       - name: Run the visual tests on merged main
         run: npx playwright test 2>&1 | tee main-run.log
       - name: Accept and save (the merged change was approved by the automatic review)
         run: |
           B=$(grep -m1 -oE 'https://eyes\.applitools\.com/app/test-results/[0-9]+\?accountId=[A-Za-z0-9_]+' main-run.log)
-          node scripts/eyes-save.mjs "$B" --accept-all
+          node visual-agent/scripts/eyes-save.mjs "$B" --accept-all

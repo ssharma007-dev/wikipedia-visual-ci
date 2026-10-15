@@ -3,6 +3,7 @@ name: Ticket check
 # Every pull request must belong to a Jira ticket: the branch name must contain a key (e.g. WIKI-17)
 # that exists in Jira. If not, this check fails and comments on the PR with how to fix it.
 # Without a ticket, the AI review has nothing to compare against.
+# A PR that only changes docs or the pipeline ( vars.NO_TICKET_PATHS ) needs no ticket.
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
@@ -25,10 +26,11 @@ jobs:
       JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
       JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      NO_TICKET_PATHS: ${{ vars.NO_TICKET_PATHS }}
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: scripts
+          sparse-checkout: visual-agent/scripts
 
       - name: Check the ticket
         run: |
@@ -55,10 +57,16 @@ jobs:
             echo "::error::$1"; exit 1
           }
 
+          if [ "$(bash visual-agent/scripts/pr-scope.sh "$PR")" = no-app ]; then
+            comment "## ✅ No Jira ticket needed
+          This pull request only changes docs or the pipeline, not the app, so it needs no Jira ticket and no visual review."
+            echo "Docs / pipeline only: no Jira ticket needed" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+
           KEY=$(echo "$BRANCH" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -1 || true)
           [ -n "$KEY" ] || fail "The branch \`$BRANCH\` has no Jira key in its name (expected something like \`WIKI-17\`)."
 
-          if ! node scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
+          if ! node visual-agent/scripts/jira.mjs fetch "$KEY" > ticket.md 2> jira.err; then
             if grep -q '→ 404' jira.err; then
               fail "The branch \`$BRANCH\` points to \`$KEY\`, but there is no such ticket in Jira. Check for a typo."
             fi

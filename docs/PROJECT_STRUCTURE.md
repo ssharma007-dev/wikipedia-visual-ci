@@ -19,15 +19,17 @@ wikipedia-visual-ci/
 │   ├── workflows/          The pipeline (GitHub Actions)
 │   ├── CODEOWNERS          Who must approve changes to the rules and the pipeline
 │   └── pull_request_template.md
-├── guidelines/             The rules the AI follows (plain text)
-├── scripts/                Helpers used by the workflows (Jira, Eyes, PDF report)
-├── tests/                  Playwright test cases (functional and visual)
-├── site/                   The sample app (Wikipedia copy)
-├── server.mjs              Starts the sample app locally
+├── visual-agent/           The reusable part: copy it into your own project
+│   ├── guidelines/         The rules the AI follows (plain text)
+│   ├── scripts/            Helpers used by the workflows (Jira, Eyes, PDF report)
+│   └── mcp.json            Connects the AI to the Applitools Eyes MCP Server
+├── examples/wikipedia/     The sample app: replace with your own app
+│   ├── site/               The Wikipedia copy
+│   ├── tests/              Playwright test cases
+│   └── server.mjs          Starts the sample app locally
 ├── tasks/                  Copy of the Jira ticket, only on feature branches
 ├── docs/                   The documents: FLOW, INSTALLATION, PROJECT_STRUCTURE ( + screenshots )
 ├── playwright.config.ts    Playwright + Applitools Eyes settings
-├── .mcp.json               Connects the AI to the Applitools Eyes MCP Server
 ├── package.json            Test tools (Playwright, Applitools Eyes)
 ├── README.md               What it is, who it is for, the flow in short ( start here )
 ```
@@ -65,7 +67,7 @@ Reuse: copy the whole folder. Your project-specific values (how to start the app
 
 What they do:
 
-- `CODEOWNERS`: names the people who must approve changes to the rules (`guidelines/`) and to the pipeline (`.github/`).
+- `CODEOWNERS`: names the people who must approve changes to the rules (`visual-agent/guidelines/`) and to the pipeline (`.github/`).
 - `pull_request_template.md`: the form a developer fills in when opening a PR, including the Jira ticket.
 
 Importance: medium. CODEOWNERS makes sure nobody, including the AI, can quietly change the rules it is judged by.
@@ -74,7 +76,7 @@ Reuse: Adapt. Replace `@ssharma007-dev` with your design lead, QA lead or platfo
 
 ---
 
-## guidelines/: the rules the AI follows
+## visual-agent/guidelines/: the rules the AI follows
 
 What it does: plain text files that tell the AI how to work and how to decide. There is no code here. The AI always reads them from `main`, so a pull request cannot change the rules it is judged by.
 
@@ -84,13 +86,13 @@ Importance: high. This is where your team's knowledge goes. Better rules mean be
 |---|---|---|
 | `design-system.md` | Colours, fonts, spacing, breakpoints and component rules every page must follow | Replace with your own design system |
 | `review-rules.md` | How the AI classifies each difference (real change, bug, noise, dynamic content, …), the thresholds (e.g. 2px or less is noise), and what it may do in Eyes | Adapt: tune the thresholds to your team |
-| `agent-implement.md` | Agent 1's instructions: how to implement a ticket, which tests to write, the report format, the work types (feature, bug, hotfix, …) | Adapt: replace the sample's paths (`site/wikipedia/…`) with your own folders |
+| `agent-implement.md` | Agent 1's instructions: how to implement a ticket, which tests to write, the report format, the work types (feature, bug, hotfix, …) | Adapt: replace the sample's paths (`examples/wikipedia/site/wikipedia/…`) with your own folders |
 | `agent-fix.md` | How Agent 1 fixes a bug it caused and tests again (up to 2 rounds) | Keep |
 | `README.md` | Explains the files above and the order of priority (design system first, then ticket, then rules) | Keep |
 
 ---
 
-## scripts/: helpers used by the workflows
+## visual-agent/scripts/: helpers used by the workflows
 
 What it does: small Node.js scripts the workflows call. You don't run them by hand.
 
@@ -108,11 +110,12 @@ Importance: high, but you rarely need to change them.
 | `compact-diff.mjs` | Shortens code diffs so the AI can read them | Keep |
 | `agent-progress.mjs` | Prints the AI's progress in the GitHub Actions log | Keep |
 | `trust-report.mjs` | Calculates how often people agree with the AI | Optional |
+| `pr-scope.sh` | Tells whether a pull request changes the app, or only docs / the pipeline ( `NO_TICKET_PATHS` ). Docs- or pipeline-only PRs need no Jira ticket and no visual review | Keep |
 | `set-merge-policy.sh` | Switches between `auto` (merge when the AI review passes) and `code-approval` (also needs one person's approval) | Keep |
 
 ---
 
-## tests/: the test cases
+## examples/wikipedia/tests/: the test cases
 
 What it does: Playwright test cases for the app. Each test can have functional checks (`expect(...)`) and visual checks (`eyes.check(...)`). Agent 1 adds new tests here when it implements a ticket.
 
@@ -122,14 +125,14 @@ Reuse: Replace with your own test cases. Use the app address from `process.env.S
 
 ---
 
-## site/ and server.mjs: the sample app
+## examples/wikipedia/: the sample app
 
 What they do:
 
-- `site/wikipedia/pages/` and `assets/`: a saved copy of the Wikipedia portal and article pages.
-- `site/wikipedia/styles/custom.css`: the team stylesheet. Most tickets in the demo change this file.
-- `site/wikipedia/flags.json` and `flag-definitions.json`: demo feature flags (e.g. remove a banner) to create visual changes on purpose.
-- `server.mjs`: a small server that shows the site on `http://localhost:3001/wikipedia`.
+- `examples/wikipedia/site/wikipedia/pages/` and `assets/`: a saved copy of the Wikipedia portal and article pages.
+- `examples/wikipedia/site/wikipedia/styles/custom.css`: the team stylesheet. Most tickets in the demo change this file.
+- `examples/wikipedia/site/wikipedia/flags.json` and `flag-definitions.json`: demo feature flags (e.g. remove a banner) to create visual changes on purpose.
+- `examples/wikipedia/server.mjs`: a small server that shows the site on `http://localhost:3001/wikipedia`.
 
 Importance: only for the demo.
 
@@ -157,9 +160,9 @@ Reuse: Adapt. Change `appName` and `browsersInfo`. Leave the branching settings 
 
 ---
 
-## .mcp.json: connection to the Applitools Eyes MCP Server
+## visual-agent/mcp.json: connection to the Applitools Eyes MCP Server
 
-What it does: tells the AI how to start the Applitools Eyes MCP Server and which keys to use. The keys come from the repository secrets.
+What it does: tells the AI how to start the Applitools Eyes MCP Server and which keys to use. The keys come from the repository secrets. Developers can use the same file in their IDE ( step 13 in [INSTALLATION.md](INSTALLATION.md) ).
 
 Importance: high. Without it, the AI cannot see the Eyes results.
 
@@ -187,6 +190,6 @@ Reuse: Optional.
 
 | Keep as it is | Adapt | Replace with your own | Leave out |
 |---|---|---|---|
-| `.github/workflows/`, `scripts/`, `guidelines/agent-fix.md`, `guidelines/README.md`, `.mcp.json` | `playwright.config.ts`, `guidelines/review-rules.md`, `guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `site/` and `server.mjs` (your app), `tests/` (your test cases), `guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (keep it if you want the guides in your repository) |
+| `.github/workflows/`, `visual-agent/scripts/`, `visual-agent/guidelines/agent-fix.md`, `visual-agent/guidelines/README.md`, `visual-agent/mcp.json` | `playwright.config.ts`, `visual-agent/guidelines/review-rules.md`, `visual-agent/guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `examples/wikipedia/site/` and `examples/wikipedia/server.mjs` (your app), `examples/wikipedia/tests/` (your test cases), `visual-agent/guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (keep it if you want the guides in your repository) |
 
-Note: the only values you set per project are repository variables (`APP_START_COMMAND`, `APP_URL`, `AGENT_ALLOWED_PATHS`, `MERGE_POLICY`, `BOT_APP_ID`) and secrets. Everything else is the same for every project.
+Note: the only values you set per project are repository variables (`APP_START_COMMAND`, `APP_URL`, `AGENT_ALLOWED_PATHS`, `AGENT_TEST_PATHS`, `NO_TICKET_PATHS`, `MERGE_POLICY`, `BOT_APP_ID`) and secrets. Everything else is the same for every project.

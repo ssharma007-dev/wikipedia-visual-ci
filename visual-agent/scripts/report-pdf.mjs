@@ -1,4 +1,4 @@
-// Turn the HTML report into a PDF (A4, light theme). Usage: node scripts/report-pdf.mjs <report.html> <report.pdf>
+// Turn the HTML report into a PDF (A4, light theme). Usage: node visual-agent/scripts/report-pdf.mjs <report.html> <report.pdf>
 import { chromium } from '@playwright/test';
 import path from 'node:path';
 

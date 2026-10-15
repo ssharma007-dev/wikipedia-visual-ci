@@ -21,11 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: scripts
+          sparse-checkout: visual-agent/scripts
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Compare AI verdicts with what people did
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/trust-report.mjs "${{ inputs.prs || 100 }}" | tee -a "$GITHUB_STEP_SUMMARY"
+        run: node visual-agent/scripts/trust-report.mjs "${{ inputs.prs || 100 }}" | tee -a "$GITHUB_STEP_SUMMARY"

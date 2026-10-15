@@ -1,5 +1,5 @@
 // Render Agent 1's report.json into a self-contained HTML report (+ a short markdown summary).
-// Usage: node scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md [run-url]
+// Usage: node visual-agent/scripts/render-report.mjs agent-report/report.json agent-report/report.html agent-report/summary.md [run-url]
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -42,7 +42,7 @@ function testLinks(t) {
   return out.join(' · ') || '—';
 }
 
-// Before / after / differences images collected from Eyes by scripts/eyes-evidence.mjs.
+// Before / after / differences images collected from Eyes by visual-agent/scripts/eyes-evidence.mjs.
 let evidence = [];
 try { evidence = JSON.parse(fs.readFileSync(path.join(path.dirname(jsonPath), 'evidence', 'evidence.json'), 'utf-8')).items ?? []; } catch {}
 let batchStats = null, testStats = null;
