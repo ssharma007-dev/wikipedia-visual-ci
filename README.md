@@ -15,7 +15,7 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
 1. Create the ticket ( Jira status: New ): the product manager creates the ticket in Jira with what should change and what must not change.
 
    <img src="docs/images/jira-create-ticket.gif" width="560" alt="Creating a ticket from the New column, adding the description and the text label">
-2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. In Ready, they choose who handles it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
+2. Review the ticket ( Jira status: Ready ): the team lead or dev manager reviews the New ticket, adds more details and moves it to Ready. Ready means the ticket is ready to be picked up. In Ready, they choose who handles it: assign a developer [ or ] click ⚡ Run Agent 1 for the AI agent. Optional labels: `feature`, `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`, `tests-only` ( no label = feature ). To add a label: open the ticket → Details panel on the right → Labels → type the label → Enter.
 
    Moving the ticket from New to Ready: open the ticket → click the status ( New ) → Ready.
 
@@ -48,7 +48,9 @@ The goal: QA and developers no longer compare screenshots by hand. People only s
    | <img src="docs/images/jira-create-branch.png" width="260" alt="Create branch from the Jira ticket"> | <img src="docs/images/jira-run-agent-1.png" width="260" alt="The Agent 1 custom agent in the Jira Automation menu"> | <img src="docs/installation/images/05-actions-run.png" width="260" alt="The Agent 1 run in GitHub Actions"> |
 4. Test cases ( Jira status: In Progress ):
    - AI agent: creates the test cases, using the Applitools Eyes MCP Server to add the visual checkpoints, and runs them.
-   - Developer: writes their own test cases, [ or ] clicks ⚡ Run Agent 1 and the AI adds them. The AI continues on the developer's branch, so it also completes anything still missing from the ticket.
+   - Developer: writes their own test cases, [ or ] lets the AI write them:
+     - only the tests: add the label `tests-only` and click ⚡ Run Agent 1 ( or click ⚡ → **Agent 1 - tests only** ). The AI keeps the developer's code exactly as it is, and only writes and runs the test cases and reviews them. If the developer's code has a bug, the AI reports it, it doesn't fix it;
+     - code and tests: click ⚡ Run Agent 1 without the label. The AI continues on the developer's branch, completes anything still missing from the ticket and writes the test cases.
    - Applitools Eyes visually tests every screen, component or important area that the Jira ticket names: the full page, or only a component ( e.g. the header links ) when the change is local. It runs on the devices listed in the ticket under "Test on below devices", or, if the ticket lists none, on the defaults in `playwright.config.ts` ( here Chrome desktop and Galaxy S25 Ultra ).
 5. AI review ( Jira status: In Progress ): once the results are there, the AI reviews them using the Eyes MCP Server. Every difference is checked against the ticket and the design system.
 6. Acceptance ( Jira status: In Progress ):
@@ -92,6 +94,7 @@ Note:
 |---|---|
 | New / Ready | Creates a new branch from `main`, builds the change, writes and runs the test cases, reviews them and opens the pull request. The ticket moves to In Progress. |
 | In Progress ( a developer already started ) | Continues on the developer's branch: builds what is still missing according to the ticket, writes and runs the test cases, reviews everything and pushes to the same pull request. It works from the ticket and the current code. It does not know what the developer planned to do next. |
+| In Progress, with `tests-only` ( or the **Agent 1 - tests only** button ) | Keeps the developer's code as it is. Only writes and runs the test cases on the developer's branch and reviews them. Bugs in the developer's code are reported in the PDF and as Jira sub-tasks, not fixed. Needs the developer's branch to exist. |
 | In Review ( the review found bugs ) | Moves the ticket back to In Progress, continues on the same branch and reviews everything again. It may fix the bugs, because it checks the ticket and the design system again, but it does not read the previous review. |
 | Done | Not useful: the branch was deleted when it was merged, so the AI starts again from `main` and finds nothing left to do. Tip: in the Jira rule, add the condition "Status is not Done". |
 
@@ -119,7 +122,7 @@ The AI builds and reviews the change based on what the ticket says, so a clear t
 | Test on below devices | Optional | e.g. "Galaxy S25 Ultra", "Chrome desktop 1200×800" | The devices Applitools Eyes tests this ticket on. Without it, the defaults in `playwright.config.ts` are used |
 | Design reference | Optional | A design system rule or a Figma link | Checked together with `visual-agent/guidelines/design-system.md` |
 | Steps to reproduce, Actual, Expected | Required for a bug or hotfix | How to see the bug, what you see now, what you should see | The AI first reproduces the bug, then fixes it and adds a regression test |
-| Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review`, `auto-ai-merge` ( merge without waiting for a person's approval ) ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
+| Labels | Optional | `feature`, `bug`, `hotfix`, `text` ( a text-only change: the AI expects only text to change and checks the new text fits ), `human-review`, `auto-ai-merge` ( merge without waiting for a person's approval ), `tests-only` ( the developer built it; the AI only writes and runs the tests ) ( extra types: `refactor` = no visual change expected, `a11y` = accessibility ) | Tells the AI the type of work ( no label = feature ). `human-review` means a person approves before the merge |
 | Work type | Optional | Task ( default, treated as a feature ) or Bug | A Bug work type is treated like the `bug` label |
 
 *Template ( copy into the Jira description )*

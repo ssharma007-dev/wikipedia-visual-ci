@@ -69,6 +69,7 @@ The pipeline starts your app in GitHub Actions and tests it. You only tell it **
 | `APP_START_COMMAND` | `npm run build && npm run preview -- --port 4173` | Starts your app in CI (it runs in the background) |
 | `APP_URL` | `http://localhost:4173` | The pipeline waits until this answers, then runs the tests against it |
 | `AGENT_ALLOWED_PATHS` | `src/ public/ tests/` | The only folders Agent 1 may change; anything else is thrown away |
+| `AGENT_TEST_PATHS` | `tests/` | Optional. The test folder: the only folder Agent 1 may change in tests-only mode ( default `examples/wikipedia/tests/` ) |
 | `NO_TICKET_PATHS` | `docs/ .github/ visual-agent/ README.md` ( default ) | Optional. A PR that only changes these needs no Jira ticket and no visual review |
 
 Now set up Playwright with Applitools Eyes. Copy `playwright.config.ts` from this sample and change only:
@@ -326,6 +327,12 @@ Check: open a ticket in Ready → ⚡ → **Agent 1**. Within a few seconds a ru
 
 ![Jira automation rule](installation/images/p12-jira-automation-rule.png)
 
+**10.3 Optional: a second button, Agent 1 - tests only.** For a developer who built the change and only wants the tests. Create a second rule the same way ( or duplicate **Agent 1** ), name it **Agent 1 - tests only**, and change only the body:
+
+`{"ref":"main","inputs":{"key":"{{issue.key}}","mode":"tests-only"}}`
+
+Without this button, the label `tests-only` on the ticket does the same with the normal **Agent 1** button.
+
 ---
 
 ## Step 11: Create the first baseline (one-time setup)
@@ -342,7 +349,7 @@ A ticket can be implemented in two ways: (1) the AI agent builds it, [ or ] (2) 
 ### (1) The AI agent builds it
 
 **1. The product manager creates the ticket** ( New ) with two lists: *what should change* and *what must not change*. The team lead or dev manager reviews it and moves it to **Ready**.
-Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`.
+Optional labels: `bug`, `hotfix`, `text`, `human-review`, `auto-ai-merge`, `tests-only`.
 
 **2. In Ready, the team lead or dev manager ( or anyone ) clicks the ⚡ ( Automation ) button → Agent 1** on the ticket. It moves to **In Progress**.
 
