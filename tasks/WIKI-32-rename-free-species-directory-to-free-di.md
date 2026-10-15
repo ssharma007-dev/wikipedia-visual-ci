@@ -1,8 +1,8 @@
 # WIKI-32 — Rename "Free species directory" to "Free directory of all species" on the portal
 
-**Type:** Task · **Priority:** Medium · **Status:** Ready · **Reporter:** Shreya Sharma
+**Type:** Task · **Priority:** Medium · **Status:** In Review · **Reporter:** Shreya Sharma
 **Source:** Jira — https://testing-visual-ci.atlassian.net/browse/WIKI-32
-**Labels:** auto-ai-merge
+**Labels:** auto-ai-merge, needs-human
 
 Why:
 
