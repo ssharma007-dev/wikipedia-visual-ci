@@ -82,7 +82,7 @@ The Jira ticket moves through five statuses: New → Ready → In Progress → I
 - Developer path: product manager ( New ) → team lead or dev manager ( Ready, assigns a developer ) → developer ( In Progress ) → AI review on the pull request → developer again only if the AI found bugs ( In Review ) → AI review again → Done.
 
 Note:
-- The pipeline moves the ticket to In Progress ( AI path ), In Review and Done. New is the status of every new ticket; the team lead or dev manager moves it to Ready.
+- The pipeline moves the ticket to In Progress ( AI path ), In Review and Done. Every new Run Agent 1 removes the old `needs-human` label first; it is added again only if that run needs a person. New is the status of every new ticket; the team lead or dev manager moves it to Ready.
 - If your Jira uses other names ( e.g. "Doing" instead of "In Progress" ), the pipeline accepts "In Progress" or "Doing" by default. You can set your own names with the repository variables `JIRA_STATUS_IN_PROGRESS`, `JIRA_STATUS_IN_REVIEW` and `JIRA_STATUS_DONE`.
 - To move the ticket to In Progress automatically when a developer creates a branch, add a Jira Automation rule: trigger "Branch created", action "Transition work item to In Progress".
 
@@ -91,7 +91,7 @@ Note:
 | Jira status when clicked | What the AI agent does |
 |---|---|
 | New / Ready | Creates a new branch from `main`, builds the change, writes and runs the test cases, reviews them and opens the pull request. The ticket moves to In Progress. |
-| In Progress ( a developer already started ) | Continues on the developer's branch: builds what is still missing according to the ticket, writes and runs the test cases, reviews everything and pushes to the same pull request. It works from the ticket and the current code. It does not know what the developer planned to do next. |
+| In Progress ( a developer already started ) | First brings the branch up to date with `main` ( if that conflicts, it stops and asks a person to merge `main` first ). Then continues on the developer's branch: builds what is still missing according to the ticket, writes and runs the test cases, reviews everything and pushes to the same pull request. It works from the ticket and the current code. It does not know what the developer planned to do next. |
 | In Progress, with the label `tests-only` | Keeps the developer's code as it is. Only writes and runs the test cases on the developer's branch and reviews them. Bugs in the developer's code are reported in the PDF and as Jira sub-tasks, not fixed. Needs the developer's branch to exist. |
 | In Review ( the review found bugs ) | Moves the ticket back to In Progress, continues on the same branch and reviews everything again. It may fix the bugs, because it checks the ticket and the design system again, but it does not read the previous review. |
 | Done | Not useful: the branch was deleted when it was merged, so the AI starts again from `main` and finds nothing left to do. Tip: in the Jira rule, add the condition "Status is not Done". |

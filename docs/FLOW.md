@@ -108,7 +108,7 @@ What happens:
 - (1) Developer: the developer moves the ticket to In Progress, creates a branch from the ticket ( Development → Create branch ) [ or ] in git, with the ticket key in its name, builds the change and opens a pull request. GitHub for Atlassian links the branch to the ticket, and the pipeline copies the ticket into the branch as `tasks/WIKI-18-….md`, so the task travels with the code.
 - (2) AI agent: someone clicks ⚡ ( Automation ) → Agent 1 on the ticket. A Jira Automation rule calls GitHub, which starts Agent 1. The ticket moves to In Progress, and the AI creates the branch itself, reads the ticket and the guidelines, and builds the change.
 
-If Run Agent 1 is clicked when a branch already exists ( a developer started, or an earlier AI run ), the AI continues on that branch and pushes to the same pull request. See "Run Agent 1 at each status" in the [README](../README.md).
+If Run Agent 1 is clicked when a branch already exists ( a developer started, or an earlier AI run ), the pipeline first merges `main` into it, so an old branch gets the latest code and pipeline ( on a conflict it stops and asks a person to merge `main` first ). Then the AI continues on that branch and pushes to the same pull request. See "Run Agent 1 at each status" in the [README](../README.md).
 
 Who: developer [ or ] AI agent.
 
@@ -199,8 +199,10 @@ Files:
 What happens:
 - No bugs found: the pipeline saves the baselines in Eyes, and:
   - by default, a person approves the pull request ( one click ). GitHub then merges it, and the ticket moves to Done;
-  - with the label `auto-ai-merge`, the pipeline merges it by itself, and the ticket moves to Done.
+  - with the label `auto-ai-merge`, the pipeline merges it by itself, and the ticket moves to Done. The GitHub App is on the bypass list of `main` ( Step 9 in INSTALLATION ), so it can merge without the approval, but only after both required checks have passed.
 - Bugs it cannot fix, unclear changes, or the `human-review` label ( Jira status: In Review ): the PR and the ticket get the label `needs-human`, and the ticket is assigned to the person who created it. A person reads the PDF, then fixes or approves. When the developer pushes a fix, the AI reviews it again.
+
+Each new Run Agent 1 removes the old `needs-human` label first, so it only shows what the latest run found.
 
 After every merge to `main`, the pipeline updates `main`'s baseline in Eyes, moves the ticket to Done and removes the ticket copy from `main`.
 

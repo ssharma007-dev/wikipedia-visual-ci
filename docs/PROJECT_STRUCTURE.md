@@ -110,6 +110,7 @@ Importance: high, but you rarely need to change them.
 | `compact-diff.mjs` | Shortens code diffs so the AI can read them | Keep |
 | `agent-progress.mjs` | Prints the AI's progress in the GitHub Actions log | Keep |
 | `trust-report.mjs` | Calculates how often people agree with the AI | Optional |
+| `pr-scope.sh` | Tells whether a pull request changes the app, or only docs / the pipeline ( `NO_TICKET_PATHS` ). Docs- or pipeline-only PRs need no Jira ticket and no visual review | Keep |
 | `set-merge-policy.sh` | Switches between `auto` (merge when the AI review passes) and `code-approval` (also needs one person's approval) | Keep |
 
 ---
@@ -191,4 +192,4 @@ Reuse: Optional.
 |---|---|---|---|
 | `.github/workflows/`, `visual-agent/scripts/`, `visual-agent/guidelines/agent-fix.md`, `visual-agent/guidelines/README.md`, `visual-agent/mcp.json` | `playwright.config.ts`, `visual-agent/guidelines/review-rules.md`, `visual-agent/guidelines/agent-implement.md`, `.github/CODEOWNERS`, `package.json` | `examples/wikipedia/site/` and `examples/wikipedia/server.mjs` (your app), `examples/wikipedia/tests/` (your test cases), `visual-agent/guidelines/design-system.md` (your design system) | `tasks/` (created automatically), `docs/` (keep it if you want the guides in your repository) |
 
-Note: the only values you set per project are repository variables (`APP_START_COMMAND`, `APP_URL`, `AGENT_ALLOWED_PATHS`, `MERGE_POLICY`, `BOT_APP_ID`) and secrets. Everything else is the same for every project.
+Note: the only values you set per project are repository variables (`APP_START_COMMAND`, `APP_URL`, `AGENT_ALLOWED_PATHS`, `AGENT_TEST_PATHS`, `NO_TICKET_PATHS`, `MERGE_POLICY`, `BOT_APP_ID`) and secrets. Everything else is the same for every project.
