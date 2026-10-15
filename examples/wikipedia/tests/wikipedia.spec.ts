@@ -107,6 +107,25 @@ test('Wikiversity sister-project description reads "Free learning materials" (WI
   await eyes.check('Sister projects list phone (WIKI-21)', { region: '.other-projects', fully: false });
 });
 
+// WIKI-32: the Wikispecies sister-project description reads "Free directory of all species"
+// instead of "Free species directory". The other sister project descriptions, tagline, search
+// bar and language links must not change.
+test('Wikispecies sister-project description reads "Free directory of all species" (WIKI-32)', async ({ page, eyes }) => {
+  await page.goto(BASE);
+
+  await expect(page.locator('[data-jsl10n="wikispecies.slogan"]')).toHaveText('Free directory of all species');
+  await expect(page.locator('[data-jsl10n="commons.slogan"]')).toHaveText('Free media library');
+  await expect(page.locator('[data-jsl10n="wikivoyage.slogan"]')).toHaveText('Free travel guide');
+  await expect(page.locator('[data-jsl10n="wiktionary.slogan"]')).toHaveText('Free dictionary');
+  await expect(page.locator('[data-jsl10n="wikiversity.slogan"]')).toHaveText('Free learning materials');
+
+  await eyes.check('Sister projects list (WIKI-32)', { region: '.other-projects', fully: false });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('[data-jsl10n="wikispecies.slogan"]')).toHaveText('Free directory of all species');
+  await eyes.check('Sister projects list phone (WIKI-32)', { region: '.other-projects', fully: false });
+});
+
 // WIKI-16: the "Donate" header link is bold (font-weight 700) on article pages, on both
 // desktop and phone, while its color and every other header link stay unchanged.
 test('Donate header link is bold, other header links are not (WIKI-16)', async ({ page }) => {
