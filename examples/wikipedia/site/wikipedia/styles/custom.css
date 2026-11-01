@@ -35,3 +35,11 @@
 @media (max-width: 480px) {
   #search-form button[type="submit"] { margin-right: -28px; }
 }
+
+/* WIKI-42: remove the "Download on the App Store" badge from the portal's
+   "Download Wikipedia" box — iOS users are being moved to the mobile website.
+   `.app-badge-ios` only exists in that box, so this can't reach any other
+   page or element. Google Play badge is untouched and stays centered. */
+.app-badge-ios {
+	display: none;
+}
