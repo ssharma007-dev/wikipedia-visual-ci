@@ -12,6 +12,8 @@ The Jira board this sample runs on: [WIKI board](https://testing-visual-ci.atlas
 
 The Jira site is private: ask the repository owner for access.
 
+To watch the agent at work: [Agent 1 runs started from Jira](https://github.com/ssharma007-dev/wikipedia-visual-ci/actions/workflows/implement-task.yml?query=event%3Aworkflow_dispatch). This view shows only the runs started with ⚡ Agent 1, without the runs that skip themselves ( e.g. "Add the Jira ticket to a new branch" when the agent creates the branch ).
+
 ## Ticket flow
 
 ![Ticket flow: New → Ready ( the team lead chooses a developer or the AI agent ) → In Progress → In Review or Done](docs/images/ticket-flow.png)
