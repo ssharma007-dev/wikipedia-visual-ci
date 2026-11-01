@@ -31,7 +31,18 @@
 	}
 }
 
-/* Portal: line the Search button up with the edge of the screen on phones */
+/* Portal: line the Search button up with the edge of the screen on phones.
+   -10px exactly cancels the button's remaining 10px gap to the viewport edge
+   (confirmed on the 384px-wide Galaxy S25 Ultra checkpoint); -28px overshot
+   by 18px and pushed the button off-screen (design-system invariants #1/#4). */
 @media (max-width: 480px) {
-  #search-form button[type="submit"] { margin-right: -28px; }
+  #search-form button[type="submit"] { margin-right: -10px; }
+}
+
+/* WIKI-44: remove the "Download on the App Store" badge from the portal's
+   Download Wikipedia box — iOS users are moving to the mobile website.
+   The Google Play badge, the box text and every other device keep showing;
+   `.app-badge-ios` only exists in this box, so no other page is affected. */
+.app-badges .app-badge-ios {
+	display: none;
 }
