@@ -14,7 +14,7 @@ if (start < 0) process.exit(0);
 const names = [];
 for (const line of text.slice(start + 1)) {
   const t = line.trim();
-  if (!t) { if (names.length) break; else continue; }
+  if (!t) continue;                                // Jira often puts a blank line between pasted list items
   const m = t.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
   if (!m) break;                                   // the list ends at the first line that is not a list item
   names.push(m[1].replace(/\s*\(.*?\)\s*$/, '').trim());
