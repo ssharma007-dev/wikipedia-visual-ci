@@ -72,6 +72,19 @@ To watch the agent at work: [Agent 1 runs started from Jira](https://github.com/
 
    Note: In Review means the work is waiting for a person's decision. It is not used for reviewing the ticket itself ( that happens between New and Ready ).
 
+### When the pull request opens and the Jira status changes ( AI agent path )
+
+The pull request opens at the end of the Agent 1 run, a few seconds before the ticket moves to In Review ( or Done ). The order of the steps in the run:
+
+| Step in the Agent 1 run | What happens | Jira status |
+|---|---|---|
+| Jira: In Progress | The ticket moves to In Progress | In Progress |
+| Agent 1, then fix rounds | The AI builds the change, runs the tests, reviews every difference and fixes its own bugs ( most of the run ) | In Progress |
+| Commit, then report | The change is committed to the branch, and the PDF report is built | In Progress |
+| Open or update the pull request | The pull request opens, with the PDF link and the review result | In Progress |
+| Jira: a sub-task for each bug | One sub-task per bug: fixed by the AI → Done, not fixed → open | In Progress |
+| Jira: report back | The PDF is attached, a comment is added, and the ticket moves | In Review ( a person decides ) [ or ] Done ( merged ) |
+
 ## Jira status: who is involved when
 
 The Jira ticket moves through five statuses: New → Ready → In Progress → In Review → Done. Anyone ( dev manager, team lead, developer ) can involve the AI agent at any time before Done by clicking the ⚡ ( Automation ) button on the ticket → Agent 1. If a developer has already started, the AI continues on the same branch.
